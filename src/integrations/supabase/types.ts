@@ -118,6 +118,88 @@ export type Database = {
           },
         ]
       }
+      document_pages: {
+        Row: {
+          containers: Json | null
+          created_at: string
+          document_id: string
+          id: string
+          layout_config: Json | null
+          page_index: number
+          page_styling: Json | null
+          updated_at: string
+        }
+        Insert: {
+          containers?: Json | null
+          created_at?: string
+          document_id: string
+          id?: string
+          layout_config?: Json | null
+          page_index: number
+          page_styling?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          containers?: Json | null
+          created_at?: string
+          document_id?: string
+          id?: string
+          layout_config?: Json | null
+          page_index?: number
+          page_styling?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_pages_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documents: {
+        Row: {
+          content: Json | null
+          created_at: string
+          id: string
+          styling_overrides: Json | null
+          template_id: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content?: Json | null
+          created_at?: string
+          id?: string
+          styling_overrides?: Json | null
+          template_id?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: Json | null
+          created_at?: string
+          id?: string
+          styling_overrides?: Json | null
+          template_id?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media: {
         Row: {
           created_at: string
@@ -178,6 +260,101 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      template_pages: {
+        Row: {
+          content_scaffold: Json | null
+          created_at: string
+          id: string
+          layout_config: Json | null
+          name: string
+          page_index: number
+          page_styling: Json | null
+          template_id: string
+        }
+        Insert: {
+          content_scaffold?: Json | null
+          created_at?: string
+          id?: string
+          layout_config?: Json | null
+          name: string
+          page_index: number
+          page_styling?: Json | null
+          template_id: string
+        }
+        Update: {
+          content_scaffold?: Json | null
+          created_at?: string
+          id?: string
+          layout_config?: Json | null
+          name?: string
+          page_index?: number
+          page_styling?: Json | null
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "template_pages_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      templates: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          figma_file_id: string | null
+          figma_node_id: string | null
+          global_styling: Json | null
+          id: string
+          is_global: boolean
+          is_premium: boolean
+          metadata: Json | null
+          name: string
+          preview_image_url: string | null
+          updated_at: string
+          usage_count: number
+          user_id: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description?: string | null
+          figma_file_id?: string | null
+          figma_node_id?: string | null
+          global_styling?: Json | null
+          id?: string
+          is_global?: boolean
+          is_premium?: boolean
+          metadata?: Json | null
+          name: string
+          preview_image_url?: string | null
+          updated_at?: string
+          usage_count?: number
+          user_id?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          figma_file_id?: string | null
+          figma_node_id?: string | null
+          global_styling?: Json | null
+          id?: string
+          is_global?: boolean
+          is_premium?: boolean
+          metadata?: Json | null
+          name?: string
+          preview_image_url?: string | null
+          updated_at?: string
+          usage_count?: number
+          user_id?: string | null
         }
         Relationships: []
       }
