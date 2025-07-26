@@ -7,6 +7,10 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { AuthGate } from "@/components/auth/AuthGate";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Dashboard from "./pages/Dashboard";
+import MyDocuments from "./pages/MyDocuments";
+import TemplateLibrary from "./pages/TemplateLibrary";
+import MediaLibrary from "./pages/MediaLibrary";
+import AdminPanel from "./pages/AdminPanel";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,10 +26,10 @@ const App = () => (
             <AppLayout>
               <Routes>
                 <Route path="/" element={<Dashboard />} />
-                <Route path="/documents" element={<div className="p-6">Documents coming soon...</div>} />
-                <Route path="/templates" element={<div className="p-6">Templates coming soon...</div>} />
-                <Route path="/media" element={<div className="p-6">Media Library coming soon...</div>} />
-                <Route path="/admin" element={<div className="p-6">Admin Panel coming soon...</div>} />
+                <Route path="/documents" element={<MyDocuments />} />
+                <Route path="/templates" element={<TemplateLibrary />} />
+                <Route path="/media" element={<MediaLibrary />} />
+                <Route path="/admin" element={<AdminPanel />} />
                 <Route path="/settings" element={<div className="p-6">Settings coming soon...</div>} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
