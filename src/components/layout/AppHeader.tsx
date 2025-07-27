@@ -35,22 +35,31 @@ export function AppHeader() {
   return (
     <header className="h-14 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50">
       <div className="flex h-full items-center justify-between px-6">
-        {/* Navigation Links */}
-        <nav className="flex items-center space-x-8">
-          {navigationItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                `text-sm font-medium transition-colors hover:text-primary ${
-                  isActive ? 'text-primary' : 'text-muted-foreground'
-                }`
-              }
-            >
-              {item.name}
-            </NavLink>
-          ))}
-        </nav>
+        {/* Logo */}
+        <div className="flex items-center space-x-8">
+          <NavLink to="/" className="flex items-center space-x-2">
+            <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+              PageMuse
+            </span>
+          </NavLink>
+          
+          {/* Navigation Links */}
+          <nav className="flex items-center space-x-8">
+            {navigationItems.map((item) => (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) =>
+                  `text-sm font-medium transition-colors hover:text-primary ${
+                    isActive ? 'text-primary' : 'text-muted-foreground'
+                  }`
+                }
+              >
+                {item.name}
+              </NavLink>
+            ))}
+          </nav>
+        </div>
 
         {/* User Menu */}
         <DropdownMenu>
