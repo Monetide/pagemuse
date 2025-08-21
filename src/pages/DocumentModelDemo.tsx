@@ -3,16 +3,10 @@ import { useParams } from 'react-router-dom'
 import { useDocumentModel } from '@/hooks/useDocumentModel'
 import { DocumentHeader } from '@/components/document/DocumentHeader'
 import { DocumentOutlineView } from '@/components/document/DocumentOutlineView'
-import { PageMasterSettings } from '@/components/document/PageMasterSettings'
-import { PagePreview } from '@/components/document/PagePreview'
-import { PaginatedLayoutPreview } from '@/components/document/PaginatedLayoutPreview'
 import { EditorCanvas } from '@/components/document/EditorCanvas'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { PageMaster } from '@/lib/document-model'
 
 export default function DocumentModelDemo() {
@@ -211,7 +205,7 @@ export default function DocumentModelDemo() {
   }, [documentId, document, loadDocument])
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {document && (
         <DocumentHeader
           title={document.title}
@@ -223,252 +217,153 @@ export default function DocumentModelDemo() {
         />
       )}
       
-      <div className="container mx-auto p-6 space-y-6">
-        {!document && (
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold mb-2">Document Model Demo</h1>
-            <p className="text-muted-foreground">
-              Semantic document structure: Document → Section → Flow → Block
-            </p>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          {/* Controls */}
-          <div className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Document Controls</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {!document ? (
-                  <div className="space-y-2">
-                    <Input
-                      placeholder="Document title"
-                      value={docTitle}
-                      onChange={(e) => setDocTitle(e.target.value)}
-                    />
-                    <div className="flex gap-2">
-                      <Button onClick={handleCreateDocument} disabled={!docTitle.trim()}>
-                        Create Document
-                      </Button>
-                      <Button onClick={createDemoDocument} variant="outline">
-                        Create Demo
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <Badge variant="default" className="mb-2">
-                      Document: {document.title}
-                    </Badge>
-                    
-                    <div className="space-y-2">
-                      <Input
-                        placeholder="Section name"
-                        value={sectionName}
-                        onChange={(e) => setSectionName(e.target.value)}
-                      />
-                      <Button 
-                        onClick={handleAddSection} 
-                        disabled={!sectionName.trim()}
-                        size="sm"
-                      >
-                        Add Section
-                      </Button>
-                    </div>
-
-                    {document.sections.length > 0 && (
-                      <div className="space-y-2 pt-2 border-t">
-                        <Input
-                          placeholder="Flow name"
-                          value={flowName}
-                          onChange={(e) => setFlowName(e.target.value)}
-                        />
-                        <div className="flex flex-wrap gap-2">
-                          {document.sections.map(section => (
-                            <Button
-                              key={section.id}
-                              onClick={() => handleAddFlow(section.id)}
-                              disabled={!flowName.trim()}
-                              size="sm"
-                              variant="outline"
-                            >
-                              Add Flow to "{section.name}"
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {document.sections.some(s => s.flows.length > 0) && (
-                      <div className="space-y-2 pt-2 border-t">
-                        <Input
-                          placeholder="Block content"
-                          value={blockContent}
-                          onChange={(e) => setBlockContent(e.target.value)}
-                        />
-                        <div className="space-y-3">
-                          {document.sections.map(section =>
-                            section.flows.map(flow => (
-                              <div key={flow.id} className="space-y-2">
-                                <div className="text-xs font-medium text-muted-foreground">
-                                  Add to "{flow.name}" in "{section.name}":
-                                </div>
-                                <div className="grid grid-cols-2 gap-1">
-                                  <Button
-                                    onClick={() => handleAddBlock(section.id, flow.id, 'heading')}
-                                    disabled={!blockContent.trim()}
-                                    size="sm"
-                                    variant="outline"
-                                    className="text-xs"
-                                  >
-                                    Heading
-                                  </Button>
-                                  <Button
-                                    onClick={() => handleAddBlock(section.id, flow.id, 'paragraph')}
-                                    disabled={!blockContent.trim()}
-                                    size="sm"
-                                    variant="outline"
-                                    className="text-xs"
-                                  >
-                                    Paragraph
-                                  </Button>
-                                  <Button
-                                    onClick={() => handleAddBlock(section.id, flow.id, 'ordered-list')}
-                                    disabled={!blockContent.trim()}
-                                    size="sm"
-                                    variant="outline"
-                                    className="text-xs"
-                                  >
-                                    Ordered List
-                                  </Button>
-                                  <Button
-                                    onClick={() => handleAddBlock(section.id, flow.id, 'unordered-list')}
-                                    disabled={!blockContent.trim()}
-                                    size="sm"
-                                    variant="outline"
-                                    className="text-xs"
-                                  >
-                                    Bullet List
-                                  </Button>
-                                  <Button
-                                    onClick={() => handleAddBlock(section.id, flow.id, 'quote')}
-                                    disabled={!blockContent.trim()}
-                                    size="sm"
-                                    variant="outline"
-                                    className="text-xs"
-                                  >
-                                    Quote
-                                  </Button>
-                                  <Button
-                                    onClick={() => handleAddBlock(section.id, flow.id, 'figure')}
-                                    size="sm"
-                                    variant="outline"
-                                    className="text-xs"
-                                  >
-                                    Figure
-                                  </Button>
-                                  <Button
-                                    onClick={() => handleAddBlock(section.id, flow.id, 'table')}
-                                    size="sm"
-                                    variant="outline"
-                                    className="text-xs"
-                                  >
-                                    Table
-                                  </Button>
-                                  <Button
-                                    onClick={() => handleAddBlock(section.id, flow.id, 'divider')}
-                                    size="sm"
-                                    variant="outline"
-                                    className="text-xs"
-                                  >
-                                    Divider
-                                  </Button>
-                                </div>
-                                <Button
-                                  onClick={() => handleAddBlock(section.id, flow.id, 'spacer')}
-                                  size="sm"
-                                  variant="outline"
-                                  className="text-xs w-full"
-                                >
-                                  Add Spacer
-                                </Button>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Page Master & Preview */}
-          <div className="xl:col-span-2 space-y-6">
-            {document && document.sections.length > 0 ? (
-              <Tabs value={selectedSectionId || document.sections[0].id} onValueChange={setSelectedSectionId}>
-                <TabsList className="grid w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                  {document.sections.map(section => (
-                    <TabsTrigger key={section.id} value={section.id} className="text-xs">
-                      {section.name}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-                
-                {document.sections.map(section => (
-                  <TabsContent key={section.id} value={section.id} className="space-y-6">
-                    <div className="space-y-6">
-                      {/* Editor Canvas - Main editing interface */}
-                      <EditorCanvas
-                        section={section}
-                        onContentChange={updateBlockContent}
-                        onNewBlock={(afterBlockId, type) => {
-                          // Special handling for creating first block
-                          if (afterBlockId === 'create-first') {
-                            addBlockAfter('create-first', type, '')
-                          } else {
-                            addBlockAfter(afterBlockId, type, '')
-                          }
-                        }}
-                        onDeleteBlock={deleteBlock}
-                      />
-                      
-                      {/* Layout Configuration */}
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <PageMasterSettings
-                          pageMaster={section.pageMaster}
-                          onUpdate={(pageMaster) => updateSectionPageMaster(section.id, pageMaster)}
-                        />
-                        <PagePreview
-                          pageMaster={section.pageMaster}
-                          sectionName={section.name}
-                        />
-                      </div>
-                      
-                      {/* Layout Preview */}
-                      <PaginatedLayoutPreview section={section} />
-                    </div>
-                  </TabsContent>
-                ))}
-              </Tabs>
-            ) : (
-              <Card>
-                <CardContent className="flex items-center justify-center h-64">
-                  <p className="text-muted-foreground">Create a section to configure page settings</p>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Document Outline */}
-            {document && (
-              <DocumentOutlineView document={document} />
-            )}
+      {!document ? (
+        // Document Creation Screen
+        <div className="flex-1 flex items-center justify-center">
+          <div className="max-w-md space-y-6 text-center">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-bold">Create Document</h1>
+              <p className="text-muted-foreground">
+                Start with a new document or demo content
+              </p>
+            </div>
+            
+            <div className="space-y-4">
+              <Input
+                placeholder="Document title"
+                value={docTitle}
+                onChange={(e) => setDocTitle(e.target.value)}
+                className="text-center"
+              />
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleCreateDocument} 
+                  disabled={!docTitle.trim()}
+                  className="flex-1"
+                >
+                  Create Document
+                </Button>
+                <Button 
+                  onClick={createDemoDocument} 
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Create Demo
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        // 3-Pane Editor Layout
+        <div className="flex-1 flex">
+          {/* Left Sidebar */}
+          <div className="w-80 border-r border-border bg-muted/30">
+            <div className="p-4 border-b border-border">
+              <h3 className="font-semibold text-sm">Document Structure</h3>
+            </div>
+            <div className="p-4">
+              <DocumentOutlineView document={document} />
+            </div>
+          </div>
+          
+          {/* Center Canvas */}
+          <div className="flex-1 flex flex-col">
+            {document.sections.length > 0 ? (
+              <>
+                {/* Section Tabs */}
+                {document.sections.length > 1 && (
+                  <div className="border-b border-border">
+                    <Tabs 
+                      value={selectedSectionId || document.sections[0].id} 
+                      onValueChange={setSelectedSectionId}
+                      className="w-full"
+                    >
+                      <TabsList className="h-12 w-full justify-start rounded-none bg-transparent">
+                        {document.sections.map(section => (
+                          <TabsTrigger 
+                            key={section.id} 
+                            value={section.id}
+                            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
+                          >
+                            {section.name}
+                          </TabsTrigger>
+                        ))}
+                      </TabsList>
+                    </Tabs>
+                  </div>
+                )}
+                
+                {/* Editor Canvas */}
+                <div className="flex-1 overflow-auto">
+                  {document.sections.map(section => {
+                    const isActiveSection = (selectedSectionId || document.sections[0].id) === section.id
+                    if (!isActiveSection) return null
+                    
+                    return (
+                      <div key={section.id} className="h-full">
+                        <EditorCanvas
+                          section={section}
+                          onContentChange={updateBlockContent}
+                          onNewBlock={(afterBlockId, type) => {
+                            if (afterBlockId === 'create-first') {
+                              addBlockAfter('create-first', type, '')
+                            } else {
+                              addBlockAfter(afterBlockId, type, '')
+                            }
+                          }}
+                          onDeleteBlock={deleteBlock}
+                        />
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center space-y-4">
+                  <p className="text-muted-foreground">No sections found</p>
+                  <Button onClick={() => {
+                    setSectionName('Main Section')
+                    handleAddSection()
+                  }}>
+                    Add First Section
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Right Inspector */}
+          <div className="w-80 border-l border-border bg-muted/30">
+            <div className="p-4 border-b border-border">
+              <h3 className="font-semibold text-sm">Inspector</h3>
+            </div>
+            <div className="p-4 space-y-4">
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">Page Layout</h4>
+                <p className="text-xs text-muted-foreground">
+                  Layout controls will be available here
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">Typography</h4>
+                <p className="text-xs text-muted-foreground">
+                  Text formatting options will be available here
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <h4 className="text-sm font-medium">Block Properties</h4>
+                <p className="text-xs text-muted-foreground">
+                  Selected block properties will be shown here
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
