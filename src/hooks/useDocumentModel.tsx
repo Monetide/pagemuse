@@ -130,6 +130,127 @@ export const useDocumentModel = () => {
     return true
   }, [document, persistence])
 
+  const updateBlockContent = useCallback((blockId: string, newContent: any) => {
+    if (!document) return
+
+    const updatedDocument = {
+      ...document,
+      sections: document.sections.map(section => ({
+        ...section,
+        flows: section.flows.map(flow => ({
+          ...flow,
+          blocks: flow.blocks.map(block => 
+            block.id === blockId 
+              ? { ...block, content: newContent }
+              : block
+          )
+        }))
+      })),
+      updated_at: new Date().toISOString()
+    }
+    
+    setDocument(updatedDocument)
+    triggerAutoSave(updatedDocument)
+  }, [document, triggerAutoSave])
+
+  const deleteBlock = useCallback((blockId: string) => {
+    if (!document) return
+
+    const updatedDocument = {
+      ...document,
+      sections: document.sections.map(section => ({
+        ...section,
+        flows: section.flows.map(flow => ({
+          ...flow,
+          blocks: flow.blocks.filter(block => block.id !== blockId)
+        }))
+      })),
+      updated_at: new Date().toISOString()
+    }
+    
+    setDocument(updatedDocument)
+    triggerAutoSave(updatedDocument)
+  }, [document, triggerAutoSave])
+
+  const addBlockAfter = useCallback((afterBlockId: string, type: Block['type'], content: any = '') => {
+    if (!document) return
+
+    // Special case: creating first block in empty document
+    if (afterBlockId === 'create-first') {
+      const firstSection = document.sections[0]
+      const firstFlow = firstSection?.flows[0]
+      
+      if (firstSection && firstFlow) {
+        const newBlock = createBlock(type, content, 0)
+        const updatedDocument = {
+          ...document,
+          sections: document.sections.map(section => 
+            section.id === firstSection.id
+              ? {
+                  ...section,
+                  flows: section.flows.map(flow =>
+                    flow.id === firstFlow.id
+                      ? addBlockToFlow(flow, newBlock)
+                      : flow
+                  )
+                }
+              : section
+          ),
+          updated_at: new Date().toISOString()
+        }
+        
+        setDocument(updatedDocument)
+        triggerAutoSave(updatedDocument)
+        return newBlock
+      }
+      return
+    }
+
+    // Find the section and flow containing the target block
+    let targetSectionId = ''
+    let targetFlowId = ''
+    let targetBlockOrder = 0
+
+    for (const section of document.sections) {
+      for (const flow of section.flows) {
+        const targetBlock = flow.blocks.find(block => block.id === afterBlockId)
+        if (targetBlock) {
+          targetSectionId = section.id
+          targetFlowId = flow.id
+          targetBlockOrder = targetBlock.order
+          break
+        }
+      }
+      if (targetSectionId) break
+    }
+
+    if (targetSectionId && targetFlowId) {
+      // Create new block with order after target block
+      const newBlock = createBlock(type, content, targetBlockOrder + 0.5)
+      
+      const updatedDocument = {
+        ...document,
+        sections: document.sections.map(section => 
+          section.id === targetSectionId
+            ? {
+                ...section,
+                flows: section.flows.map(flow =>
+                  flow.id === targetFlowId
+                    ? addBlockToFlow(flow, newBlock)
+                    : flow
+                )
+              }
+            : section
+        ),
+        updated_at: new Date().toISOString()
+      }
+      
+      setDocument(updatedDocument)
+      triggerAutoSave(updatedDocument)
+      return newBlock
+    }
+  }, [document, triggerAutoSave])
+
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
@@ -148,6 +269,9 @@ export const useDocumentModel = () => {
     addBlock,
     setDocument: updateDocument,
     updateTitle,
+    updateBlockContent,
+    deleteBlock,
+    addBlockAfter,
     persistence
   }
 }

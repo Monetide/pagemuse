@@ -5,6 +5,7 @@ import { DocumentOutlineView } from '@/components/document/DocumentOutlineView'
 import { PageMasterSettings } from '@/components/document/PageMasterSettings'
 import { PagePreview } from '@/components/document/PagePreview'
 import { PaginatedLayoutPreview } from '@/components/document/PaginatedLayoutPreview'
+import { EditorCanvas } from '@/components/document/EditorCanvas'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -22,6 +23,9 @@ export default function DocumentModelDemo() {
     addBlock, 
     setDocument, 
     updateTitle,
+    updateBlockContent,
+    deleteBlock,
+    addBlockAfter,
     persistence 
   } = useDocumentModel()
   const [docTitle, setDocTitle] = useState('')
@@ -406,6 +410,22 @@ export default function DocumentModelDemo() {
                 {document.sections.map(section => (
                   <TabsContent key={section.id} value={section.id} className="space-y-6">
                     <div className="space-y-6">
+                      {/* Editor Canvas - Main editing interface */}
+                      <EditorCanvas
+                        section={section}
+                        onContentChange={updateBlockContent}
+                        onNewBlock={(afterBlockId, type) => {
+                          // Special handling for creating first block
+                          if (afterBlockId === 'create-first') {
+                            addBlockAfter('create-first', type, '')
+                          } else {
+                            addBlockAfter(afterBlockId, type, '')
+                          }
+                        }}
+                        onDeleteBlock={deleteBlock}
+                      />
+                      
+                      {/* Layout Configuration */}
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <PageMasterSettings
                           pageMaster={section.pageMaster}
@@ -416,6 +436,8 @@ export default function DocumentModelDemo() {
                           sectionName={section.name}
                         />
                       </div>
+                      
+                      {/* Layout Preview */}
                       <PaginatedLayoutPreview section={section} />
                     </div>
                   </TabsContent>
