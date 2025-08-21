@@ -18,7 +18,7 @@ export interface Theme {
 
 export interface Block {
   id: string
-  type: 'heading' | 'paragraph' | 'ordered-list' | 'unordered-list' | 'quote' | 'divider' | 'spacer'
+  type: 'heading' | 'paragraph' | 'ordered-list' | 'unordered-list' | 'quote' | 'divider' | 'spacer' | 'figure' | 'table'
   content: any
   styles?: Style[]
   metadata?: Record<string, any>
@@ -127,6 +127,19 @@ export const getDefaultPaginationRules = (type: Block['type']): PaginationRules 
         breakAvoid: true, // Quotes prefer to stay together
         minOrphans: 2,
         minWidows: 2
+      }
+    case 'figure':
+      return {
+        keepTogether: true, // Figures are atomic
+        breakAvoid: true, // Never split figures
+        keepWithNext: false
+      }
+    case 'table':
+      return {
+        keepTogether: false, // Tables can span pages but not split rows
+        breakAvoid: false, // Tables can be broken between rows
+        minOrphans: 1, // At least header + 1 row
+        minWidows: 1
       }
     case 'divider':
       return {

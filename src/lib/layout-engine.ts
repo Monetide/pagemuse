@@ -50,6 +50,18 @@ const estimateBlockHeight = (block: Block, columnWidth: number): number => {
       const quoteWords = quoteText.split(' ').length
       const quoteLines = Math.ceil(quoteWords / (columnWidth * 1.5)) // slightly fewer words per line due to indentation
       return quoteLines * 0.167 + 0.3 // plus quote padding
+    case 'figure':
+      // Figure = image height + caption + spacing
+      const imageHeight = block.metadata?.imageHeight || 2 // default 2 inches
+      const captionHeight = block.content?.caption ? 0.3 : 0 // caption height
+      return imageHeight + captionHeight + 0.2 // spacing
+    case 'table':
+      // Table height = header + data rows + spacing
+      const tableData = block.content || { headers: [], rows: [] }
+      const headerHeight = 0.3 // inches for header row
+      const rowHeight = 0.25 // inches per data row
+      const dataRowCount = Array.isArray(tableData.rows) ? tableData.rows.length : 0
+      return headerHeight + (dataRowCount * rowHeight) + 0.2 // plus spacing
     case 'divider':
       return 0.2 // inches
     case 'spacer':
@@ -117,6 +129,16 @@ const canSplitWithRules = (
 ): { canSplit: boolean; reason?: string } => {
   const rules = block.paginationRules || {}
   
+  // Atomic blocks (figures) can never be split
+  if (block.type === 'figure') {
+    return { canSplit: false, reason: 'atomic-block' }
+  }
+  
+  // Tables can be split between rows but not within rows
+  if (block.type === 'table') {
+    return canSplitTable(block, remainingHeight, columnWidth)
+  }
+  
   if (rules.keepTogether) {
     return { canSplit: false, reason: 'keep-together' }
   }
@@ -145,6 +167,107 @@ const canSplitWithRules = (
   }
   
   return { canSplit: true }
+}
+
+// Special handling for table splitting
+const canSplitTable = (
+  block: Block,
+  remainingHeight: number,
+  columnWidth: number
+): { canSplit: boolean; reason?: string } => {
+  const tableData = block.content || { headers: [], rows: [] }
+  const headerHeight = 0.3
+  const rowHeight = 0.25
+  
+  // Need at least space for header + 1 data row
+  const minTableHeight = headerHeight + rowHeight + 0.2
+  
+  if (remainingHeight < minTableHeight) {
+    return { canSplit: false, reason: 'insufficient-space-for-header' }
+  }
+  
+  // Calculate how many complete rows can fit
+  const availableRowSpace = remainingHeight - headerHeight - 0.2
+  const fittableRows = Math.floor(availableRowSpace / rowHeight)
+  
+  if (fittableRows >= 1) {
+    return { canSplit: true }
+  }
+  
+  return { canSplit: false, reason: 'no-complete-rows-fit' }
+}
+
+// Split table between rows with header repetition
+const splitTable = (
+  block: Block,
+  remainingHeight: number,
+  columnWidth: number
+): Block[] => {
+  const tableData = block.content || { headers: [], rows: [] }
+  const headerHeight = 0.3
+  const rowHeight = 0.25
+  
+  const availableRowSpace = remainingHeight - headerHeight - 0.2
+  const fittableRows = Math.floor(availableRowSpace / rowHeight)
+  
+  if (fittableRows <= 0 || !Array.isArray(tableData.rows)) {
+    return [block] // Can't split effectively
+  }
+  
+  const firstPartRows = tableData.rows.slice(0, fittableRows)
+  const remainingRows = tableData.rows.slice(fittableRows)
+  
+  const chunks: Block[] = []
+  let chunkIndex = 0
+  
+  // First chunk (fits in current column)
+  chunks.push({
+    ...block,
+    id: `${block.id}-chunk-${chunkIndex}`,
+    content: {
+      ...tableData,
+      rows: firstPartRows
+    },
+    metadata: {
+      ...block.metadata,
+      isTableChunk: true,
+      chunkIndex,
+      originalBlockId: block.id,
+      totalChunks: Math.ceil(tableData.rows.length / fittableRows)
+    }
+  })
+  
+  // Remaining chunks
+  let remainingRowsToProcess = remainingRows
+  while (remainingRowsToProcess.length > 0) {
+    chunkIndex++
+    
+    // Calculate rows for next chunk (assuming full column height)
+    const fullColumnHeight = 8 // approximate full column height in inches
+    const fullColumnRowSpace = fullColumnHeight - headerHeight - 0.2
+    const fullColumnRows = Math.floor(fullColumnRowSpace / rowHeight)
+    
+    const chunkRows = remainingRowsToProcess.slice(0, fullColumnRows)
+    remainingRowsToProcess = remainingRowsToProcess.slice(fullColumnRows)
+    
+    chunks.push({
+      ...block,
+      id: `${block.id}-chunk-${chunkIndex}`,
+      content: {
+        ...tableData,
+        rows: chunkRows
+      },
+      metadata: {
+        ...block.metadata,
+        isTableChunk: true,
+        chunkIndex,
+        originalBlockId: block.id,
+        totalChunks: Math.ceil(tableData.rows.length / Math.max(fittableRows, fullColumnRows))
+      }
+    })
+  }
+  
+  return chunks
 }
 const splitBlock = (block: Block, maxHeight: number, columnWidth: number): Block[] => {
   const totalHeight = estimateBlockHeight(block, columnWidth)
@@ -273,8 +396,14 @@ export const generateLayout = (section: Section): LayoutResult => {
             // Try splitting if possible
             const splitCheck = canSplitWithRules(nextBlock, remainingHeight, columnWidth)
             
-            if (splitCheck.canSplit && ['paragraph', 'quote'].includes(nextBlock.type) && remainingHeight > 0.5) {
-              const splitBlocks = splitBlock(nextBlock, remainingHeight, columnWidth)
+            if (splitCheck.canSplit && ['paragraph', 'quote', 'table'].includes(nextBlock.type) && remainingHeight > 0.5) {
+              let splitBlocks: Block[]
+              
+              if (nextBlock.type === 'table') {
+                splitBlocks = splitTable(nextBlock, remainingHeight, columnWidth)
+              } else {
+                splitBlocks = splitBlock(nextBlock, remainingHeight, columnWidth)
+              }
               
               if (splitBlocks.length > 1) {
                 // Remove original and add split blocks

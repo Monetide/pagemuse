@@ -18,6 +18,8 @@ const BLOCK_TYPE_COLORS = {
   'ordered-list': 'bg-green-100 border-green-300 text-green-800',
   'unordered-list': 'bg-green-100 border-green-300 text-green-800',
   'quote': 'bg-purple-100 border-purple-300 text-purple-800',
+  'figure': 'bg-indigo-100 border-indigo-300 text-indigo-800',
+  'table': 'bg-teal-100 border-teal-300 text-teal-800',
   'divider': 'bg-orange-100 border-orange-300 text-orange-800',
   'spacer': 'bg-yellow-100 border-yellow-300 text-yellow-800'
 }
@@ -158,6 +160,7 @@ const PageBoxPreview = ({ pageBox, showRendered }: { pageBox: PageBox; showRende
                     // Schema view - show block metadata
                     columnBox.content.map((block, blockIndex) => {
                       const isChunk = block.metadata?.isChunk
+                      const isTableChunk = block.metadata?.isTableChunk
                       const chunkIndex = block.metadata?.chunkIndex
                       const placementReason = block.metadata?.placementReason
                       const colorClass = BLOCK_TYPE_COLORS[block.type] || 'bg-gray-100 border-gray-300 text-gray-800'
@@ -165,7 +168,7 @@ const PageBoxPreview = ({ pageBox, showRendered }: { pageBox: PageBox; showRende
                       return (
                         <div
                           key={`${block.id}-${blockIndex}`}
-                          className={`text-xs p-2 rounded border ${colorClass} ${isChunk ? 'border-l-4 border-l-accent' : ''} relative`}
+                          className={`text-xs p-2 rounded border ${colorClass} ${(isChunk || isTableChunk) ? 'border-l-4 border-l-accent' : ''} relative`}
                         >
                           {/* Pagination rule indicator */}
                           {placementReason && placementReason !== 'normal' && (
@@ -176,7 +179,7 @@ const PageBoxPreview = ({ pageBox, showRendered }: { pageBox: PageBox; showRende
                             <span className="font-medium text-xs uppercase tracking-wide">
                               {block.type.replace('-', ' ')}
                               {block.type === 'heading' && block.metadata?.level && ` H${block.metadata.level}`}
-                              {isChunk && (
+                              {(isChunk || isTableChunk) && (
                                 <span className="ml-1 text-accent font-normal lowercase">
                                   (cont. {chunkIndex! + 1})
                                 </span>
@@ -193,7 +196,7 @@ const PageBoxPreview = ({ pageBox, showRendered }: { pageBox: PageBox; showRende
                                   <span className="px-1 py-0.5 bg-yellow-200 text-yellow-800 rounded text-xs">BA</span>
                                 )}
                                 {block.paginationRules.keepTogether && (
-                                  <span className="px-1 py-0.5 bg-green-200 text-green-800 rounded text-xs">KT</span>
+                                  <span className="px-1 py-0.5 bg-green-200 text-green-800 rounded text-xs">AT</span>
                                 )}
                               </div>
                             )}
@@ -201,10 +204,17 @@ const PageBoxPreview = ({ pageBox, showRendered }: { pageBox: PageBox; showRende
                           
                           <div className="text-xs leading-tight overflow-hidden">
                             <div className="line-clamp-2 opacity-70">
-                              {Array.isArray(block.content) 
-                                ? `${block.content.length} items: ${block.content.join(', ')}`
-                                : String(block.content)
-                              }
+                              {block.type === 'figure' && (
+                                `Image: ${block.content?.imageUrl || 'placeholder'} | Caption: ${block.content?.caption || 'none'}`
+                              )}
+                              {block.type === 'table' && (
+                                `${block.content?.headers?.length || 0} cols, ${block.content?.rows?.length || 0} rows`
+                              )}
+                              {!['figure', 'table'].includes(block.type) && (
+                                Array.isArray(block.content) 
+                                  ? `${block.content.length} items: ${block.content.join(', ')}`
+                                  : String(block.content)
+                              )}
                             </div>
                           </div>
                           

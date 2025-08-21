@@ -41,7 +41,7 @@ export default function DocumentModelDemo() {
     }
   }
 
-  const handleAddBlock = (sectionId: string, flowId: string, type: 'heading' | 'paragraph' | 'ordered-list' | 'unordered-list' | 'quote' | 'divider' | 'spacer') => {
+  const handleAddBlock = (sectionId: string, flowId: string, type: 'heading' | 'paragraph' | 'ordered-list' | 'unordered-list' | 'quote' | 'divider' | 'spacer' | 'figure' | 'table') => {
     if (document) {
       let content: any = blockContent.trim()
       let metadata = {}
@@ -51,13 +51,36 @@ export default function DocumentModelDemo() {
         metadata = { level: 2 } // Default to H2
       } else if (type === 'ordered-list' || type === 'unordered-list') {
         content = content ? content.split('\n').filter((line: string) => line.trim()) : ['List item 1', 'List item 2', 'List item 3']
+      } else if (type === 'figure') {
+        content = {
+          imageUrl: content || 'sample-image.jpg',
+          caption: 'Sample figure caption explaining the content of the image',
+          number: 1
+        }
+        metadata = { imageHeight: 2.5 }
+      } else if (type === 'table') {
+        content = {
+          headers: ['Column 1', 'Column 2', 'Column 3'],
+          rows: [
+            ['Row 1, Cell 1', 'Row 1, Cell 2', 'Row 1, Cell 3'],
+            ['Row 2, Cell 1', 'Row 2, Cell 2', 'Row 2, Cell 3'],
+            ['Row 3, Cell 1', 'Row 3, Cell 2', 'Row 3, Cell 3'],
+            ['Row 4, Cell 1', 'Row 4, Cell 2', 'Row 4, Cell 3'],
+            ['Row 5, Cell 1', 'Row 5, Cell 2', 'Row 5, Cell 3'],
+            ['Row 6, Cell 1', 'Row 6, Cell 2', 'Row 6, Cell 3'],
+            ['Row 7, Cell 1', 'Row 7, Cell 2', 'Row 7, Cell 3'],
+            ['Row 8, Cell 1', 'Row 8, Cell 2', 'Row 8, Cell 3']
+          ],
+          caption: content || 'Sample table with demonstration data',
+          number: 1
+        }
       } else if (type === 'divider') {
         content = '---'
       } else if (type === 'spacer') {
         content = ''
         metadata = { height: 0.5 }
-      } else if (!content && !['divider', 'spacer'].includes(type)) {
-        return // Don't add empty blocks except dividers and spacers
+      } else if (!content && !['divider', 'spacer', 'figure', 'table'].includes(type)) {
+        return // Don't add empty blocks except dividers, spacers, figures, and tables
       }
       
       const block = addBlock(sectionId, flowId, type, content)
@@ -86,53 +109,70 @@ export default function DocumentModelDemo() {
 
   const createDemoDocument = () => {
     const doc = createNewDocument('Demo Document')
-    const section = addSection('Typography Showcase')
+    const section = addSection('Advanced Layout Showcase')
     if (section) {
       setSelectedSectionId(section.id)
       const flow = addFlow(section.id, 'Main Content Flow')
       if (flow) {
-        // Create content that will demonstrate pagination rules
-        let block = addBlock(section.id, flow.id, 'heading', 'Professional Typography Rules')
+        // Create content demonstrating figures and tables
+        let block = addBlock(section.id, flow.id, 'heading', 'Figures and Tables Demonstration')
         if (block) block.metadata = { level: 1 }
         
-        addBlock(section.id, flow.id, 'paragraph', 'This document demonstrates professional typography and pagination rules. Watch how headings never appear alone at the bottom of columns, paragraphs avoid orphan and widow lines, and lists stay together when possible.')
+        addBlock(section.id, flow.id, 'paragraph', 'This document showcases atomic blocks like figures and tables, which maintain their integrity during pagination. Figures never split, and tables repeat headers when spanning pages.')
         
-        // This heading will demonstrate keep-with-next
-        block = addBlock(section.id, flow.id, 'heading', 'Keep-With-Next Demonstration')
+        // Add a figure (atomic block)
+        let figureBlock = addBlock(section.id, flow.id, 'figure', {
+          imageUrl: 'document-structure-diagram.png',
+          caption: 'Semantic document structure showing the hierarchy from Document to Section to Flow to Block',
+          number: 1
+        })
+        if (figureBlock) figureBlock.metadata = { imageHeight: 3 }
+        
+        block = addBlock(section.id, flow.id, 'heading', 'Professional Table Layout')
         if (block) block.metadata = { level: 2 }
         
-        addBlock(section.id, flow.id, 'paragraph', 'The heading above uses the keep-with-next rule, ensuring it never appears alone at the bottom of a column without at least some following content.')
+        addBlock(section.id, flow.id, 'paragraph', 'Tables automatically repeat their headers when flowing across pages. They never split within a row, ensuring data integrity and readability.')
+        
+        // Add a large table to demonstrate pagination
+        addBlock(section.id, flow.id, 'table', {
+          headers: ['Feature', 'Description', 'Status'],
+          rows: [
+            ['Keep-with-next', 'Headings stay with following content', 'Implemented'],
+            ['Widow/Orphan Protection', 'Minimum 2 lines together', 'Implemented'],
+            ['Atomic Blocks', 'Figures never split', 'Implemented'],
+            ['Table Headers', 'Repeat on new pages', 'Implemented'],
+            ['Break Avoidance', 'Lists prefer to stay together', 'Implemented'],
+            ['Multi-column Layout', 'Content flows across columns', 'Implemented'],
+            ['Page Generation', 'Automatic page creation', 'Implemented'],
+            ['Professional Typography', 'Publication-quality rules', 'Implemented'],
+            ['Content Splitting', 'Smart paragraph breaks', 'Implemented'],
+            ['Layout Engine', 'Rule-based placement', 'Implemented']
+          ],
+          caption: 'Implementation status of professional typography features',
+          number: 1
+        })
         
         addBlock(section.id, flow.id, 'unordered-list', [
-          'Lists have break-avoid and keep-together rules',
-          'They prefer to stay on the same column/page',
-          'This prevents awkward list splitting',
-          'Better readability and professional appearance'
+          'Figures are atomic - they move as complete units',
+          'Tables can span pages but never split rows',
+          'Headers repeat automatically on continuation pages',
+          'Professional spacing maintained throughout'
         ])
         
-        addBlock(section.id, flow.id, 'divider', '---')
-        
-        block = addBlock(section.id, flow.id, 'heading', 'Paragraph Flow Control')
+        block = addBlock(section.id, flow.id, 'heading', 'Layout Behavior')
         if (block) block.metadata = { level: 2 }
         
-        addBlock(section.id, flow.id, 'paragraph', 'Paragraphs have sophisticated widow and orphan protection. A widow is a short line at the beginning of a column, while an orphan is a short line at the end. Our system ensures at least 2 lines appear together to maintain readability and professional appearance.')
+        addBlock(section.id, flow.id, 'paragraph', 'When a figure is too tall for remaining column space, it moves entirely to the next column or page. Tables flow naturally but maintain row integrity - if a row cannot fit, the entire row moves to the next page along with a repeated header.')
         
-        addBlock(section.id, flow.id, 'quote', 'Good typography is like a good wine glass - it should never call attention to itself, but should enhance the content it contains. Professional pagination rules ensure this elegance is maintained throughout the document.')
+        // Another figure to test multiple figures
+        figureBlock = addBlock(section.id, flow.id, 'figure', {
+          imageUrl: 'pagination-rules-diagram.png',
+          caption: 'Visual representation of pagination rules including widow/orphan protection and keep-with-next behavior',
+          number: 2
+        })
+        if (figureBlock) figureBlock.metadata = { imageHeight: 2.5 }
         
-        block = addBlock(section.id, flow.id, 'heading', 'Advanced Layout Features')
-        if (block) block.metadata = { level: 2 }
-        
-        addBlock(section.id, flow.id, 'paragraph', 'The layout engine considers multiple factors when placing content: available space, pagination rules, content type, and readability. This creates documents that not only look professional but also follow established typography conventions used in high-quality publications.')
-        
-        addBlock(section.id, flow.id, 'ordered-list', [
-          'Automatic heading protection (never orphaned)',
-          'Widow and orphan control for paragraphs',
-          'List integrity maintenance',
-          'Quote block protection',
-          'Intelligent content splitting when necessary'
-        ])
-        
-        addBlock(section.id, flow.id, 'paragraph', 'Switch between schema and rendered views using the toggle above to see how these rules affect the actual layout and appearance of your content.')
+        addBlock(section.id, flow.id, 'quote', 'Professional document layout is not just about making things look good - it is about ensuring readability, maintaining data integrity, and following established typographic conventions that enhance comprehension.')
       }
     }
   }
@@ -275,6 +315,22 @@ export default function DocumentModelDemo() {
                                   className="text-xs"
                                 >
                                   Quote
+                                </Button>
+                                <Button
+                                  onClick={() => handleAddBlock(section.id, flow.id, 'figure')}
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs"
+                                >
+                                  Figure
+                                </Button>
+                                <Button
+                                  onClick={() => handleAddBlock(section.id, flow.id, 'table')}
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs"
+                                >
+                                  Table
                                 </Button>
                                 <Button
                                   onClick={() => handleAddBlock(section.id, flow.id, 'divider')}
