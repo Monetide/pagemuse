@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -11,7 +12,11 @@ import {
   Copy,
   FolderOpen,
   Edit3,
-  MoreHorizontal
+  MoreHorizontal,
+  Share,
+  Download,
+  Settings,
+  Command
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -49,6 +54,8 @@ export function DocumentHeader({
   onSaveAs,
   onClose
 }: DocumentHeaderProps) {
+  const navigate = useNavigate()
+  const { id } = useParams()
   const [isEditing, setIsEditing] = useState(false)
   const [editingTitle, setEditingTitle] = useState(title)
   const [saveAsTitle, setSaveAsTitle] = useState('')
@@ -198,20 +205,61 @@ export function DocumentHeader({
         <div className="flex items-center gap-3">
           {/* Save Status */}
           {saveStatus !== 'idle' && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Badge variant="secondary" className="flex items-center gap-1">
               {getSaveStatusIcon()}
-              <span>{getSaveStatusText()}</span>
-            </div>
+              <span className="text-xs">{getSaveStatusText()}</span>
+            </Badge>
           )}
 
           {/* Document Metadata */}
           {documentMetadata && (
-            <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="hidden lg:flex items-center gap-2 text-xs text-muted-foreground">
               <span>Modified {formatDate(documentMetadata.updated_at)}</span>
             </div>
           )}
 
-          {/* Actions Menu */}
+          {/* Action Buttons */}
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {/* TODO: Implement command palette */}}
+              title="Command Palette"
+            >
+              <Command className="w-4 h-4" />
+            </Button>
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {/* TODO: Implement share */}}
+              title="Share"
+            >
+              <Share className="w-4 h-4" />
+            </Button>
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {/* TODO: Implement export */}}
+              title="Export"
+            >
+              <Download className="w-4 h-4" />
+            </Button>
+            
+            {id && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate(`/documents/${id}/settings`)}
+                title="Document Settings"
+              >
+                <Settings className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+
+          {/* More Actions Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm">
