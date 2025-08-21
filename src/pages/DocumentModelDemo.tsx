@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { useDocumentModel } from '@/hooks/useDocumentModel'
 import { DocumentHeader } from '@/components/document/DocumentHeader'
-import { DocumentOutlineView } from '@/components/document/DocumentOutlineView'
+import { Navigator } from '@/components/document/Navigator'
 import { EditorCanvas } from '@/components/document/EditorCanvas'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { PageMaster } from '@/lib/document-model'
+import { PageMaster, Section } from '@/lib/document-model'
 
 export default function DocumentModelDemo() {
   const { id } = useParams()
@@ -259,12 +259,53 @@ export default function DocumentModelDemo() {
         <div className="flex-1 flex">
           {/* Left Sidebar */}
           <div className="w-80 border-r border-border bg-muted/30">
-            <div className="p-4 border-b border-border">
-              <h3 className="font-semibold text-sm">Document Structure</h3>
-            </div>
-            <div className="p-4">
-              <DocumentOutlineView document={document} />
-            </div>
+            <Tabs defaultValue="navigator" className="h-full flex flex-col">
+              <TabsList className="grid w-full grid-cols-2 rounded-none border-b">
+                <TabsTrigger value="navigator">Navigator</TabsTrigger>
+                <TabsTrigger value="outline">Outline</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="navigator" className="flex-1 mt-0">
+                <Navigator
+                  document={document}
+                  selectedSectionId={selectedSectionId || document.sections[0]?.id}
+                  onSectionSelect={setSelectedSectionId}
+                  onAddSection={(name) => {
+                    const section = addSection(name)
+                    if (section) {
+                      setSelectedSectionId(section.id)
+                      // Add default flow
+                      addFlow(section.id, 'Main Flow')
+                    }
+                  }}
+                  onAddFlow={(sectionId, name) => {
+                    addFlow(sectionId, name)
+                  }}
+                  onReorderSections={(sections) => {
+                    if (!document) return
+                    const updatedDoc = {
+                      ...document,
+                      sections,
+                      updated_at: new Date().toISOString()
+                    }
+                    setDocument(updatedDoc)
+                  }}
+                  onJumpToHeading={(blockId) => {
+                    // TODO: Implement jump to heading in canvas
+                    console.log('Jump to heading:', blockId)
+                  }}
+                />
+              </TabsContent>
+              
+              <TabsContent value="outline" className="flex-1 mt-0 p-4">
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium">Document Outline</h4>
+                  <p className="text-xs text-muted-foreground">
+                    Detailed outline view coming soon
+                  </p>
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
           
           {/* Center Canvas */}
