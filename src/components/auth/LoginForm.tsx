@@ -10,11 +10,12 @@ import { Loader2, Palette } from 'lucide-react'
 export const LoginForm = () => {
   const [isSignUp, setIsSignUp] = useState(false)
   const [isForgotPassword, setIsForgotPassword] = useState(false)
+  const [isMagicLink, setIsMagicLink] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [loading, setLoading] = useState(false)
-  const { signIn, signUp, resetPassword } = useAuth()
+  const { signIn, signUp, resetPassword, magicLinkSignIn } = useAuth()
   const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -23,7 +24,9 @@ export const LoginForm = () => {
 
     try {
       let result
-      if (isForgotPassword) {
+      if (isMagicLink) {
+        result = await magicLinkSignIn(email)
+      } else if (isForgotPassword) {
         result = await resetPassword(email)
       } else if (isSignUp) {
         result = await signUp(email, password, displayName)
@@ -38,6 +41,11 @@ export const LoginForm = () => {
           title: 'Authentication Error',
           description: error.message,
           variant: 'destructive',
+        })
+      } else if (isMagicLink) {
+        toast({
+          title: 'Magic link sent',
+          description: 'Check your email and open the link in this preview window.',
         })
       } else if (isForgotPassword) {
         toast({
@@ -83,21 +91,25 @@ export const LoginForm = () => {
         <Card className="border-0 shadow-medium">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-semibold">
-              {isForgotPassword ? 'Reset password' : (isSignUp ? 'Create account' : 'Welcome back')}
+              {isForgotPassword
+                ? 'Reset password'
+                : isMagicLink
+                  ? 'Sign in with magic link'
+                  : (isSignUp ? 'Create account' : 'Welcome back')}
             </CardTitle>
             <CardDescription>
-              {isForgotPassword 
+              {isForgotPassword
                 ? 'Enter your email address to receive reset instructions'
-                : (isSignUp 
-                  ? 'Enter your details to create your PageMuse account'
-                  : 'Enter your credentials to access your workspace'
-                )
-              }
+                : isMagicLink
+                  ? 'We will email you a sign-in link that works in this preview'
+                  : (isSignUp
+                    ? 'Enter your details to create your PageMuse account'
+                    : 'Enter your credentials to access your workspace')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {isSignUp && !isForgotPassword && (
+              {isSignUp && !isForgotPassword && !isMagicLink && (
                 <div className="space-y-2">
                   <Label htmlFor="displayName">Display Name</Label>
                   <Input
@@ -124,7 +136,7 @@ export const LoginForm = () => {
                 />
               </div>
               
-              {!isForgotPassword && (
+              {!isForgotPassword && !isMagicLink && (
                 <div className="space-y-2">
                   <Label htmlFor="password">Password</Label>
                   <Input
@@ -147,16 +159,24 @@ export const LoginForm = () => {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isForgotPassword ? 'Sending reset email...' : (isSignUp ? 'Creating account...' : 'Signing in...')}
+                    {isForgotPassword
+                      ? 'Sending reset email...'
+                      : isMagicLink
+                        ? 'Sending magic link...'
+                        : (isSignUp ? 'Creating account...' : 'Signing in...')}
                   </>
                 ) : (
-                  isForgotPassword ? 'Send reset email' : (isSignUp ? 'Create account' : 'Sign in')
+                  isForgotPassword
+                    ? 'Send reset email'
+                    : isMagicLink
+                      ? 'Send magic link'
+                      : (isSignUp ? 'Create account' : 'Sign in')
                 )}
               </Button>
             </form>
 
             <div className="mt-6 text-center space-y-2">
-              {!isForgotPassword && (
+              {!isForgotPassword && !isMagicLink && (
                 <div>
                   <button
                     type="button"
@@ -167,23 +187,39 @@ export const LoginForm = () => {
                   </button>
                 </div>
               )}
-              
+
               <div>
                 <button
                   type="button"
                   onClick={() => {
-                    setIsSignUp(!isSignUp)
+                    setIsMagicLink(!isMagicLink)
                     setIsForgotPassword(false)
+                    setIsSignUp(false)
                   }}
                   className="text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
-                  {isSignUp 
-                    ? 'Already have an account? Sign in'
-                    : "Don't have an account? Sign up"
-                  }
+                  {isMagicLink ? 'Use password instead' : 'Use magic link instead'}
                 </button>
               </div>
               
+              {!isMagicLink && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSignUp(!isSignUp)
+                      setIsForgotPassword(false)
+                    }}
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    {isSignUp 
+                      ? 'Already have an account? Sign in'
+                      : "Don't have an account? Sign up"
+                    }
+                  </button>
+                </div>
+              )}
+
               {isForgotPassword && (
                 <div>
                   <button
