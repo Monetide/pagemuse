@@ -70,14 +70,13 @@ export default function DocumentModelDemo() {
       setSelectedSectionId(section.id)
       const flow = addFlow(section.id, 'Main Content Flow')
       if (flow) {
-        addBlock(section.id, flow.id, 'heading', 'Welcome to Our Document')
-        addBlock(section.id, flow.id, 'paragraph', 'This is a paragraph that explains the purpose of this document and provides context for the reader. It contains enough text to demonstrate how content flows through columns and pages.')
-        addBlock(section.id, flow.id, 'heading', 'Understanding Document Structure')
-        addBlock(section.id, flow.id, 'paragraph', 'Documents are composed of sections, which contain flows of content blocks. Each section has its own page master settings that control layout and formatting.')
-        addBlock(section.id, flow.id, 'paragraph', 'When content exceeds the available space in a column, it automatically flows to the next column. When all columns are full, a new page is generated automatically.')
-        addBlock(section.id, flow.id, 'heading', 'Advanced Features')
-        addBlock(section.id, flow.id, 'paragraph', 'The layout engine supports multiple page sizes, flexible column layouts, configurable margins, and optional headers and footers. Baseline grid alignment ensures consistent typography.')
-        addBlock(section.id, flow.id, 'paragraph', 'This additional content helps demonstrate how the pagination system works when content overflows beyond what fits on a single page.')
+        addBlock(section.id, flow.id, 'heading', 'Welcome to Our Document System')
+        addBlock(section.id, flow.id, 'paragraph', 'This is a comprehensive demonstration of how our semantic document model works. The system automatically flows content from one column to the next, and from one page to the next, without requiring manual page breaks or column management. This paragraph is intentionally long to show how text automatically wraps and continues across multiple columns and pages when needed.')
+        addBlock(section.id, flow.id, 'heading', 'Understanding Content Flow')
+        addBlock(section.id, flow.id, 'paragraph', 'Documents are composed of sections, which contain flows of content blocks. Each section has its own page master settings that control layout and formatting. When you set a section to use multiple columns, content automatically flows from the first column to the second, third, and so on. When all columns on a page are filled, the system automatically creates a new page and continues the flow there.')
+        addBlock(section.id, flow.id, 'paragraph', 'This additional content demonstrates how the pagination system works seamlessly. Long paragraphs are intelligently split at appropriate points, ensuring that text flows naturally across columns and pages. You can see this in action by setting up a 2-column layout - watch how the text flows from column 1 to column 2, then automatically continues on page 2.')
+        addBlock(section.id, flow.id, 'heading', 'Advanced Layout Features')
+        addBlock(section.id, flow.id, 'paragraph', 'The layout engine supports multiple page sizes, flexible column layouts, configurable margins, headers, footers, and baseline grid alignment. All of these features work together to ensure consistent, professional typography and layout throughout your documents. The system handles complex layout scenarios automatically, so you can focus on content creation rather than manual formatting.')
       }
     }
   }

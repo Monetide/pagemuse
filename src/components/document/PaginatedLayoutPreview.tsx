@@ -119,20 +119,34 @@ const PageBoxPreview = ({ pageBox }: { pageBox: PageBox }) => {
                 
                 {/* Content blocks */}
                 <div className="flex-1 p-2 pt-6 space-y-1">
-                  {columnBox.content.map((block, blockIndex) => (
-                    <div
-                      key={`${block.id}-${blockIndex}`}
-                      className={`text-xs p-1 rounded border ${
-                        block.type === 'heading' 
-                          ? 'bg-primary/20 border-primary/30 font-semibold'
-                          : 'bg-secondary/20 border-secondary/30'
-                      }`}
-                    >
-                      <div className="truncate">
-                        {block.type}: {String(block.content).substring(0, 20)}...
+                  {columnBox.content.map((block, blockIndex) => {
+                    const isChunk = block.metadata?.isChunk
+                    const chunkIndex = block.metadata?.chunkIndex
+                    return (
+                      <div
+                        key={`${block.id}-${blockIndex}`}
+                        className={`text-xs p-1 rounded border ${
+                          block.type === 'heading' 
+                            ? 'bg-primary/20 border-primary/30 font-semibold'
+                            : 'bg-secondary/20 border-secondary/30'
+                        } ${isChunk ? 'border-l-4 border-l-accent' : ''}`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-medium text-xs">
+                            {block.type}
+                            {isChunk && (
+                              <span className="ml-1 text-accent font-normal">
+                                (cont. {chunkIndex! + 1})
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        <div className="text-xs leading-tight overflow-hidden h-12">
+                          {String(block.content)}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                   {columnBox.content.length === 0 && (
                     <div className="text-xs text-muted-foreground text-center italic mt-4">
                       Empty
@@ -197,10 +211,11 @@ export const PaginatedLayoutPreview = ({ section }: PaginatedLayoutPreviewProps)
           </div>
         )}
         
-        <div className="mt-4 text-xs text-muted-foreground">
-          <p>• Columns automatically fill with content from flows</p>
-          <p>• New pages generate automatically when content overflows</p>
-          <p>• Red columns indicate they are full and caused overflow</p>
+        <div className="mt-4 text-xs text-muted-foreground space-y-1">
+          <p>• Content flows automatically: Column 1 → Column 2 → Next Page</p>
+          <p>• Long paragraphs split across columns/pages (shown with "cont." label)</p>
+          <p>• Red borders indicate columns that are full and caused overflow</p>
+          <p>• Blue left border indicates text continuation from previous column</p>
         </div>
       </CardContent>
     </Card>

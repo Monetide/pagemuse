@@ -23,28 +23,71 @@ export interface LayoutResult {
   hasOverflow: boolean
 }
 
-// Estimate content height (simplified for demo)
+// Enhanced content height estimation with text splitting capability
 const estimateBlockHeight = (block: Block, columnWidth: number): number => {
   switch (block.type) {
     case 'heading':
-      return 1.5 // inches
+      return 0.5 // inches - more realistic
     case 'paragraph':
-      // Rough estimate: 120 words per inch, 8 words per line
-      const wordCount = block.content.toString().split(' ').length
-      const linesNeeded = Math.ceil(wordCount / 8)
-      return linesNeeded * 0.15 // 0.15 inches per line
+      // More accurate estimate: 10-12 words per line, 6 lines per inch
+      const text = block.content.toString()
+      const wordCount = text.split(' ').length
+      const avgWordsPerLine = Math.floor(columnWidth * 1.8) // rough estimation based on column width
+      const linesNeeded = Math.ceil(wordCount / avgWordsPerLine)
+      return linesNeeded * 0.167 // 6 lines per inch = 0.167 inches per line
     case 'image':
-      return 3 // inches
+      return 2 // inches
     case 'list':
       const items = Array.isArray(block.content) ? block.content.length : 3
-      return items * 0.2 // inches per item
+      return items * 0.25 // inches per item
     case 'quote':
-      return 1 // inches
+      return 0.8 // inches
     case 'code':
-      return 2 // inches
+      return 1.5 // inches
     default:
-      return 0.5 // inches
+      return 0.3 // inches
   }
+}
+
+// Split a block if it's too large for remaining space
+const splitBlock = (block: Block, maxHeight: number, columnWidth: number): Block[] => {
+  const totalHeight = estimateBlockHeight(block, columnWidth)
+  
+  if (totalHeight <= maxHeight || block.type !== 'paragraph') {
+    return [block] // Can't or don't need to split
+  }
+  
+  const text = block.content.toString()
+  const words = text.split(' ')
+  const avgWordsPerLine = Math.floor(columnWidth * 1.8)
+  const maxLines = Math.floor(maxHeight / 0.167)
+  const maxWordsInChunk = maxLines * avgWordsPerLine
+  
+  const chunks: Block[] = []
+  let wordIndex = 0
+  let chunkIndex = 0
+  
+  while (wordIndex < words.length) {
+    const chunkWords = words.slice(wordIndex, wordIndex + maxWordsInChunk)
+    const chunkText = chunkWords.join(' ')
+    
+    chunks.push({
+      ...block,
+      id: `${block.id}-chunk-${chunkIndex}`,
+      content: chunkText,
+      metadata: {
+        ...block.metadata,
+        isChunk: true,
+        chunkIndex,
+        originalBlockId: block.id
+      }
+    })
+    
+    wordIndex += maxWordsInChunk
+    chunkIndex++
+  }
+  
+  return chunks
 }
 
 export const generateLayout = (section: Section): LayoutResult => {
@@ -73,16 +116,16 @@ export const generateLayout = (section: Section): LayoutResult => {
   const totalGapWidth = (pageMaster.columns - 1) * pageMaster.columnGap
   const columnWidth = (contentWidth - totalGapWidth) / pageMaster.columns
   
-  // Collect all blocks from all flows
+  // Collect all blocks from all flows and prepare for splitting
   const allBlocks: Block[] = []
   section.flows.forEach(flow => {
     allBlocks.push(...flow.blocks.sort((a, b) => a.order - b.order))
   })
   
-  // Generate pages
+  // Process blocks and split them as needed during layout
   const pages: PageBox[] = []
   let currentPageNumber = 1
-  let remainingBlocks = [...allBlocks]
+  let blockQueue = [...allBlocks] // Queue of blocks to be placed
   
   // Always create at least one page, even if empty
   do {
@@ -100,19 +143,42 @@ export const generateLayout = (section: Section): LayoutResult => {
         isFull: false
       }
       
-      // Fill column with blocks
+      // Fill column with blocks, splitting when necessary
       let currentColumnHeight = 0
       
-      while (remainingBlocks.length > 0) {
-        const block = remainingBlocks[0]
-        const blockHeight = estimateBlockHeight(block, columnWidth)
+      while (blockQueue.length > 0) {
+        const nextBlock = blockQueue[0]
+        const blockHeight = estimateBlockHeight(nextBlock, columnWidth)
+        const remainingHeight = availableHeight - currentColumnHeight
         
-        // Check if block fits in current column
-        if (currentColumnHeight + blockHeight <= availableHeight) {
-          columnBox.content.push(remainingBlocks.shift()!)
+        // If block fits completely, add it
+        if (blockHeight <= remainingHeight) {
+          columnBox.content.push(blockQueue.shift()!)
           currentColumnHeight += blockHeight
           pageHasContent = true
-        } else {
+        }
+        // If block doesn't fit but we can split it (paragraph only)
+        else if (nextBlock.type === 'paragraph' && remainingHeight > 0.5) {
+          const splitBlocks = splitBlock(nextBlock, remainingHeight, columnWidth)
+          
+          if (splitBlocks.length > 1) {
+            // Remove original block and add split blocks to queue
+            blockQueue.shift()
+            blockQueue.unshift(...splitBlocks)
+            
+            // Add the first chunk that fits in remaining space
+            const firstChunk = blockQueue.shift()!
+            columnBox.content.push(firstChunk)
+            currentColumnHeight += estimateBlockHeight(firstChunk, columnWidth)
+            pageHasContent = true
+          } else {
+            // Can't split effectively, mark column as full
+            columnBox.isFull = true
+            break
+          }
+        }
+        // Block doesn't fit and can't be split, mark column as full
+        else {
           columnBox.isFull = true
           break
         }
@@ -121,7 +187,7 @@ export const generateLayout = (section: Section): LayoutResult => {
       columnBoxes.push(columnBox)
       
       // If no more blocks, don't fill remaining columns
-      if (remainingBlocks.length === 0) break
+      if (blockQueue.length === 0) break
     }
     
     const pageBox: PageBox = {
@@ -129,14 +195,14 @@ export const generateLayout = (section: Section): LayoutResult => {
       pageNumber: currentPageNumber,
       pageMaster,
       columnBoxes,
-      hasOverflow: remainingBlocks.length > 0
+      hasOverflow: blockQueue.length > 0
     }
     
     pages.push(pageBox)
     currentPageNumber++
     
     // Continue if there are remaining blocks or if this is the first page (always show at least one)
-  } while (remainingBlocks.length > 0 || pages.length === 0)
+  } while (blockQueue.length > 0 || pages.length === 0)
   
   // If no content was added to any page, ensure we show at least empty frames
   if (pages.length > 0 && !pages.some(page => page.columnBoxes.some(col => col.content.length > 0))) {
