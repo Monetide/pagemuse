@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { useDocumentModel } from '@/hooks/useDocumentModel'
 import { DocumentHeader } from '@/components/document/DocumentHeader'
 import { Navigator } from '@/components/document/Navigator'
+import { BlockPalette } from '@/components/document/BlockPalette'
 import { EditorCanvas } from '@/components/document/EditorCanvas'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -262,7 +263,7 @@ export default function DocumentModelDemo() {
             <Tabs defaultValue="navigator" className="h-full flex flex-col">
               <TabsList className="grid w-full grid-cols-2 rounded-none border-b">
                 <TabsTrigger value="navigator">Navigator</TabsTrigger>
-                <TabsTrigger value="outline">Outline</TabsTrigger>
+                <TabsTrigger value="blocks">Blocks</TabsTrigger>
               </TabsList>
               
               <TabsContent value="navigator" className="flex-1 mt-0">
@@ -297,13 +298,83 @@ export default function DocumentModelDemo() {
                 />
               </TabsContent>
               
-              <TabsContent value="outline" className="flex-1 mt-0 p-4">
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium">Document Outline</h4>
-                  <p className="text-xs text-muted-foreground">
-                    Detailed outline view coming soon
-                  </p>
-                </div>
+              <TabsContent value="blocks" className="flex-1 mt-0">
+                <BlockPalette
+                  onInsertBlock={(blockType) => {
+                    // Insert at the end of the primary flow of current section
+                    const currentSection = document.sections.find(s => 
+                      s.id === (selectedSectionId || document.sections[0]?.id)
+                    )
+                    if (currentSection && currentSection.flows.length > 0) {
+                      const primaryFlow = currentSection.flows[0]
+                      let content: any = ''
+                      let metadata = {}
+                      
+                      // Handle different block types with default content
+                      switch (blockType) {
+                        case 'heading':
+                          content = 'New Heading'
+                          metadata = { level: 2 }
+                          break
+                        case 'paragraph':
+                          content = 'Start typing...'
+                          break
+                        case 'ordered-list':
+                          content = ['First item', 'Second item', 'Third item']
+                          break
+                        case 'unordered-list':
+                          content = ['First item', 'Second item', 'Third item']
+                          break
+                        case 'quote':
+                          content = 'Enter your quote here...'
+                          break
+                        case 'divider':
+                          content = '---'
+                          break
+                        case 'spacer':
+                          content = ''
+                          metadata = { height: 0.5 }
+                          break
+                        case 'figure':
+                          content = {
+                            imageUrl: 'placeholder-image.jpg',
+                            caption: 'Add your caption here',
+                            number: 1
+                          }
+                          metadata = { imageHeight: 2.5 }
+                          break
+                        case 'table':
+                          content = {
+                            headers: ['Column 1', 'Column 2', 'Column 3'],
+                            rows: [
+                              ['Row 1, Cell 1', 'Row 1, Cell 2', 'Row 1, Cell 3'],
+                              ['Row 2, Cell 1', 'Row 2, Cell 2', 'Row 2, Cell 3'],
+                            ],
+                            caption: 'Table caption',
+                            number: 1
+                          }
+                          break
+                        case 'callout':
+                          content = 'Important information goes here...'
+                          metadata = { type: 'info' }
+                          break
+                      }
+                      
+                      const block = addBlock(currentSection.id, primaryFlow.id, blockType as any, content)
+                      if (block && Object.keys(metadata).length > 0) {
+                        block.metadata = { ...block.metadata, ...metadata }
+                      }
+                    }
+                  }}
+                  onDragStart={(blockType) => {
+                    // TODO: Implement drag preview and drop zones
+                    console.log('Dragging block type:', blockType)
+                  }}
+                  onDragEnd={() => {
+                    // TODO: Clean up drag state
+                    console.log('Drag ended')
+                  }}
+                />
               </TabsContent>
             </Tabs>
           </div>
