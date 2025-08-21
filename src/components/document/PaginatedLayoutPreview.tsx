@@ -1,11 +1,25 @@
 import { Section } from '@/lib/document-model'
 import { generateLayout, PageBox } from '@/lib/layout-engine'
+import { BlockRenderer } from './BlockRenderer'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
+import { useState } from 'react'
 
 interface PaginatedLayoutPreviewProps {
   section: Section
+}
+
+const BLOCK_TYPE_COLORS = {
+  'heading': 'bg-blue-100 border-blue-300 text-blue-800',
+  'paragraph': 'bg-gray-100 border-gray-300 text-gray-800',
+  'ordered-list': 'bg-green-100 border-green-300 text-green-800',
+  'unordered-list': 'bg-green-100 border-green-300 text-green-800',
+  'quote': 'bg-purple-100 border-purple-300 text-purple-800',
+  'divider': 'bg-orange-100 border-orange-300 text-orange-800',
+  'spacer': 'bg-yellow-100 border-yellow-300 text-yellow-800'
 }
 
 const PAGE_SIZES = {
@@ -15,7 +29,7 @@ const PAGE_SIZES = {
   Tabloid: { width: 11, height: 17 }
 }
 
-const PageBoxPreview = ({ pageBox }: { pageBox: PageBox }) => {
+const PageBoxPreview = ({ pageBox, showRendered }: { pageBox: PageBox; showRendered: boolean }) => {
   const pageSize = PAGE_SIZES[pageBox.pageMaster.pageSize]
   
   // Scale factor to fit preview (max 250px width)
@@ -118,38 +132,56 @@ const PageBoxPreview = ({ pageBox }: { pageBox: PageBox }) => {
                 </div>
                 
                 {/* Content blocks */}
-                <div className="flex-1 p-2 pt-6 space-y-1">
-                  {columnBox.content.map((block, blockIndex) => {
-                    const isChunk = block.metadata?.isChunk
-                    const chunkIndex = block.metadata?.chunkIndex
-                    return (
-                      <div
-                        key={`${block.id}-${blockIndex}`}
-                        className={`text-xs p-1 rounded border ${
-                          block.type === 'heading' 
-                            ? 'bg-primary/20 border-primary/30 font-semibold'
-                            : 'bg-secondary/20 border-secondary/30'
-                        } ${isChunk ? 'border-l-4 border-l-accent' : ''}`}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-medium text-xs">
-                            {block.type}
-                            {isChunk && (
-                              <span className="ml-1 text-accent font-normal">
-                                (cont. {chunkIndex! + 1})
-                              </span>
-                            )}
-                          </span>
+                <div className="flex-1 p-2 pt-6 space-y-1 overflow-y-auto">
+                  {showRendered ? (
+                    // Rendered view - show actual content
+                    <div className="space-y-0">
+                      {columnBox.content.map((block, blockIndex) => (
+                        <BlockRenderer
+                          key={`${block.id}-${blockIndex}`}
+                          block={block}
+                          className="text-xs"
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    // Schema view - show block metadata
+                    columnBox.content.map((block, blockIndex) => {
+                      const isChunk = block.metadata?.isChunk
+                      const chunkIndex = block.metadata?.chunkIndex
+                      const colorClass = BLOCK_TYPE_COLORS[block.type] || 'bg-gray-100 border-gray-300 text-gray-800'
+                      
+                      return (
+                        <div
+                          key={`${block.id}-${blockIndex}`}
+                          className={`text-xs p-2 rounded border ${colorClass} ${isChunk ? 'border-l-4 border-l-accent' : ''}`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-medium text-xs uppercase tracking-wide">
+                              {block.type.replace('-', ' ')}
+                              {block.type === 'heading' && block.metadata?.level && ` H${block.metadata.level}`}
+                              {isChunk && (
+                                <span className="ml-1 text-accent font-normal lowercase">
+                                  (cont. {chunkIndex! + 1})
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                          <div className="text-xs leading-tight overflow-hidden">
+                            <div className="line-clamp-2 opacity-70">
+                              {Array.isArray(block.content) 
+                                ? `${block.content.length} items: ${block.content.join(', ')}`
+                                : String(block.content)
+                              }
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-xs leading-tight overflow-hidden h-12">
-                          {String(block.content)}
-                        </div>
-                      </div>
-                    )
-                  })}
+                      )
+                    })
+                  )}
                   {columnBox.content.length === 0 && (
                     <div className="text-xs text-muted-foreground text-center italic mt-4">
-                      Empty
+                      Empty Column
                     </div>
                   )}
                 </div>
@@ -175,6 +207,7 @@ const PageBoxPreview = ({ pageBox }: { pageBox: PageBox }) => {
 
 export const PaginatedLayoutPreview = ({ section }: PaginatedLayoutPreviewProps) => {
   const layoutResult = generateLayout(section)
+  const [showRendered, setShowRendered] = useState(false)
   
   return (
     <Card>
@@ -184,15 +217,27 @@ export const PaginatedLayoutPreview = ({ section }: PaginatedLayoutPreviewProps)
             <Badge variant="secondary">Layout Preview</Badge>
             {section.name}
           </div>
-          <div className="flex gap-2">
-            <Badge variant="outline" className="text-xs">
-              {layoutResult.totalPages} page{layoutResult.totalPages !== 1 ? 's' : ''}
-            </Badge>
-            {layoutResult.hasOverflow && (
-              <Badge variant="destructive" className="text-xs">
-                Overflow
+          <div className="flex items-center gap-4">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="render-mode"
+                checked={showRendered}
+                onCheckedChange={setShowRendered}
+              />
+              <Label htmlFor="render-mode" className="text-xs">
+                Rendered
+              </Label>
+            </div>
+            <div className="flex gap-2">
+              <Badge variant="outline" className="text-xs">
+                {layoutResult.totalPages} page{layoutResult.totalPages !== 1 ? 's' : ''}
               </Badge>
-            )}
+              {layoutResult.hasOverflow && (
+                <Badge variant="destructive" className="text-xs">
+                  Overflow
+                </Badge>
+              )}
+            </div>
           </div>
         </CardTitle>
       </CardHeader>
@@ -200,7 +245,7 @@ export const PaginatedLayoutPreview = ({ section }: PaginatedLayoutPreviewProps)
         <ScrollArea className="w-full">
           <div className="flex gap-6 pb-4">
             {layoutResult.pages.map(pageBox => (
-              <PageBoxPreview key={pageBox.id} pageBox={pageBox} />
+              <PageBoxPreview key={pageBox.id} pageBox={pageBox} showRendered={showRendered} />
             ))}
           </div>
         </ScrollArea>

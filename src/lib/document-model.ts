@@ -18,7 +18,7 @@ export interface Theme {
 
 export interface Block {
   id: string
-  type: 'heading' | 'paragraph' | 'image' | 'list' | 'quote' | 'code'
+  type: 'heading' | 'paragraph' | 'ordered-list' | 'unordered-list' | 'quote' | 'divider' | 'spacer'
   content: any
   styles?: Style[]
   metadata?: Record<string, any>

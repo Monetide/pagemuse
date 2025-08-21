@@ -27,7 +27,9 @@ export interface LayoutResult {
 const estimateBlockHeight = (block: Block, columnWidth: number): number => {
   switch (block.type) {
     case 'heading':
-      return 0.5 // inches - more realistic
+      // H1 = 0.6", H2 = 0.5", H3 = 0.4"
+      const level = block.metadata?.level || 1
+      return level === 1 ? 0.6 : level === 2 ? 0.5 : 0.4
     case 'paragraph':
       // More accurate estimate: 10-12 words per line, 6 lines per inch
       const text = block.content.toString()
@@ -35,15 +37,19 @@ const estimateBlockHeight = (block: Block, columnWidth: number): number => {
       const avgWordsPerLine = Math.floor(columnWidth * 1.8) // rough estimation based on column width
       const linesNeeded = Math.ceil(wordCount / avgWordsPerLine)
       return linesNeeded * 0.167 // 6 lines per inch = 0.167 inches per line
-    case 'image':
-      return 2 // inches
-    case 'list':
-      const items = Array.isArray(block.content) ? block.content.length : 3
-      return items * 0.25 // inches per item
+    case 'ordered-list':
+    case 'unordered-list':
+      const items = Array.isArray(block.content) ? block.content.length : 1
+      return items * 0.25 + 0.2 // inches per item plus list padding
     case 'quote':
-      return 0.8 // inches
-    case 'code':
-      return 1.5 // inches
+      const quoteText = block.content.toString()
+      const quoteWords = quoteText.split(' ').length
+      const quoteLines = Math.ceil(quoteWords / (columnWidth * 1.5)) // slightly fewer words per line due to indentation
+      return quoteLines * 0.167 + 0.3 // plus quote padding
+    case 'divider':
+      return 0.2 // inches
+    case 'spacer':
+      return block.metadata?.height || 0.5 // configurable spacer height
     default:
       return 0.3 // inches
   }
@@ -53,7 +59,7 @@ const estimateBlockHeight = (block: Block, columnWidth: number): number => {
 const splitBlock = (block: Block, maxHeight: number, columnWidth: number): Block[] => {
   const totalHeight = estimateBlockHeight(block, columnWidth)
   
-  if (totalHeight <= maxHeight || block.type !== 'paragraph') {
+  if (totalHeight <= maxHeight || !['paragraph', 'quote'].includes(block.type)) {
     return [block] // Can't or don't need to split
   }
   
@@ -157,8 +163,8 @@ export const generateLayout = (section: Section): LayoutResult => {
           currentColumnHeight += blockHeight
           pageHasContent = true
         }
-        // If block doesn't fit but we can split it (paragraph only)
-        else if (nextBlock.type === 'paragraph' && remainingHeight > 0.5) {
+        // If block doesn't fit but we can split it (paragraph and quote)
+        else if (['paragraph', 'quote'].includes(nextBlock.type) && remainingHeight > 0.5) {
           const splitBlocks = splitBlock(nextBlock, remainingHeight, columnWidth)
           
           if (splitBlocks.length > 1) {

@@ -41,9 +41,30 @@ export default function DocumentModelDemo() {
     }
   }
 
-  const handleAddBlock = (sectionId: string, flowId: string, type: 'heading' | 'paragraph') => {
-    if (blockContent.trim() && document) {
-      addBlock(sectionId, flowId, type, blockContent.trim())
+  const handleAddBlock = (sectionId: string, flowId: string, type: 'heading' | 'paragraph' | 'ordered-list' | 'unordered-list' | 'quote' | 'divider' | 'spacer') => {
+    if (document) {
+      let content: any = blockContent.trim()
+      let metadata = {}
+      
+      // Handle special block types
+      if (type === 'heading') {
+        metadata = { level: 2 } // Default to H2
+      } else if (type === 'ordered-list' || type === 'unordered-list') {
+        content = content ? content.split('\n').filter((line: string) => line.trim()) : ['List item 1', 'List item 2', 'List item 3']
+      } else if (type === 'divider') {
+        content = '---'
+      } else if (type === 'spacer') {
+        content = ''
+        metadata = { height: 0.5 }
+      } else if (!content && !['divider', 'spacer'].includes(type)) {
+        return // Don't add empty blocks except dividers and spacers
+      }
+      
+      const block = addBlock(sectionId, flowId, type, content)
+      if (block && Object.keys(metadata).length > 0) {
+        block.metadata = { ...block.metadata, ...metadata }
+      }
+      
       setBlockContent('')
     }
   }
@@ -70,13 +91,43 @@ export default function DocumentModelDemo() {
       setSelectedSectionId(section.id)
       const flow = addFlow(section.id, 'Main Content Flow')
       if (flow) {
-        addBlock(section.id, flow.id, 'heading', 'Welcome to Our Document System')
-        addBlock(section.id, flow.id, 'paragraph', 'This is a comprehensive demonstration of how our semantic document model works. The system automatically flows content from one column to the next, and from one page to the next, without requiring manual page breaks or column management. This paragraph is intentionally long to show how text automatically wraps and continues across multiple columns and pages when needed.')
-        addBlock(section.id, flow.id, 'heading', 'Understanding Content Flow')
-        addBlock(section.id, flow.id, 'paragraph', 'Documents are composed of sections, which contain flows of content blocks. Each section has its own page master settings that control layout and formatting. When you set a section to use multiple columns, content automatically flows from the first column to the second, third, and so on. When all columns on a page are filled, the system automatically creates a new page and continues the flow there.')
-        addBlock(section.id, flow.id, 'paragraph', 'This additional content demonstrates how the pagination system works seamlessly. Long paragraphs are intelligently split at appropriate points, ensuring that text flows naturally across columns and pages. You can see this in action by setting up a 2-column layout - watch how the text flows from column 1 to column 2, then automatically continues on page 2.')
-        addBlock(section.id, flow.id, 'heading', 'Advanced Layout Features')
-        addBlock(section.id, flow.id, 'paragraph', 'The layout engine supports multiple page sizes, flexible column layouts, configurable margins, headers, footers, and baseline grid alignment. All of these features work together to ensure consistent, professional typography and layout throughout your documents. The system handles complex layout scenarios automatically, so you can focus on content creation rather than manual formatting.')
+        // Create a comprehensive demo with all block types
+        let block = addBlock(section.id, flow.id, 'heading', 'Welcome to Our Document System')
+        if (block) block.metadata = { level: 1 }
+        
+        addBlock(section.id, flow.id, 'paragraph', 'This is a comprehensive demonstration of how our semantic document model works with various content types. The system automatically flows content from one column to the next, and from one page to the next, without requiring manual page breaks.')
+        
+        addBlock(section.id, flow.id, 'unordered-list', [
+          'Automatic content flow across columns and pages',
+          'Support for multiple block types',
+          'Intelligent text splitting for long paragraphs',
+          'Configurable page masters and layouts'
+        ])
+        
+        addBlock(section.id, flow.id, 'divider', '---')
+        
+        block = addBlock(section.id, flow.id, 'heading', 'Content Types')
+        if (block) block.metadata = { level: 2 }
+        
+        addBlock(section.id, flow.id, 'paragraph', 'Our system supports various content block types, each with its own rendering and layout characteristics:')
+        
+        addBlock(section.id, flow.id, 'ordered-list', [
+          'Headings (H1, H2, H3) with proper hierarchy',
+          'Paragraphs with intelligent text wrapping',
+          'Ordered and unordered lists',
+          'Quotes with distinctive styling',
+          'Visual dividers for content separation',
+          'Configurable spacers for layout control'
+        ])
+        
+        addBlock(section.id, flow.id, 'quote', 'The best way to predict the future is to create it. Our document system creates the future of content layout and management.')
+        
+        addBlock(section.id, flow.id, 'spacer', '')
+        
+        block = addBlock(section.id, flow.id, 'heading', 'Advanced Features')
+        if (block) block.metadata = { level: 2 }
+        
+        addBlock(section.id, flow.id, 'paragraph', 'The layout engine supports multiple page sizes, flexible column layouts, configurable margins, headers, footers, and baseline grid alignment. All features work together to ensure consistent, professional typography throughout your documents.')
       }
     }
   }
@@ -167,25 +218,75 @@ export default function DocumentModelDemo() {
                         value={blockContent}
                         onChange={(e) => setBlockContent(e.target.value)}
                       />
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         {document.sections.map(section =>
                           section.flows.map(flow => (
-                            <div key={flow.id} className="flex gap-2">
+                            <div key={flow.id} className="space-y-2">
+                              <div className="text-xs font-medium text-muted-foreground">
+                                Add to "{flow.name}" in "{section.name}":
+                              </div>
+                              <div className="grid grid-cols-2 gap-1">
+                                <Button
+                                  onClick={() => handleAddBlock(section.id, flow.id, 'heading')}
+                                  disabled={!blockContent.trim()}
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs"
+                                >
+                                  Heading
+                                </Button>
+                                <Button
+                                  onClick={() => handleAddBlock(section.id, flow.id, 'paragraph')}
+                                  disabled={!blockContent.trim()}
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs"
+                                >
+                                  Paragraph
+                                </Button>
+                                <Button
+                                  onClick={() => handleAddBlock(section.id, flow.id, 'ordered-list')}
+                                  disabled={!blockContent.trim()}
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs"
+                                >
+                                  Ordered List
+                                </Button>
+                                <Button
+                                  onClick={() => handleAddBlock(section.id, flow.id, 'unordered-list')}
+                                  disabled={!blockContent.trim()}
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs"
+                                >
+                                  Bullet List
+                                </Button>
+                                <Button
+                                  onClick={() => handleAddBlock(section.id, flow.id, 'quote')}
+                                  disabled={!blockContent.trim()}
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs"
+                                >
+                                  Quote
+                                </Button>
+                                <Button
+                                  onClick={() => handleAddBlock(section.id, flow.id, 'divider')}
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs"
+                                >
+                                  Divider
+                                </Button>
+                              </div>
                               <Button
-                                onClick={() => handleAddBlock(section.id, flow.id, 'heading')}
-                                disabled={!blockContent.trim()}
+                                onClick={() => handleAddBlock(section.id, flow.id, 'spacer')}
                                 size="sm"
                                 variant="outline"
+                                className="text-xs w-full"
                               >
-                                Add Heading to "{flow.name}"
-                              </Button>
-                              <Button
-                                onClick={() => handleAddBlock(section.id, flow.id, 'paragraph')}
-                                disabled={!blockContent.trim()}
-                                size="sm"
-                                variant="outline"
-                              >
-                                Add Paragraph to "{flow.name}"
+                                Add Spacer
                               </Button>
                             </div>
                           ))
