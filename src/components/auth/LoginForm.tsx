@@ -9,12 +9,11 @@ import { Loader2, Palette } from 'lucide-react'
 
 export const LoginForm = () => {
   const [isSignUp, setIsSignUp] = useState(false)
-  const [isResetMode, setIsResetMode] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [loading, setLoading] = useState(false)
-  const { signIn, signUp, resetPassword } = useAuth()
+  const { signIn, signUp } = useAuth()
   const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -22,35 +21,20 @@ export const LoginForm = () => {
     setLoading(true)
 
     try {
-      let error
-      if (isResetMode) {
-        const result = await resetPassword(email)
-        error = result.error
-        if (!error) {
-          toast({
-            title: 'Reset Email Sent',
-            description: 'Check your email for password reset instructions.',
-          })
-          setIsResetMode(false)
-        }
-      } else {
-        const result = isSignUp 
-          ? await signUp(email, password, displayName)
-          : await signIn(email, password)
-        error = result.error
-        if (!error && isSignUp) {
-          toast({
-            title: 'Account Created',
-            description: 'Please check your email to verify your account.',
-          })
-        }
-      }
+      const { error } = isSignUp 
+        ? await signUp(email, password, displayName)
+        : await signIn(email, password)
 
       if (error) {
         toast({
           title: 'Authentication Error',
           description: error.message,
           variant: 'destructive',
+        })
+      } else if (isSignUp) {
+        toast({
+          title: 'Account Created',
+          description: 'Please check your email to verify your account.',
         })
       }
     } catch (error) {
@@ -85,12 +69,10 @@ export const LoginForm = () => {
         <Card className="border-0 shadow-medium">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-semibold">
-              {isResetMode ? 'Reset password' : isSignUp ? 'Create account' : 'Welcome back'}
+              {isSignUp ? 'Create account' : 'Welcome back'}
             </CardTitle>
             <CardDescription>
-              {isResetMode 
-                ? 'Enter your email to receive reset instructions'
-                : isSignUp 
+              {isSignUp 
                 ? 'Enter your details to create your PageMuse account'
                 : 'Enter your credentials to access your workspace'
               }
@@ -98,7 +80,7 @@ export const LoginForm = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {isSignUp && !isResetMode && (
+              {isSignUp && (
                 <div className="space-y-2">
                   <Label htmlFor="displayName">Display Name</Label>
                   <Input
@@ -117,7 +99,7 @@ export const LoginForm = () => {
                 <Input
                   id="email"
                   type="email"
-                  placeholder={isResetMode ? "gevaperry@gmail.com" : "you@example.com"}
+                  placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -125,20 +107,18 @@ export const LoginForm = () => {
                 />
               </div>
               
-              {!isResetMode && (
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="transition-all duration-200 focus:shadow-glow"
-                  />
-                </div>
-              )}
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="transition-all duration-200 focus:shadow-glow"
+                />
+              </div>
               
               <Button 
                 type="submit" 
@@ -148,39 +128,21 @@ export const LoginForm = () => {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isResetMode ? 'Sending reset email...' : isSignUp ? 'Creating account...' : 'Signing in...'}
+                    {isSignUp ? 'Creating account...' : 'Signing in...'}
                   </>
                 ) : (
-                  isResetMode ? 'Send reset email' : isSignUp ? 'Create account' : 'Sign in'
+                  isSignUp ? 'Create account' : 'Sign in'
                 )}
               </Button>
             </form>
 
-            <div className="mt-6 text-center space-y-2">
-              {!isResetMode && (
-                <button
-                  type="button"
-                  onClick={() => setIsResetMode(true)}
-                  className="text-sm text-muted-foreground hover:text-primary transition-colors block w-full"
-                >
-                  Forgot your password?
-                </button>
-              )}
-              
+            <div className="mt-6 text-center">
               <button
                 type="button"
-                onClick={() => {
-                  if (isResetMode) {
-                    setIsResetMode(false)
-                  } else {
-                    setIsSignUp(!isSignUp)
-                  }
-                }}
+                onClick={() => setIsSignUp(!isSignUp)}
                 className="text-sm text-muted-foreground hover:text-primary transition-colors"
               >
-                {isResetMode 
-                  ? 'Back to sign in'
-                  : isSignUp 
+                {isSignUp 
                   ? 'Already have an account? Sign in'
                   : "Don't have an account? Sign up"
                 }
