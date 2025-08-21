@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useParams } from 'react-router-dom'
 import { useDocumentModel } from '@/hooks/useDocumentModel'
 import { DocumentHeader } from '@/components/document/DocumentHeader'
 import { DocumentOutlineView } from '@/components/document/DocumentOutlineView'
@@ -15,9 +16,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { PageMaster } from '@/lib/document-model'
 
 export default function DocumentModelDemo() {
+  const { documentId } = useParams()
   const { 
     document, 
     createNewDocument, 
+    loadDocument,
     addSection, 
     addFlow, 
     addBlock, 
@@ -198,6 +201,13 @@ export default function DocumentModelDemo() {
       await persistence.saveAs(document, newTitle)
     }
   }
+
+  // Auto-load document if documentId is in URL
+  useEffect(() => {
+    if (documentId && !document) {
+      loadDocument(documentId)
+    }
+  }, [documentId, document, loadDocument])
 
   return (
     <div className="min-h-screen bg-background">

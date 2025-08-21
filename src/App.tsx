@@ -34,6 +34,7 @@ const App = () => (
                 <Route path="/admin" element={<AdminPanel />} />
                 <Route path="/settings" element={<div className="p-6">Settings coming soon...</div>} />
                 <Route path="/document-model" element={<DocumentModelDemo />} />
+                <Route path="/document-model/:documentId" element={<DocumentModelDemo />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />

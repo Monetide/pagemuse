@@ -174,11 +174,11 @@ export default function MyDocuments() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => navigate('/document-model')}>
+                        <DropdownMenuItem onClick={() => navigate(`/document-model/${doc.id}`)}>
                           <Eye className="w-4 h-4 mr-2" />
                           View
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate('/document-model')}>
+                        <DropdownMenuItem onClick={() => navigate(`/document-model/${doc.id}`)}>
                           <Edit className="w-4 h-4 mr-2" />
                           Edit
                         </DropdownMenuItem>
