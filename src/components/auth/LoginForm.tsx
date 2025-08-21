@@ -9,11 +9,12 @@ import { Loader2, Palette } from 'lucide-react'
 
 export const LoginForm = () => {
   const [isSignUp, setIsSignUp] = useState(false)
+  const [isForgotPassword, setIsForgotPassword] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [loading, setLoading] = useState(false)
-  const { signIn, signUp } = useAuth()
+  const { signIn, signUp, resetPassword } = useAuth()
   const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -21,9 +22,16 @@ export const LoginForm = () => {
     setLoading(true)
 
     try {
-      const { error } = isSignUp 
-        ? await signUp(email, password, displayName)
-        : await signIn(email, password)
+      let result
+      if (isForgotPassword) {
+        result = await resetPassword(email)
+      } else if (isSignUp) {
+        result = await signUp(email, password, displayName)
+      } else {
+        result = await signIn(email, password)
+      }
+
+      const { error } = result
 
       if (error) {
         toast({
@@ -31,6 +39,12 @@ export const LoginForm = () => {
           description: error.message,
           variant: 'destructive',
         })
+      } else if (isForgotPassword) {
+        toast({
+          title: 'Reset Email Sent',
+          description: 'Please check your email for password reset instructions.',
+        })
+        setIsForgotPassword(false)
       } else if (isSignUp) {
         toast({
           title: 'Account Created',
@@ -69,18 +83,21 @@ export const LoginForm = () => {
         <Card className="border-0 shadow-medium">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-semibold">
-              {isSignUp ? 'Create account' : 'Welcome back'}
+              {isForgotPassword ? 'Reset password' : (isSignUp ? 'Create account' : 'Welcome back')}
             </CardTitle>
             <CardDescription>
-              {isSignUp 
-                ? 'Enter your details to create your PageMuse account'
-                : 'Enter your credentials to access your workspace'
+              {isForgotPassword 
+                ? 'Enter your email address to receive reset instructions'
+                : (isSignUp 
+                  ? 'Enter your details to create your PageMuse account'
+                  : 'Enter your credentials to access your workspace'
+                )
               }
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {isSignUp && (
+              {isSignUp && !isForgotPassword && (
                 <div className="space-y-2">
                   <Label htmlFor="displayName">Display Name</Label>
                   <Input
@@ -99,7 +116,7 @@ export const LoginForm = () => {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@example.com"
+                  placeholder="gevaperry@gmail.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -107,18 +124,20 @@ export const LoginForm = () => {
                 />
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="transition-all duration-200 focus:shadow-glow"
-                />
-              </div>
+              {!isForgotPassword && (
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="transition-all duration-200 focus:shadow-glow"
+                  />
+                </div>
+              )}
               
               <Button 
                 type="submit" 
@@ -128,25 +147,54 @@ export const LoginForm = () => {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isSignUp ? 'Creating account...' : 'Signing in...'}
+                    {isForgotPassword ? 'Sending reset email...' : (isSignUp ? 'Creating account...' : 'Signing in...')}
                   </>
                 ) : (
-                  isSignUp ? 'Create account' : 'Sign in'
+                  isForgotPassword ? 'Send reset email' : (isSignUp ? 'Create account' : 'Sign in')
                 )}
               </Button>
             </form>
 
-            <div className="mt-6 text-center">
-              <button
-                type="button"
-                onClick={() => setIsSignUp(!isSignUp)}
-                className="text-sm text-muted-foreground hover:text-primary transition-colors"
-              >
-                {isSignUp 
-                  ? 'Already have an account? Sign in'
-                  : "Don't have an account? Sign up"
-                }
-              </button>
+            <div className="mt-6 text-center space-y-2">
+              {!isForgotPassword && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setIsForgotPassword(true)}
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    Forgot your password?
+                  </button>
+                </div>
+              )}
+              
+              <div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSignUp(!isSignUp)
+                    setIsForgotPassword(false)
+                  }}
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  {isSignUp 
+                    ? 'Already have an account? Sign in'
+                    : "Don't have an account? Sign up"
+                  }
+                </button>
+              </div>
+              
+              {isForgotPassword && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setIsForgotPassword(false)}
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    Back to sign in
+                  </button>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
