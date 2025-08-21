@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuth } from '@/hooks/useAuth'
 import { useDocuments, useTemplates, useUserStats } from '@/hooks/useSupabaseData'
+import { useNavigate } from 'react-router-dom'
 import { 
   Plus, 
   FileText, 
@@ -14,6 +15,7 @@ import {
 } from 'lucide-react'
 
 export default function Dashboard() {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const { documents, loading: documentsLoading } = useDocuments()
   const { templates, loading: templatesLoading } = useTemplates()
@@ -60,7 +62,10 @@ export default function Dashboard() {
             Let's create something amazing today
           </p>
         </div>
-        <Button className="bg-gradient-primary hover:shadow-glow transition-all duration-200">
+        <Button 
+          className="bg-gradient-primary hover:shadow-glow transition-all duration-200"
+          onClick={() => navigate('/document-model')}
+        >
           <Plus className="w-4 h-4 mr-2" />
           New Document
         </Button>
@@ -137,7 +142,11 @@ export default function Dashboard() {
                 )
               })
             )}
-            <Button variant="ghost" className="w-full mt-4">
+            <Button 
+              variant="ghost" 
+              className="w-full mt-4"
+              onClick={() => navigate('/documents')}
+            >
               View All Documents
             </Button>
           </CardContent>
@@ -197,7 +206,11 @@ export default function Dashboard() {
                 </div>
               ))
             )}
-            <Button variant="ghost" className="w-full mt-4">
+            <Button 
+              variant="ghost" 
+              className="w-full mt-4"
+              onClick={() => navigate('/templates')}
+            >
               Browse All Templates
             </Button>
           </CardContent>
@@ -214,15 +227,27 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button variant="outline" className="h-24 flex-col gap-2 hover:shadow-soft transition-all">
+            <Button 
+              variant="outline" 
+              className="h-24 flex-col gap-2 hover:shadow-soft transition-all"
+              onClick={() => navigate('/document-model')}
+            >
               <FileText className="w-6 h-6 text-primary" />
               <span>Create Document</span>
             </Button>
-            <Button variant="outline" className="h-24 flex-col gap-2 hover:shadow-soft transition-all">
+            <Button 
+              variant="outline" 
+              className="h-24 flex-col gap-2 hover:shadow-soft transition-all"
+              onClick={() => navigate('/templates')}
+            >
               <Palette className="w-6 h-6 text-primary" />
               <span>Browse Templates</span>
             </Button>
-            <Button variant="outline" className="h-24 flex-col gap-2 hover:shadow-soft transition-all">
+            <Button 
+              variant="outline" 
+              className="h-24 flex-col gap-2 hover:shadow-soft transition-all"
+              onClick={() => navigate('/documents')}
+            >
               <BarChart3 className="w-6 h-6 text-primary" />
               <span>View Analytics</span>
             </Button>

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -23,6 +24,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 export default function MyDocuments() {
+  const navigate = useNavigate()
   const { documents, loading } = useDocuments()
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -66,7 +68,10 @@ export default function MyDocuments() {
             Manage and organize all your documents
           </p>
         </div>
-        <Button className="bg-gradient-primary hover:shadow-glow transition-all duration-200">
+        <Button 
+          className="bg-gradient-primary hover:shadow-glow transition-all duration-200"
+          onClick={() => navigate('/document-model')}
+        >
           <Plus className="w-4 h-4 mr-2" />
           New Document
         </Button>
@@ -126,7 +131,10 @@ export default function MyDocuments() {
                 }
               </p>
               {!searchQuery && (
-                <Button className="bg-gradient-primary hover:shadow-glow transition-all duration-200">
+                <Button 
+                  className="bg-gradient-primary hover:shadow-glow transition-all duration-200"
+                  onClick={() => navigate('/document-model')}
+                >
                   <Plus className="w-4 h-4 mr-2" />
                   Create Document
                 </Button>
