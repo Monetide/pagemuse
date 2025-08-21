@@ -3,6 +3,7 @@ import { useDocumentModel } from '@/hooks/useDocumentModel'
 import { DocumentOutlineView } from '@/components/document/DocumentOutlineView'
 import { PageMasterSettings } from '@/components/document/PageMasterSettings'
 import { PagePreview } from '@/components/document/PagePreview'
+import { PaginatedLayoutPreview } from '@/components/document/PaginatedLayoutPreview'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -70,7 +71,13 @@ export default function DocumentModelDemo() {
       const flow = addFlow(section.id, 'Main Content Flow')
       if (flow) {
         addBlock(section.id, flow.id, 'heading', 'Welcome to Our Document')
-        addBlock(section.id, flow.id, 'paragraph', 'This is a paragraph that explains the purpose of this document and provides context for the reader.')
+        addBlock(section.id, flow.id, 'paragraph', 'This is a paragraph that explains the purpose of this document and provides context for the reader. It contains enough text to demonstrate how content flows through columns and pages.')
+        addBlock(section.id, flow.id, 'heading', 'Understanding Document Structure')
+        addBlock(section.id, flow.id, 'paragraph', 'Documents are composed of sections, which contain flows of content blocks. Each section has its own page master settings that control layout and formatting.')
+        addBlock(section.id, flow.id, 'paragraph', 'When content exceeds the available space in a column, it automatically flows to the next column. When all columns are full, a new page is generated automatically.')
+        addBlock(section.id, flow.id, 'heading', 'Advanced Features')
+        addBlock(section.id, flow.id, 'paragraph', 'The layout engine supports multiple page sizes, flexible column layouts, configurable margins, and optional headers and footers. Baseline grid alignment ensures consistent typography.')
+        addBlock(section.id, flow.id, 'paragraph', 'This additional content helps demonstrate how the pagination system works when content overflows beyond what fits on a single page.')
       }
     }
   }
@@ -207,15 +214,18 @@ export default function DocumentModelDemo() {
               
               {document.sections.map(section => (
                 <TabsContent key={section.id} value={section.id} className="space-y-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <PageMasterSettings
-                      pageMaster={section.pageMaster}
-                      onUpdate={(pageMaster) => updateSectionPageMaster(section.id, pageMaster)}
-                    />
-                    <PagePreview
-                      pageMaster={section.pageMaster}
-                      sectionName={section.name}
-                    />
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <PageMasterSettings
+                        pageMaster={section.pageMaster}
+                        onUpdate={(pageMaster) => updateSectionPageMaster(section.id, pageMaster)}
+                      />
+                      <PagePreview
+                        pageMaster={section.pageMaster}
+                        sectionName={section.name}
+                      />
+                    </div>
+                    <PaginatedLayoutPreview section={section} />
                   </div>
                 </TabsContent>
               ))}
