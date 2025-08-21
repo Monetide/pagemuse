@@ -4,13 +4,23 @@ import { EditableBlockRenderer } from './EditableBlockRenderer'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
+import { Toggle } from '@/components/ui/toggle'
 import { useState, useCallback } from 'react'
+import { ZoomIn, ZoomOut, Maximize2, Grid3x3, Columns, Square } from 'lucide-react'
 
 interface EditorCanvasProps {
   section: Section
   onContentChange?: (blockId: string, newContent: any) => void
   onNewBlock?: (afterBlockId: string, type: Block['type']) => void
   onDeleteBlock?: (blockId: string) => void
+}
+
+interface OverlaySettings {
+  showMargins: boolean
+  showColumns: boolean
+  showGrid: boolean
 }
 
 const PAGE_SIZES = {
@@ -28,7 +38,9 @@ const EditorPageBox = ({
   selectedBlockId,
   onSelectBlock,
   hasContent,
-  onCreateFirstBlock
+  onCreateFirstBlock,
+  zoomLevel,
+  overlaySettings
 }: { 
   pageBox: PageBox
   onContentChange?: (blockId: string, newContent: any) => void
@@ -38,12 +50,15 @@ const EditorPageBox = ({
   onSelectBlock?: (blockId: string) => void
   hasContent?: boolean
   onCreateFirstBlock?: () => void
+  zoomLevel: number
+  overlaySettings: OverlaySettings
 }) => {
   const pageSize = PAGE_SIZES[pageBox.pageMaster.pageSize]
   
-  // Scale factor for canvas view (larger than preview)
-  const maxWidth = 600
-  const scale = Math.min(maxWidth / pageSize.width, 800 / pageSize.height)
+  // Base scale factor for canvas view, then apply zoom
+  const baseMaxWidth = 600
+  const baseScale = Math.min(baseMaxWidth / pageSize.width, 800 / pageSize.height)
+  const scale = baseScale * zoomLevel
   
   const canvasWidth = pageSize.width * scale
   const canvasHeight = pageSize.height * scale
@@ -81,6 +96,36 @@ const EditorPageBox = ({
           height: canvasHeight 
         }}
       >
+        {/* Margin Overlays */}
+        {overlaySettings.showMargins && (
+          <>
+            {/* Top margin */}
+            <div className="absolute bg-blue-500/10 border border-blue-500/30" style={{
+              top: 0, left: 0, right: 0, height: margins.top
+            }} />
+            {/* Bottom margin */}
+            <div className="absolute bg-blue-500/10 border border-blue-500/30" style={{
+              bottom: 0, left: 0, right: 0, height: margins.bottom
+            }} />
+            {/* Left margin */}
+            <div className="absolute bg-blue-500/10 border border-blue-500/30" style={{
+              top: 0, bottom: 0, left: 0, width: margins.left
+            }} />
+            {/* Right margin */}
+            <div className="absolute bg-blue-500/10 border border-blue-500/30" style={{
+              top: 0, bottom: 0, right: 0, width: margins.right
+            }} />
+          </>
+        )}
+
+        {/* Baseline Grid Overlay */}
+        {overlaySettings.showGrid && (
+          <div className="absolute inset-0 pointer-events-none" style={{
+            backgroundImage: `linear-gradient(to bottom, transparent 23px, rgba(156, 163, 175, 0.2) 24px)`,
+            backgroundSize: '24px 24px'
+          }} />
+        )}
+
         {/* Page margins */}
         <div 
           className="absolute bg-background"
@@ -125,10 +170,12 @@ const EditorPageBox = ({
             {pageBox.columnBoxes.map((columnBox, i) => (
               <div
                 key={columnBox.id}
-                className="relative bg-background border-l border-r border-muted/20 first:border-l-0 last:border-r-0 overflow-hidden"
+                className="relative bg-background overflow-hidden"
                 style={{ 
                   width: columnBox.width * scale,
-                  height: '100%'
+                  height: '100%',
+                  border: overlaySettings.showColumns ? '1px dashed rgb(34 197 94 / 0.5)' : '1px solid rgb(229 231 235 / 0.2)',
+                  backgroundColor: overlaySettings.showColumns ? 'rgb(34 197 94 / 0.05)' : 'transparent'
                 }}
               >
                 {/* Column content */}
@@ -175,7 +222,39 @@ export const EditorCanvas = ({
   onDeleteBlock 
 }: EditorCanvasProps) => {
   const [selectedBlockId, setSelectedBlockId] = useState<string>()
+  const [zoomLevel, setZoomLevel] = useState<number>(1)
+  const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>({
+    showMargins: false,
+    showColumns: false,
+    showGrid: false
+  })
   const layoutResult = generateLayout(section)
+
+  const handleZoomIn = useCallback(() => {
+    setZoomLevel(prev => Math.min(prev + 0.25, 2))
+  }, [])
+
+  const handleZoomOut = useCallback(() => {
+    setZoomLevel(prev => Math.max(prev - 0.25, 0.5))
+  }, [])
+
+  const handleFitToWidth = useCallback(() => {
+    const pageSize = PAGE_SIZES[layoutResult.pages[0]?.pageMaster?.pageSize || 'Letter']
+    const containerWidth = 600 // Approximate container width
+    const baseScale = containerWidth / (pageSize.width * 72) // Convert inches to pixels (72 DPI)
+    setZoomLevel(baseScale)
+  }, [layoutResult.pages])
+
+  const handleFitToPage = useCallback(() => {
+    setZoomLevel(1)
+  }, [])
+
+  const toggleOverlay = useCallback((overlay: keyof OverlaySettings) => {
+    setOverlaySettings(prev => ({
+      ...prev,
+      [overlay]: !prev[overlay]
+    }))
+  }, [])
 
   const handleSelectBlock = useCallback((blockId: string) => {
     setSelectedBlockId(blockId)
@@ -216,6 +295,70 @@ export const EditorCanvas = ({
             )}
           </div>
         </div>
+
+        {/* Canvas Controls */}
+        <div className="flex items-center justify-between mb-4 p-3 bg-muted/20 rounded-lg">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Overlays:</span>
+            <Toggle 
+              pressed={overlaySettings.showMargins} 
+              onPressedChange={() => toggleOverlay('showMargins')}
+              size="sm"
+            >
+              <Square className="h-3 w-3 mr-1" />
+              Margins
+            </Toggle>
+            <Toggle 
+              pressed={overlaySettings.showColumns} 
+              onPressedChange={() => toggleOverlay('showColumns')}
+              size="sm"
+            >
+              <Columns className="h-3 w-3 mr-1" />
+              Columns  
+            </Toggle>
+            <Toggle 
+              pressed={overlaySettings.showGrid} 
+              onPressedChange={() => toggleOverlay('showGrid')}
+              size="sm"
+            >
+              <Grid3x3 className="h-3 w-3 mr-1" />
+              Grid
+            </Toggle>
+          </div>
+
+          <Separator orientation="vertical" className="h-6" />
+
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Zoom:</span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleZoomOut} 
+              disabled={zoomLevel <= 0.5}
+            >
+              <ZoomOut className="h-3 w-3" />
+            </Button>
+            <span className="text-sm min-w-[50px] text-center">
+              {Math.round(zoomLevel * 100)}%
+            </span>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleZoomIn} 
+              disabled={zoomLevel >= 2}
+            >
+              <ZoomIn className="h-3 w-3" />
+            </Button>
+            <Separator orientation="vertical" className="h-6 mx-1" />
+            <Button variant="outline" size="sm" onClick={handleFitToWidth}>
+              Fit Width
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleFitToPage}>
+              <Maximize2 className="h-3 w-3 mr-1" />
+              Fit Page
+            </Button>
+          </div>
+        </div>
         
         <ScrollArea className="w-full h-[800px]">
           <div 
@@ -233,6 +376,8 @@ export const EditorCanvas = ({
                 onSelectBlock={handleSelectBlock}
                 hasContent={hasContent}
                 onCreateFirstBlock={handleCreateFirstBlock}
+                zoomLevel={zoomLevel}
+                overlaySettings={overlaySettings}
               />
             ))}
           </div>
