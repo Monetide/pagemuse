@@ -1,17 +1,23 @@
 import { useState } from 'react'
 import { useDocumentModel } from '@/hooks/useDocumentModel'
 import { DocumentOutlineView } from '@/components/document/DocumentOutlineView'
+import { PageMasterSettings } from '@/components/document/PageMasterSettings'
+import { PagePreview } from '@/components/document/PagePreview'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { PageMaster } from '@/lib/document-model'
 
 export default function DocumentModelDemo() {
-  const { document, createNewDocument, addSection, addFlow, addBlock } = useDocumentModel()
+  const { document, createNewDocument, addSection, addFlow, addBlock, setDocument } = useDocumentModel()
   const [docTitle, setDocTitle] = useState('')
   const [sectionName, setSectionName] = useState('')
   const [flowName, setFlowName] = useState('')
   const [blockContent, setBlockContent] = useState('')
+  const [selectedSectionId, setSelectedSectionId] = useState<string>('')
 
   const handleCreateDocument = () => {
     if (docTitle.trim()) {
@@ -41,10 +47,26 @@ export default function DocumentModelDemo() {
     }
   }
 
+  const updateSectionPageMaster = (sectionId: string, pageMaster: PageMaster) => {
+    if (!document) return
+    
+    const updatedDoc = {
+      ...document,
+      sections: document.sections.map(section => 
+        section.id === sectionId 
+          ? { ...section, pageMaster }
+          : section
+      ),
+      updated_at: new Date().toISOString()
+    }
+    setDocument(updatedDoc)
+  }
+
   const createDemoDocument = () => {
     const doc = createNewDocument('Demo Document')
     const section = addSection('Introduction Section')
     if (section) {
+      setSelectedSectionId(section.id)
       const flow = addFlow(section.id, 'Main Content Flow')
       if (flow) {
         addBlock(section.id, flow.id, 'heading', 'Welcome to Our Document')
@@ -52,6 +74,8 @@ export default function DocumentModelDemo() {
       }
     }
   }
+
+  const selectedSection = document?.sections.find(s => s.id === selectedSectionId)
 
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -62,7 +86,7 @@ export default function DocumentModelDemo() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Controls */}
         <div className="space-y-4">
           <Card>
@@ -169,16 +193,44 @@ export default function DocumentModelDemo() {
           </Card>
         </div>
 
-        {/* Outline View */}
-        <div>
-          {document ? (
-            <DocumentOutlineView document={document} />
+        {/* Page Master & Preview */}
+        <div className="xl:col-span-2 space-y-6">
+          {document && document.sections.length > 0 ? (
+            <Tabs value={selectedSectionId || document.sections[0].id} onValueChange={setSelectedSectionId}>
+              <TabsList className="grid w-full grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                {document.sections.map(section => (
+                  <TabsTrigger key={section.id} value={section.id} className="text-xs">
+                    {section.name}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              
+              {document.sections.map(section => (
+                <TabsContent key={section.id} value={section.id} className="space-y-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <PageMasterSettings
+                      pageMaster={section.pageMaster}
+                      onUpdate={(pageMaster) => updateSectionPageMaster(section.id, pageMaster)}
+                    />
+                    <PagePreview
+                      pageMaster={section.pageMaster}
+                      sectionName={section.name}
+                    />
+                  </div>
+                </TabsContent>
+              ))}
+            </Tabs>
           ) : (
             <Card>
               <CardContent className="flex items-center justify-center h-64">
-                <p className="text-muted-foreground">Create a document to see the outline</p>
+                <p className="text-muted-foreground">Create a section to configure page settings</p>
               </CardContent>
             </Card>
+          )}
+
+          {/* Document Outline */}
+          {document && (
+            <DocumentOutlineView document={document} />
           )}
         </div>
       </div>

@@ -35,11 +35,28 @@ export interface Flow {
   order: number
 }
 
+export interface PageMaster {
+  pageSize: 'Letter' | 'A4' | 'Legal' | 'Tabloid'
+  margins: {
+    top: number
+    right: number
+    bottom: number
+    left: number
+  }
+  columns: 1 | 2 | 3
+  columnGap: number
+  hasHeader: boolean
+  hasFooter: boolean
+  baselineGrid: boolean
+  gridSpacing: number
+}
+
 export interface Section {
   id: string
   name: string
   description?: string
   flows: Flow[]
+  pageMaster: PageMaster
   metadata?: Record<string, any>
   order: number
 }
@@ -79,10 +96,27 @@ export const createFlow = (
   order
 })
 
+export const createPageMaster = (): PageMaster => ({
+  pageSize: 'Letter',
+  margins: {
+    top: 1,
+    right: 1,
+    bottom: 1,
+    left: 1
+  },
+  columns: 1,
+  columnGap: 0.25,
+  hasHeader: false,
+  hasFooter: false,
+  baselineGrid: false,
+  gridSpacing: 0.125
+})
+
 export const createSection = (name: string, order: number = 0): Section => ({
   id: crypto.randomUUID(),
   name,
   flows: [],
+  pageMaster: createPageMaster(),
   order
 })
 
