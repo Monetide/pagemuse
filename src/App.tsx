@@ -12,6 +12,7 @@ import TemplateLibrary from "./pages/TemplateLibrary";
 import MediaLibrary from "./pages/MediaLibrary";
 import AdminPanel from "./pages/AdminPanel";
 import NotFound from "./pages/NotFound";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => (
                 <Route path="/media" element={<MediaLibrary />} />
                 <Route path="/admin" element={<AdminPanel />} />
                 <Route path="/settings" element={<div className="p-6">Settings coming soon...</div>} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
