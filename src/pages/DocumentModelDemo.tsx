@@ -86,48 +86,53 @@ export default function DocumentModelDemo() {
 
   const createDemoDocument = () => {
     const doc = createNewDocument('Demo Document')
-    const section = addSection('Introduction Section')
+    const section = addSection('Typography Showcase')
     if (section) {
       setSelectedSectionId(section.id)
       const flow = addFlow(section.id, 'Main Content Flow')
       if (flow) {
-        // Create a comprehensive demo with all block types
-        let block = addBlock(section.id, flow.id, 'heading', 'Welcome to Our Document System')
+        // Create content that will demonstrate pagination rules
+        let block = addBlock(section.id, flow.id, 'heading', 'Professional Typography Rules')
         if (block) block.metadata = { level: 1 }
         
-        addBlock(section.id, flow.id, 'paragraph', 'This is a comprehensive demonstration of how our semantic document model works with various content types. The system automatically flows content from one column to the next, and from one page to the next, without requiring manual page breaks.')
+        addBlock(section.id, flow.id, 'paragraph', 'This document demonstrates professional typography and pagination rules. Watch how headings never appear alone at the bottom of columns, paragraphs avoid orphan and widow lines, and lists stay together when possible.')
+        
+        // This heading will demonstrate keep-with-next
+        block = addBlock(section.id, flow.id, 'heading', 'Keep-With-Next Demonstration')
+        if (block) block.metadata = { level: 2 }
+        
+        addBlock(section.id, flow.id, 'paragraph', 'The heading above uses the keep-with-next rule, ensuring it never appears alone at the bottom of a column without at least some following content.')
         
         addBlock(section.id, flow.id, 'unordered-list', [
-          'Automatic content flow across columns and pages',
-          'Support for multiple block types',
-          'Intelligent text splitting for long paragraphs',
-          'Configurable page masters and layouts'
+          'Lists have break-avoid and keep-together rules',
+          'They prefer to stay on the same column/page',
+          'This prevents awkward list splitting',
+          'Better readability and professional appearance'
         ])
         
         addBlock(section.id, flow.id, 'divider', '---')
         
-        block = addBlock(section.id, flow.id, 'heading', 'Content Types')
+        block = addBlock(section.id, flow.id, 'heading', 'Paragraph Flow Control')
         if (block) block.metadata = { level: 2 }
         
-        addBlock(section.id, flow.id, 'paragraph', 'Our system supports various content block types, each with its own rendering and layout characteristics:')
+        addBlock(section.id, flow.id, 'paragraph', 'Paragraphs have sophisticated widow and orphan protection. A widow is a short line at the beginning of a column, while an orphan is a short line at the end. Our system ensures at least 2 lines appear together to maintain readability and professional appearance.')
+        
+        addBlock(section.id, flow.id, 'quote', 'Good typography is like a good wine glass - it should never call attention to itself, but should enhance the content it contains. Professional pagination rules ensure this elegance is maintained throughout the document.')
+        
+        block = addBlock(section.id, flow.id, 'heading', 'Advanced Layout Features')
+        if (block) block.metadata = { level: 2 }
+        
+        addBlock(section.id, flow.id, 'paragraph', 'The layout engine considers multiple factors when placing content: available space, pagination rules, content type, and readability. This creates documents that not only look professional but also follow established typography conventions used in high-quality publications.')
         
         addBlock(section.id, flow.id, 'ordered-list', [
-          'Headings (H1, H2, H3) with proper hierarchy',
-          'Paragraphs with intelligent text wrapping',
-          'Ordered and unordered lists',
-          'Quotes with distinctive styling',
-          'Visual dividers for content separation',
-          'Configurable spacers for layout control'
+          'Automatic heading protection (never orphaned)',
+          'Widow and orphan control for paragraphs',
+          'List integrity maintenance',
+          'Quote block protection',
+          'Intelligent content splitting when necessary'
         ])
         
-        addBlock(section.id, flow.id, 'quote', 'The best way to predict the future is to create it. Our document system creates the future of content layout and management.')
-        
-        addBlock(section.id, flow.id, 'spacer', '')
-        
-        block = addBlock(section.id, flow.id, 'heading', 'Advanced Features')
-        if (block) block.metadata = { level: 2 }
-        
-        addBlock(section.id, flow.id, 'paragraph', 'The layout engine supports multiple page sizes, flexible column layouts, configurable margins, headers, footers, and baseline grid alignment. All features work together to ensure consistent, professional typography throughout your documents.')
+        addBlock(section.id, flow.id, 'paragraph', 'Switch between schema and rendered views using the toggle above to see how these rules affect the actual layout and appearance of your content.')
       }
     }
   }

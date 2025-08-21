@@ -15,6 +15,10 @@ export interface ColumnBox {
   height: number
   content: Block[]
   isFull: boolean
+  metadata?: {
+    endReason?: string
+    blocksRemaining?: number
+  }
 }
 
 export interface LayoutResult {
@@ -55,7 +59,93 @@ const estimateBlockHeight = (block: Block, columnWidth: number): number => {
   }
 }
 
-// Split a block if it's too large for remaining space
+// Enhanced pagination rule checking
+const checkPaginationRules = (
+  block: Block, 
+  nextBlock: Block | null,
+  remainingHeight: number,
+  columnWidth: number,
+  blockQueue: Block[]
+): { canPlace: boolean; reason?: string } => {
+  const blockHeight = estimateBlockHeight(block, columnWidth)
+  const rules = block.paginationRules || {}
+  
+  // Check if block fits at all
+  if (blockHeight > remainingHeight) {
+    return { canPlace: false, reason: 'insufficient-space' }
+  }
+  
+  // Check keep-with-next rule
+  if (rules.keepWithNext && nextBlock) {
+    const nextBlockHeight = estimateBlockHeight(nextBlock, columnWidth)
+    const minNextHeight = Math.min(nextBlockHeight, 0.3) // At least some of next block
+    
+    if (remainingHeight < blockHeight + minNextHeight) {
+      return { canPlace: false, reason: 'keep-with-next' }
+    }
+  }
+  
+  // Check minimum orphans (lines at bottom)
+  if (rules.minOrphans && rules.minOrphans > 0) {
+    const lineHeight = 0.167 // inches per line
+    const minOrphanHeight = rules.minOrphans * lineHeight
+    
+    if (block.type === 'paragraph' && blockHeight > minOrphanHeight) {
+      const availableLines = Math.floor(remainingHeight / lineHeight)
+      const blockLines = Math.ceil(blockHeight / lineHeight)
+      
+      if (availableLines > 0 && availableLines < rules.minOrphans && blockLines > availableLines) {
+        return { canPlace: false, reason: 'orphan-protection' }
+      }
+    }
+  }
+  
+  // Check break-avoid preference
+  if (rules.breakAvoid && blockHeight > remainingHeight * 0.7) {
+    // If block takes up most of remaining space, prefer to move to next column
+    return { canPlace: false, reason: 'break-avoid' }
+  }
+  
+  return { canPlace: true }
+}
+
+// Check if splitting a block would violate widow/orphan rules
+const canSplitWithRules = (
+  block: Block,
+  remainingHeight: number,
+  columnWidth: number
+): { canSplit: boolean; reason?: string } => {
+  const rules = block.paginationRules || {}
+  
+  if (rules.keepTogether) {
+    return { canSplit: false, reason: 'keep-together' }
+  }
+  
+  if (rules.breakAvoid && block.type !== 'paragraph') {
+    return { canSplit: false, reason: 'break-avoid' }
+  }
+  
+  // Check widow/orphan rules for splittable content
+  if (block.type === 'paragraph' || block.type === 'quote') {
+    const lineHeight = 0.167
+    const availableLines = Math.floor(remainingHeight / lineHeight)
+    const minOrphans = rules.minOrphans || 2
+    const minWidows = rules.minWidows || 2
+    
+    if (availableLines < minOrphans) {
+      return { canSplit: false, reason: 'orphan-protection' }
+    }
+    
+    const totalLines = Math.ceil(estimateBlockHeight(block, columnWidth) / lineHeight)
+    const remainingLines = totalLines - availableLines
+    
+    if (remainingLines > 0 && remainingLines < minWidows) {
+      return { canSplit: false, reason: 'widow-protection' }
+    }
+  }
+  
+  return { canSplit: true }
+}
 const splitBlock = (block: Block, maxHeight: number, columnWidth: number): Block[] => {
   const totalHeight = estimateBlockHeight(block, columnWidth)
   
@@ -149,43 +239,71 @@ export const generateLayout = (section: Section): LayoutResult => {
         isFull: false
       }
       
-      // Fill column with blocks, splitting when necessary
+      // Fill column with blocks, applying pagination rules
       let currentColumnHeight = 0
       
       while (blockQueue.length > 0) {
         const nextBlock = blockQueue[0]
-        const blockHeight = estimateBlockHeight(nextBlock, columnWidth)
+        const followingBlock = blockQueue.length > 1 ? blockQueue[1] : null
         const remainingHeight = availableHeight - currentColumnHeight
         
-        // If block fits completely, add it
-        if (blockHeight <= remainingHeight) {
-          columnBox.content.push(blockQueue.shift()!)
-          currentColumnHeight += blockHeight
+        // Check pagination rules
+        const ruleCheck = checkPaginationRules(
+          nextBlock, 
+          followingBlock, 
+          remainingHeight, 
+          columnWidth, 
+          blockQueue
+        )
+        
+        if (ruleCheck.canPlace) {
+          // Block can be placed, add it
+          const block = blockQueue.shift()!
+          columnBox.content.push(block)
+          currentColumnHeight += estimateBlockHeight(block, columnWidth)
           pageHasContent = true
-        }
-        // If block doesn't fit but we can split it (paragraph and quote)
-        else if (['paragraph', 'quote'].includes(nextBlock.type) && remainingHeight > 0.5) {
-          const splitBlocks = splitBlock(nextBlock, remainingHeight, columnWidth)
           
-          if (splitBlocks.length > 1) {
-            // Remove original block and add split blocks to queue
-            blockQueue.shift()
-            blockQueue.unshift(...splitBlocks)
-            
-            // Add the first chunk that fits in remaining space
-            const firstChunk = blockQueue.shift()!
-            columnBox.content.push(firstChunk)
-            currentColumnHeight += estimateBlockHeight(firstChunk, columnWidth)
-            pageHasContent = true
-          } else {
-            // Can't split effectively, mark column as full
-            columnBox.isFull = true
-            break
+          // Add debug info about rule application
+          if (block.metadata) {
+            block.metadata.placementReason = 'normal'
           }
-        }
-        // Block doesn't fit and can't be split, mark column as full
-        else {
+        } else {
+          // Block cannot be placed due to pagination rules
+          if (ruleCheck.reason === 'insufficient-space' || ruleCheck.reason === 'break-avoid') {
+            // Try splitting if possible
+            const splitCheck = canSplitWithRules(nextBlock, remainingHeight, columnWidth)
+            
+            if (splitCheck.canSplit && ['paragraph', 'quote'].includes(nextBlock.type) && remainingHeight > 0.5) {
+              const splitBlocks = splitBlock(nextBlock, remainingHeight, columnWidth)
+              
+              if (splitBlocks.length > 1) {
+                // Remove original and add split blocks
+                blockQueue.shift()
+                blockQueue.unshift(...splitBlocks)
+                
+                // Place first chunk
+                const firstChunk = blockQueue.shift()!
+                columnBox.content.push(firstChunk)
+                currentColumnHeight += estimateBlockHeight(firstChunk, columnWidth)
+                pageHasContent = true
+                
+                // Mark as split due to pagination rules
+                if (firstChunk.metadata) {
+                  firstChunk.metadata.placementReason = `split-${ruleCheck.reason}`
+                }
+                continue
+              }
+            }
+          }
+          
+          // Cannot place or split - mark column as full
           columnBox.isFull = true
+          
+          // Add metadata about why column ended
+          columnBox.metadata = {
+            endReason: ruleCheck.reason,
+            blocksRemaining: blockQueue.length
+          }
           break
         }
       }

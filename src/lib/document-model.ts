@@ -23,6 +23,17 @@ export interface Block {
   styles?: Style[]
   metadata?: Record<string, any>
   order: number
+  paginationRules?: PaginationRules
+}
+
+export interface PaginationRules {
+  keepWithNext?: boolean // Don't break after this block
+  keepTogether?: boolean // Don't break within this block
+  breakBefore?: boolean // Always break before this block
+  breakAfter?: boolean // Always break after this block
+  minOrphans?: number // Minimum lines at bottom of page/column
+  minWidows?: number // Minimum lines at top of page/column
+  breakAvoid?: boolean // Avoid breaking this block if possible
 }
 
 export interface Flow {
@@ -77,12 +88,59 @@ export const createBlock = (
   type: Block['type'],
   content: any,
   order: number = 0
-): Block => ({
-  id: crypto.randomUUID(),
-  type,
-  content,
-  order
-})
+): Block => {
+  const defaultRules = getDefaultPaginationRules(type)
+  return {
+    id: crypto.randomUUID(),
+    type,
+    content,
+    order,
+    paginationRules: defaultRules
+  }
+}
+
+// Get default pagination rules for block type
+export const getDefaultPaginationRules = (type: Block['type']): PaginationRules => {
+  switch (type) {
+    case 'heading':
+      return {
+        keepWithNext: true, // Headings should stay with following content
+        minOrphans: 1, // At least one line must follow
+        breakAvoid: true
+      }
+    case 'paragraph':
+      return {
+        minOrphans: 2, // At least 2 lines at bottom
+        minWidows: 2, // At least 2 lines at top
+        breakAvoid: false
+      }
+    case 'ordered-list':
+    case 'unordered-list':
+      return {
+        breakAvoid: true, // Lists prefer to stay together
+        keepTogether: true,
+        minOrphans: 2,
+        minWidows: 2
+      }
+    case 'quote':
+      return {
+        breakAvoid: true, // Quotes prefer to stay together
+        minOrphans: 2,
+        minWidows: 2
+      }
+    case 'divider':
+      return {
+        keepWithNext: true, // Dividers should stay with following content
+        breakAvoid: true
+      }
+    case 'spacer':
+      return {
+        breakAvoid: false // Spacers can be broken
+      }
+    default:
+      return {}
+  }
+}
 
 export const createFlow = (
   name: string,

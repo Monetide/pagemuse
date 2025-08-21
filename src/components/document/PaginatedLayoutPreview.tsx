@@ -127,21 +127,31 @@ const PageBoxPreview = ({ pageBox, showRendered }: { pageBox: PageBox; showRende
                 }}
               >
                 {/* Column header */}
-                <div className="absolute top-1 left-1 right-1 text-xs text-muted-foreground text-center bg-background/80 rounded px-1">
-                  Col {i + 1} {columnBox.content.length > 0 && `(${columnBox.content.length} blocks)`}
+                <div className="absolute top-1 left-1 right-1 text-xs text-muted-foreground text-center bg-background/90 rounded px-1 py-0.5">
+                  <div>Col {i + 1} {columnBox.content.length > 0 && `(${columnBox.content.length})`}</div>
+                  {columnBox.metadata?.endReason && (
+                    <div className="text-xs text-accent">
+                      {columnBox.metadata.endReason.replace('-', ' ')}
+                    </div>
+                  )}
                 </div>
                 
                 {/* Content blocks */}
-                <div className="flex-1 p-2 pt-6 space-y-1 overflow-y-auto">
+                <div className="flex-1 p-2 pt-8 space-y-1 overflow-y-auto">
                   {showRendered ? (
                     // Rendered view - show actual content
                     <div className="space-y-0">
                       {columnBox.content.map((block, blockIndex) => (
-                        <BlockRenderer
-                          key={`${block.id}-${blockIndex}`}
-                          block={block}
-                          className="text-xs"
-                        />
+                        <div key={`${block.id}-${blockIndex}`} className="relative">
+                          {/* Pagination rule indicator */}
+                          {block.metadata?.placementReason && block.metadata.placementReason !== 'normal' && (
+                            <div className="absolute -left-1 top-0 w-1 h-full bg-accent/60 rounded-r" />
+                          )}
+                          <BlockRenderer
+                            block={block}
+                            className="text-xs"
+                          />
+                        </div>
                       ))}
                     </div>
                   ) : (
@@ -149,13 +159,19 @@ const PageBoxPreview = ({ pageBox, showRendered }: { pageBox: PageBox; showRende
                     columnBox.content.map((block, blockIndex) => {
                       const isChunk = block.metadata?.isChunk
                       const chunkIndex = block.metadata?.chunkIndex
+                      const placementReason = block.metadata?.placementReason
                       const colorClass = BLOCK_TYPE_COLORS[block.type] || 'bg-gray-100 border-gray-300 text-gray-800'
                       
                       return (
                         <div
                           key={`${block.id}-${blockIndex}`}
-                          className={`text-xs p-2 rounded border ${colorClass} ${isChunk ? 'border-l-4 border-l-accent' : ''}`}
+                          className={`text-xs p-2 rounded border ${colorClass} ${isChunk ? 'border-l-4 border-l-accent' : ''} relative`}
                         >
+                          {/* Pagination rule indicator */}
+                          {placementReason && placementReason !== 'normal' && (
+                            <div className="absolute -left-1 top-0 bottom-0 w-1 bg-accent rounded-r" />
+                          )}
+                          
                           <div className="flex items-center justify-between mb-1">
                             <span className="font-medium text-xs uppercase tracking-wide">
                               {block.type.replace('-', ' ')}
@@ -166,7 +182,23 @@ const PageBoxPreview = ({ pageBox, showRendered }: { pageBox: PageBox; showRende
                                 </span>
                               )}
                             </span>
+                            
+                            {/* Pagination rules indicator */}
+                            {block.paginationRules && (
+                              <div className="flex gap-1">
+                                {block.paginationRules.keepWithNext && (
+                                  <span className="px-1 py-0.5 bg-blue-200 text-blue-800 rounded text-xs">K+</span>
+                                )}
+                                {block.paginationRules.breakAvoid && (
+                                  <span className="px-1 py-0.5 bg-yellow-200 text-yellow-800 rounded text-xs">BA</span>
+                                )}
+                                {block.paginationRules.keepTogether && (
+                                  <span className="px-1 py-0.5 bg-green-200 text-green-800 rounded text-xs">KT</span>
+                                )}
+                              </div>
+                            )}
                           </div>
+                          
                           <div className="text-xs leading-tight overflow-hidden">
                             <div className="line-clamp-2 opacity-70">
                               {Array.isArray(block.content) 
@@ -175,6 +207,13 @@ const PageBoxPreview = ({ pageBox, showRendered }: { pageBox: PageBox; showRende
                               }
                             </div>
                           </div>
+                          
+                          {/* Placement reason */}
+                          {placementReason && placementReason !== 'normal' && (
+                            <div className="mt-1 text-xs text-accent font-medium">
+                              Rule: {placementReason.replace('-', ' ')}
+                            </div>
+                          )}
                         </div>
                       )
                     })
@@ -257,10 +296,10 @@ export const PaginatedLayoutPreview = ({ section }: PaginatedLayoutPreviewProps)
         )}
         
         <div className="mt-4 text-xs text-muted-foreground space-y-1">
-          <p>• Content flows automatically: Column 1 → Column 2 → Next Page</p>
-          <p>• Long paragraphs split across columns/pages (shown with "cont." label)</p>
-          <p>• Red borders indicate columns that are full and caused overflow</p>
-          <p>• Blue left border indicates text continuation from previous column</p>
+          <p>• <strong>Professional pagination rules:</strong> Headings stay with content, no orphans/widows</p>
+          <p>• <strong>Rule indicators:</strong> K+ (keep with next), BA (break avoid), KT (keep together)</p>
+          <p>• <strong>Blue accent bar:</strong> Shows blocks affected by pagination rules</p>
+          <p>• Toggle "Rendered" to see actual formatted content vs. block structure</p>
         </div>
       </CardContent>
     </Card>
