@@ -14,6 +14,9 @@ import AdminPanel from "./pages/AdminPanel";
 import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
 import DocumentModelDemo from "./pages/DocumentModelDemo";
+import DocumentSettings from "./pages/DocumentSettings";
+import DocumentModelRedirect from "./components/DocumentModelRedirect";
+import { Navigate } from "react-router-dom";
 
 const queryClient = new QueryClient();
 
@@ -29,12 +32,15 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/documents" element={<MyDocuments />} />
+                <Route path="/documents/:id/editor" element={<DocumentModelDemo />} />
+                <Route path="/documents/:id/settings" element={<DocumentSettings />} />
                 <Route path="/templates" element={<TemplateLibrary />} />
                 <Route path="/media" element={<MediaLibrary />} />
                 <Route path="/admin" element={<AdminPanel />} />
                 <Route path="/settings" element={<div className="p-6">Settings coming soon...</div>} />
-                <Route path="/document-model" element={<DocumentModelDemo />} />
-                <Route path="/document-model/:documentId" element={<DocumentModelDemo />} />
+                {/* Redirects from old paths */}
+                <Route path="/document-model" element={<DocumentModelRedirect />} />
+                <Route path="/document-model/:documentId" element={<DocumentModelRedirect />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />

@@ -16,7 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { PageMaster } from '@/lib/document-model'
 
 export default function DocumentModelDemo() {
-  const { documentId } = useParams()
+  const { id } = useParams()
+  const documentId = id === 'new' ? undefined : id
   const { 
     document, 
     createNewDocument, 

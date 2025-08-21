@@ -70,7 +70,7 @@ export default function MyDocuments() {
         </div>
         <Button 
           className="bg-gradient-primary hover:shadow-glow transition-all duration-200"
-          onClick={() => navigate('/document-model')}
+          onClick={() => navigate('/documents/new/editor')}
         >
           <Plus className="w-4 h-4 mr-2" />
           New Document
@@ -133,7 +133,7 @@ export default function MyDocuments() {
               {!searchQuery && (
                 <Button 
                   className="bg-gradient-primary hover:shadow-glow transition-all duration-200"
-                  onClick={() => navigate('/document-model')}
+                  onClick={() => navigate('/documents/new/editor')}
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Create Document
@@ -174,11 +174,11 @@ export default function MyDocuments() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => navigate(`/document-model/${doc.id}`)}>
+                        <DropdownMenuItem onClick={() => navigate(`/documents/${doc.id}/editor`)}>
                           <Eye className="w-4 h-4 mr-2" />
                           View
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate(`/document-model/${doc.id}`)}>
+                        <DropdownMenuItem onClick={() => navigate(`/documents/${doc.id}/editor`)}>
                           <Edit className="w-4 h-4 mr-2" />
                           Edit
                         </DropdownMenuItem>
