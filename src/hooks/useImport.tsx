@@ -6,12 +6,16 @@ import { ingestFile } from '@/lib/ingest-pipeline'
 import { mapIRToPageMuse } from '@/lib/ir-mapper'
 import { PDFProcessingOptions, processPDFFile } from '@/lib/pdf-processor'
 import { PDFProcessingDialog } from '@/components/import/PDFProcessingDialog'
+import { MappingWizard, MappingConfig } from '@/components/import/MappingWizard'
 import { IRDocument } from '@/lib/ir-types'
 
 export const useImport = () => {
   const [isImporting, setIsImporting] = useState(false)
   const [showPDFDialog, setShowPDFDialog] = useState(false)
+  const [showMappingWizard, setShowMappingWizard] = useState(false)
   const [pendingPDFFile, setPendingPDFFile] = useState<File | null>(null)
+  const [pendingIRDocument, setPendingIRDocument] = useState<IRDocument | null>(null)
+  const [pendingFileName, setPendingFileName] = useState<string | null>(null)
   const [pendingHandlers, setPendingHandlers] = useState<{
     mode: ImportMode,
     currentDocument?: SemanticDocument,
@@ -46,41 +50,21 @@ export const useImport = () => {
     setIsImporting(true)
     try {
       const irDoc = await processPDFFile(pendingPDFFile, options)
-      const pageMuseDoc = mapIRToPageMuse(irDoc)
       
-      // Apply import mode
-      const { mode, currentDocument, onCreateDocument, onUpdateDocument } = pendingHandlers
-      
-      switch (mode) {
-        case 'new-document':
-          onCreateDocument?.(pageMuseDoc.title, pageMuseDoc)
-          break
-        case 'append-section':
-          if (currentDocument && onUpdateDocument) {
-            onUpdateDocument({
-              ...currentDocument,
-              sections: [...currentDocument.sections, ...pageMuseDoc.sections]
-            })
-          }
-          break
-      }
-      
-      toast({
-        title: "PDF Import Successful",
-        description: `Successfully imported ${pendingPDFFile.name}`
-      })
+      // Show mapping wizard instead of direct processing
+      setPendingIRDocument(irDoc)
+      setPendingFileName(pendingPDFFile.name)
+      setShowPDFDialog(false)
+      setShowMappingWizard(true)
       
     } catch (error) {
       toast({
-        title: "PDF Import Failed",
+        title: "PDF Processing Failed",
         description: error instanceof Error ? error.message : "Failed to process PDF",
         variant: "destructive"
       })
     } finally {
       setIsImporting(false)
-      setPendingPDFFile(null)
-      setPendingHandlers(null)
-      setShowPDFDialog(false)
     }
   }, [pendingPDFFile, pendingHandlers, toast])
 
@@ -94,42 +78,29 @@ export const useImport = () => {
     setIsImporting(true)
 
     try {
-      let combinedDocument: SemanticDocument | null = null
+      let combinedIRDocument: IRDocument | null = null
       
       for (const file of files) {
         const irDoc = await ingestFile(file)
-        const pageMuseDoc = mapIRToPageMuse(irDoc)
         
-        if (!combinedDocument) {
-          combinedDocument = pageMuseDoc
+        if (!combinedIRDocument) {
+          combinedIRDocument = irDoc
         } else {
-          combinedDocument = {
-            ...combinedDocument,
-            sections: [...combinedDocument.sections, ...pageMuseDoc.sections]
+          // Combine IR documents
+          combinedIRDocument = {
+            ...combinedIRDocument,
+            sections: [...combinedIRDocument.sections, ...irDoc.sections]
           }
         }
       }
 
-      if (!combinedDocument) throw new Error('No documents processed')
+      if (!combinedIRDocument) throw new Error('No documents processed')
 
-      switch (mode) {
-        case 'new-document':
-          onCreateDocument?.(combinedDocument.title, combinedDocument)
-          break
-        case 'append-section':
-          if (currentDocument && onUpdateDocument) {
-            onUpdateDocument({
-              ...currentDocument,
-              sections: [...currentDocument.sections, ...combinedDocument.sections]
-            })
-          }
-          break
-      }
-
-      toast({
-        title: "Import Successful",
-        description: `Successfully imported ${files.length} file${files.length !== 1 ? 's' : ''}`
-      })
+      // Show mapping wizard instead of direct processing
+      setPendingIRDocument(combinedIRDocument)
+      setPendingFileName(files.length === 1 ? files[0].name : `${files.length} files`)
+      setPendingHandlers({ mode, currentDocument, onCreateDocument, onUpdateDocument })
+      setShowMappingWizard(true)
 
     } catch (error) {
       toast({
@@ -142,6 +113,61 @@ export const useImport = () => {
     }
   }, [toast])
 
+  const handleMappingConfirm = useCallback((config: MappingConfig, mappedDocument: SemanticDocument) => {
+    if (!pendingHandlers) return
+    
+    const { mode, currentDocument, onCreateDocument, onUpdateDocument } = pendingHandlers
+    
+    try {
+      switch (mode) {
+        case 'new-document':
+          onCreateDocument?.(mappedDocument.title, mappedDocument)
+          break
+        case 'append-section':
+          if (currentDocument && onUpdateDocument) {
+            onUpdateDocument({
+              ...currentDocument,
+              sections: [...currentDocument.sections, ...mappedDocument.sections]
+            })
+          }
+          break
+        case 'insert-at-cursor':
+          // Handle cursor insertion
+          if (currentDocument && onUpdateDocument) {
+            // This would need cursor position context
+            onUpdateDocument(mappedDocument)
+          }
+          break
+        case 'replace-selection':
+          // Handle selection replacement
+          if (currentDocument && onUpdateDocument) {
+            // This would need selection context
+            onUpdateDocument(mappedDocument)
+          }
+          break
+      }
+      
+      toast({
+        title: "Import Successful",
+        description: `Successfully imported ${pendingFileName} with custom mapping`
+      })
+      
+    } catch (error) {
+      toast({
+        title: "Import Failed",
+        description: error instanceof Error ? error.message : "Failed to apply mapping",
+        variant: "destructive"
+      })
+    } finally {
+      // Reset all state
+      setPendingIRDocument(null)
+      setPendingFileName(null)
+      setPendingHandlers(null)
+      setPendingPDFFile(null)
+      setShowMappingWizard(false)
+    }
+  }, [pendingHandlers, pendingFileName, toast])
+
   return {
     importFiles,
     isImporting,
@@ -151,6 +177,16 @@ export const useImport = () => {
         onOpenChange={setShowPDFDialog}
         fileName={pendingPDFFile?.name}
         onConfirm={processPDFWithOptions}
+      />
+    ),
+    MappingWizard: () => (
+      <MappingWizard
+        open={showMappingWizard}
+        onOpenChange={setShowMappingWizard}
+        irDocument={pendingIRDocument!}
+        onConfirm={handleMappingConfirm}
+        currentDocument={pendingHandlers?.currentDocument}
+        fileName={pendingFileName || undefined}
       />
     )
   }

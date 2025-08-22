@@ -26,7 +26,7 @@ export default function Dashboard() {
   const { documents, loading: documentsLoading } = useDocuments()
   const { templates, loading: templatesLoading } = useTemplates()
   const { stats: userStats, loading: statsLoading } = useUserStats()
-  const { importFiles, PDFDialog } = useImport()
+  const { importFiles, PDFDialog, MappingWizard } = useImport()
   
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false)
@@ -317,7 +317,8 @@ export default function Dashboard() {
       />
       
       {/* PDF Processing Dialog */}
-      <PDFDialog />
+        <PDFDialog />
+        <MappingWizard />
       
       {/* Template Gallery Dialog */}
       <TemplateGalleryDialog

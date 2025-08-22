@@ -22,7 +22,7 @@ import {
   CheckCircle 
 } from 'lucide-react'
 
-export type ImportMode = 'new-document' | 'append-section' | 'insert-section' | 'replace-document'
+export type ImportMode = 'new-document' | 'append-section' | 'insert-section' | 'replace-document' | 'insert-at-cursor' | 'replace-selection'
 
 interface ImportDialogProps {
   open: boolean
