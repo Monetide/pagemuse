@@ -1,253 +1,249 @@
-import { useState } from 'react'
-import {
-  DndContext,
-  DragOverlay,
-  useDraggable,
-  useDroppable,
-  DragStartEvent,
-  DragEndEvent,
-} from '@dnd-kit/core'
 import { Button } from '@/components/ui/button'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
-import {
-  Type,
-  AlignLeft,
-  List,
-  ListOrdered,
-  Quote,
-  Minus,
-  Square,
-  Image,
-  Table,
-  AlertCircle,
-  GripVertical,
+import { 
+  Type, 
+  AlignLeft, 
+  Quote, 
+  List, 
+  ListOrdered, 
+  Image, 
+  Table, 
+  Link, 
+  Minus, 
+  Move,
+  FileText,
+  GripVertical
 } from 'lucide-react'
+import { Block } from '@/lib/document-model'
+import { cn } from '@/lib/utils'
+import { useDragDropContext } from '@/contexts/DragDropContext'
 
-export interface BlockType {
-  id: string
+interface BlockType {
+  type: Block['type']
   name: string
-  icon: React.ComponentType<{ className?: string }>
   description: string
-  category: string
+  icon: React.ComponentType<{ className?: string }>
+  category: 'text' | 'layout' | 'atomic'
 }
 
 const blockTypes: BlockType[] = [
   {
-    id: 'heading',
+    type: 'heading',
     name: 'Heading',
-    icon: Type,
     description: 'Section title',
-    category: 'Text'
+    icon: Type,
+    category: 'text'
   },
   {
-    id: 'paragraph',
+    type: 'paragraph',
     name: 'Paragraph',
-    icon: AlignLeft,
     description: 'Plain text',
-    category: 'Text'
+    icon: AlignLeft,
+    category: 'text'
   },
   {
-    id: 'ordered-list',
-    name: 'Ordered List',
-    icon: ListOrdered,
-    description: 'Numbered list',
-    category: 'Text'
-  },
-  {
-    id: 'unordered-list',
-    name: 'Bullet List',
-    icon: List,
-    description: 'Bulleted list',
-    category: 'Text'
-  },
-  {
-    id: 'quote',
+    type: 'quote',
     name: 'Quote',
+    description: 'Blockquote with attribution',
     icon: Quote,
-    description: 'Blockquote',
-    category: 'Text'
+    category: 'text'
   },
   {
-    id: 'divider',
-    name: 'Divider',
-    icon: Minus,
-    description: 'Section break',
-    category: 'Layout'
+    type: 'unordered-list',
+    name: 'Bullet List',
+    description: 'Bulleted list',
+    icon: List,
+    category: 'text'
   },
   {
-    id: 'spacer',
-    name: 'Spacer',
-    icon: Square,
-    description: 'Vertical space',
-    category: 'Layout'
+    type: 'ordered-list',
+    name: 'Numbered List',
+    description: 'Numbered list',
+    icon: ListOrdered,
+    category: 'text'
   },
   {
-    id: 'figure',
+    type: 'figure',
     name: 'Figure',
-    icon: Image,
     description: 'Image with caption',
-    category: 'Media'
+    icon: Image,
+    category: 'atomic'
   },
   {
-    id: 'table',
+    type: 'table',
     name: 'Table',
-    icon: Table,
     description: 'Data table',
-    category: 'Media'
+    icon: Table,
+    category: 'atomic'
   },
   {
-    id: 'callout',
-    name: 'Callout',
-    icon: AlertCircle,
-    description: 'Important note',
-    category: 'Text'
+    type: 'cross-reference',
+    name: 'Cross Reference',
+    description: 'Link to other content',
+    icon: Link,
+    category: 'text'
+  },
+  {
+    type: 'divider',
+    name: 'Divider',
+    description: 'Section break',
+    icon: Minus,
+    category: 'layout'
+  },
+  {
+    type: 'spacer',
+    name: 'Spacer',
+    description: 'Vertical spacing',
+    icon: Move,
+    category: 'layout'
   }
 ]
 
-const categories = ['Text', 'Layout', 'Media']
-
-interface DraggableBlockItemProps {
-  blockType: BlockType
-  onClick: () => void
-}
-
-function DraggableBlockItem({ blockType, onClick }: DraggableBlockItemProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    isDragging,
-  } = useDraggable({
-    id: `palette-${blockType.id}`,
-    data: {
-      type: 'block-type',
-      blockType: blockType.id,
-    },
-  })
-
-  const style = transform ? {
-    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-    opacity: isDragging ? 0.5 : 1,
-  } : undefined
-
-  const Icon = blockType.icon
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`group flex items-center gap-3 p-3 rounded-lg border border-border hover:border-primary/50 hover:bg-muted/50 cursor-pointer transition-colors ${
-        isDragging ? 'opacity-50' : ''
-      }`}
-      onClick={onClick}
-    >
-      <div
-        className="cursor-grab hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical className="w-4 h-4" />
-      </div>
-      
-      <div className="flex items-center justify-center w-8 h-8 rounded-md bg-primary/10">
-        <Icon className="w-4 h-4 text-primary" />
-      </div>
-      
-      <div className="flex-1 min-w-0">
-        <div className="font-medium text-sm">{blockType.name}</div>
-        <div className="text-xs text-muted-foreground truncate">
-          {blockType.description}
-        </div>
-      </div>
-    </div>
-  )
-}
+const categories = [
+  { key: 'text', label: 'Text' },
+  { key: 'layout', label: 'Layout' },
+  { key: 'atomic', label: 'Atomic' }
+] as const
 
 interface BlockPaletteProps {
-  onInsertBlock: (blockType: string) => void
-  onDragStart?: (blockType: string) => void
+  onInsertBlock: (blockType: Block['type']) => void
+  onDragStart?: (blockType: Block['type']) => void
   onDragEnd?: () => void
 }
 
-export function BlockPalette({ onInsertBlock, onDragStart, onDragEnd }: BlockPaletteProps) {
-  const [activeBlockType, setActiveBlockType] = useState<string | null>(null)
+export const BlockPalette = ({ onInsertBlock, onDragStart, onDragEnd }: BlockPaletteProps) => {
+  const { startDrag, endDrag } = useDragDropContext()
 
-  function handleDragStart(event: DragStartEvent) {
-    const blockType = event.active.data.current?.blockType
-    if (blockType) {
-      setActiveBlockType(blockType)
-      onDragStart?.(blockType)
-    }
+  const handleDragStart = (e: React.DragEvent<HTMLButtonElement>, blockType: Block['type']) => {
+    // Start drag with ghost position
+    startDrag(
+      { 
+        type: 'block-type', 
+        blockType,
+        sourceElement: e.currentTarget
+      },
+      { 
+        x: e.clientX, 
+        y: e.clientY 
+      }
+    )
+    
+    // Set drag data for native drag events
+    e.dataTransfer.setData('application/x-block-type', blockType)
+    e.dataTransfer.effectAllowed = 'copy'
+    
+    // Create a transparent drag image to hide the native ghost
+    const dragImage = document.createElement('div')
+    dragImage.style.opacity = '0'
+    dragImage.style.position = 'absolute'
+    dragImage.style.top = '-1000px'
+    dragImage.style.width = '1px'
+    dragImage.style.height = '1px'
+    document.body.appendChild(dragImage)
+    e.dataTransfer.setDragImage(dragImage, 0, 0)
+    
+    // Clean up after a delay
+    setTimeout(() => {
+      if (document.body.contains(dragImage)) {
+        document.body.removeChild(dragImage)
+      }
+    }, 100)
+
+    onDragStart?.(blockType)
   }
 
-  function handleDragEnd(event: DragEndEvent) {
-    setActiveBlockType(null)
+  const handleDragEnd = (e: React.DragEvent) => {
+    endDrag()
     onDragEnd?.()
   }
 
-  const activeBlock = activeBlockType 
-    ? blockTypes.find(b => b.id === activeBlockType)
-    : null
+  const handleMouseDown = (e: React.MouseEvent<HTMLButtonElement>, blockType: Block['type']) => {
+    // Add visual feedback for drag start
+    e.currentTarget.style.transform = 'scale(0.95)'
+    e.currentTarget.style.opacity = '0.8'
+  }
+
+  const handleMouseUp = (e: React.MouseEvent<HTMLButtonElement>) => {
+    // Remove visual feedback
+    e.currentTarget.style.transform = ''
+    e.currentTarget.style.opacity = ''
+  }
+
+  const handleMouseLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
+    // Remove visual feedback if mouse leaves while pressed
+    e.currentTarget.style.transform = ''
+    e.currentTarget.style.opacity = ''
+  }
 
   return (
-    <DndContext
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="h-full flex flex-col">
-        {/* Header */}
-        <div className="p-4 border-b border-border">
-          <h3 className="font-semibold text-sm">Block Palette</h3>
-          <p className="text-xs text-muted-foreground mt-1">
-            Drag to canvas or click to insert
-          </p>
-        </div>
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="p-4 border-b">
+        <h3 className="font-semibold text-sm">Block Palette</h3>
+        <p className="text-xs text-muted-foreground mt-1">
+          Drag to canvas or click to insert
+        </p>
+      </div>
 
-        {/* Block Categories */}
-        <div className="flex-1 overflow-auto">
+      {/* Block Categories */}
+      <ScrollArea className="flex-1">
+        <div className="p-4 space-y-6">
           {categories.map(category => {
-            const categoryBlocks = blockTypes.filter(b => b.category === category)
+            const categoryBlocks = blockTypes.filter(b => b.category === category.key)
             
             return (
-              <div key={category} className="p-4">
+              <div key={category.key}>
                 <div className="flex items-center gap-2 mb-3">
                   <Badge variant="secondary" className="text-xs">
-                    {category}
+                    {category.label}
                   </Badge>
                 </div>
                 
                 <div className="space-y-2">
-                  {categoryBlocks.map(blockType => (
-                    <DraggableBlockItem
-                      key={blockType.id}
-                      blockType={blockType}
-                      onClick={() => onInsertBlock(blockType.id)}
-                    />
+                  {categoryBlocks.map(block => (
+                    <Button
+                      key={block.type}
+                      variant="ghost"
+                      size="sm"
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, block.type)}
+                      onDragEnd={handleDragEnd}
+                      onMouseDown={(e) => handleMouseDown(e, block.type)}
+                      onMouseUp={handleMouseUp}
+                      onMouseLeave={handleMouseLeave}
+                      onClick={() => onInsertBlock(block.type)}
+                      className={cn(
+                        'w-full justify-start h-auto p-3 hover:bg-accent',
+                        'cursor-grab active:cursor-grabbing transition-all duration-150',
+                        'group'
+                      )}
+                    >
+                      <div className="flex items-center gap-3 w-full">
+                        <div className="flex items-center gap-2">
+                          <GripVertical className="h-3 w-3 text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          <div className="flex items-center justify-center w-6 h-6 rounded bg-primary/10">
+                            <block.icon className="h-3 w-3 text-primary" />
+                          </div>
+                        </div>
+                        <div className="flex-1 text-left">
+                          <div className="font-medium text-sm">{block.name}</div>
+                          <div className="text-xs text-muted-foreground">{block.description}</div>
+                        </div>
+                        {block.category === 'atomic' && (
+                          <Badge variant="secondary" className="text-xs">
+                            Atomic
+                          </Badge>
+                        )}
+                      </div>
+                    </Button>
                   ))}
                 </div>
               </div>
             )
           })}
         </div>
-      </div>
-
-      {/* Drag Overlay */}
-      <DragOverlay>
-        {activeBlock && (
-          <div className="flex items-center gap-3 p-3 rounded-lg border border-primary bg-background shadow-lg">
-            <div className="flex items-center justify-center w-8 h-8 rounded-md bg-primary/10">
-              <activeBlock.icon className="w-4 h-4 text-primary" />
-            </div>
-            <div>
-              <div className="font-medium text-sm">{activeBlock.name}</div>
-              <div className="text-xs text-muted-foreground">
-                {activeBlock.description}
-              </div>
-            </div>
-          </div>
-        )}
-      </DragOverlay>
-    </DndContext>
+      </ScrollArea>
+    </div>
   )
 }

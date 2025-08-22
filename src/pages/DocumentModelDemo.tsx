@@ -10,7 +10,9 @@ import { LayoutPreview } from '@/components/document/LayoutPreview'
 import { StructureTree } from '@/components/document/StructureTree'
 import { CommandPalette } from '@/components/document/CommandPalette'
 import { VersionHistoryPanel } from '@/components/document/VersionHistoryPanel'
+import { DragGhost } from '@/components/document/DragGhost'
 import { AccessibilityProvider } from '@/components/accessibility/AccessibilityProvider'
+import { DragDropProvider } from '@/contexts/DragDropContext'
 import { AltTextValidator } from '@/components/accessibility/AltTextValidator'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -262,8 +264,9 @@ export default function DocumentModelDemo() {
 
   return (
     <AccessibilityProvider>
-      <div className="min-h-screen bg-background flex flex-col">
-        {document && (
+      <DragDropProvider>
+        <div className="min-h-screen bg-background flex flex-col">
+          {document && (
           <DocumentHeader
             title={document.title}
             saveStatus={persistence.saveStatus}
@@ -433,7 +436,7 @@ export default function DocumentModelDemo() {
                               number: 1
                             }
                             break
-                          case 'callout':
+                          case 'cross-reference':
                             content = 'Important information goes here...'
                             metadata = { type: 'info' }
                             break
@@ -644,8 +647,7 @@ export default function DocumentModelDemo() {
             </div>
           </div>
         )}
-        
-        {/* Command Palette */}
+        </div>
         <CommandPalette
           open={commandPaletteOpen}
           onOpenChange={setCommandPaletteOpen}
@@ -660,7 +662,10 @@ export default function DocumentModelDemo() {
             setFocusedBlockId(blockId)
           }}
         />
-      </div>
+        
+        {/* Drag Ghost */}
+        <DragGhost />
+      </DragDropProvider>
     </AccessibilityProvider>
   )
 }
