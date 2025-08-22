@@ -161,30 +161,45 @@ export type Database = {
       }
       documents: {
         Row: {
+          archived: boolean | null
           content: Json | null
           created_at: string
+          deleted_at: string | null
+          folder_path: string | null
           id: string
+          starred: boolean | null
           styling_overrides: Json | null
+          tags: string[] | null
           template_id: string | null
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          archived?: boolean | null
           content?: Json | null
           created_at?: string
+          deleted_at?: string | null
+          folder_path?: string | null
           id?: string
+          starred?: boolean | null
           styling_overrides?: Json | null
+          tags?: string[] | null
           template_id?: string | null
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          archived?: boolean | null
           content?: Json | null
           created_at?: string
+          deleted_at?: string | null
+          folder_path?: string | null
           id?: string
+          starred?: boolean | null
           styling_overrides?: Json | null
+          tags?: string[] | null
           template_id?: string | null
           title?: string
           updated_at?: string
@@ -196,6 +211,44 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      folders: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          parent_id: string | null
+          path: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          parent_id?: string | null
+          path: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          parent_id?: string | null
+          path?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folders_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
             referencedColumns: ["id"]
           },
         ]
@@ -387,6 +440,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_folder_hierarchy: {
+        Args: { folder_id: string }
+        Returns: {
+          id: string
+          level: number
+          name: string
+          path: string
+        }[]
+      }
       get_user_roles: {
         Args: { _user_id: string }
         Returns: {
