@@ -60,6 +60,89 @@ export const BlockRenderer = ({ block, className = '' }: BlockRendererProps) => 
       
       case 'figure':
         const figureData = block.content || {}
+        
+        // Apply oversized element policies for figures
+        if (block.metadata?.oversizedPolicy === 'scaled' && block.metadata?.scaleRatio) {
+          const scaleStyle = {
+            transform: `scale(${block.metadata.scaleRatio})`,
+            transformOrigin: 'top left',
+            width: `${100 / block.metadata.scaleRatio}%`
+          }
+          
+          return (
+            <figure className="mb-4 p-2 border border-border rounded bg-muted/10" style={scaleStyle}>
+              <div className="text-xs text-amber-600 font-medium mb-2 flex items-center gap-1">
+                <span className="w-2 h-2 bg-amber-500 rounded-full" />
+                Scaled to {Math.round(block.metadata.scaleRatio * 100)}% for legibility
+              </div>
+              <div className="flex items-center justify-center bg-muted/20 border border-dashed border-muted-foreground/30 rounded mb-2" 
+                   style={{ height: `${(block.metadata?.imageHeight || 2) * 24}px` }}>
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <Image className="w-8 h-8" />
+                  <span className="text-xs">{figureData.imageUrl || 'Image placeholder'}</span>
+                  <span className="text-xs opacity-60">{block.metadata?.imageHeight || 2}" tall</span>
+                </div>
+              </div>
+              {figureData.caption && (
+                <figcaption className="text-xs text-center text-muted-foreground italic mt-2">
+                  <strong>Figure {figureData.number || '1'}:</strong> {figureData.caption}
+                </figcaption>
+              )}
+            </figure>
+          )
+        }
+        
+        // Handle dedicated page figures
+        if (block.metadata?.oversizedPolicy === 'dedicated-page') {
+          return (
+            <figure className="mb-4 p-2 border border-border rounded bg-muted/10">
+              <div className="text-xs text-blue-600 font-medium mb-2 flex items-center gap-1">
+                <span className="w-2 h-2 bg-blue-500 rounded-full" />
+                Full-page figure (dedicated page)
+              </div>
+              <div className="flex items-center justify-center bg-muted/20 border border-dashed border-muted-foreground/30 rounded mb-2" 
+                   style={{ height: `${(block.metadata?.imageHeight || 2) * 24}px` }}>
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <Image className="w-8 h-8" />
+                  <span className="text-xs">{figureData.imageUrl || 'Image placeholder'}</span>
+                  <span className="text-xs opacity-60">{block.metadata?.imageHeight || 2}" tall</span>
+                </div>
+              </div>
+              {figureData.caption && (
+                <figcaption className="text-xs text-center text-muted-foreground italic mt-2">
+                  <strong>Figure {figureData.number || '1'}:</strong> {figureData.caption}
+                </figcaption>
+              )}
+            </figure>
+          )
+        }
+        
+        // Handle auto-landscape figures
+        if (block.metadata?.oversizedPolicy === 'auto-landscape') {
+          return (
+            <figure className="mb-4 p-2 border border-border rounded bg-muted/10">
+              <div className="text-xs text-green-600 font-medium mb-2 flex items-center gap-1">
+                <span className="w-2 h-2 bg-green-500 rounded-full" />
+                Page rotated to landscape for optimal viewing
+              </div>
+              <div className="flex items-center justify-center bg-muted/20 border border-dashed border-muted-foreground/30 rounded mb-2" 
+                   style={{ height: `${(block.metadata?.imageHeight || 2) * 24}px` }}>
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <Image className="w-8 h-8" />
+                  <span className="text-xs">{figureData.imageUrl || 'Image placeholder'}</span>
+                  <span className="text-xs opacity-60">{block.metadata?.imageHeight || 2}" tall</span>
+                </div>
+              </div>
+              {figureData.caption && (
+                <figcaption className="text-xs text-center text-muted-foreground italic mt-2">
+                  <strong>Figure {figureData.number || '1'}:</strong> {figureData.caption}
+                </figcaption>
+              )}
+            </figure>
+          )
+        }
+        
+        // Regular figure rendering
         return (
           <figure className="mb-4 p-2 border border-border rounded bg-muted/10">
             <div className="flex items-center justify-center bg-muted/20 border border-dashed border-muted-foreground/30 rounded mb-2" 
@@ -82,13 +165,37 @@ export const BlockRenderer = ({ block, className = '' }: BlockRendererProps) => 
         const tableData = block.content || { headers: [], rows: [] }
         return (
           <div className="mb-4">
+            {/* Show oversized element policy indicators */}
+            {block.metadata?.oversizedPolicy === 'scaled' && block.metadata?.scaleRatio && (
+              <div className="text-xs text-amber-600 font-medium mb-2 flex items-center gap-1">
+                <span className="w-2 h-2 bg-amber-500 rounded-full" />
+                Table scaled to {Math.round(block.metadata.scaleRatio * 100)}% for legibility
+              </div>
+            )}
+            {block.metadata?.oversizedPolicy === 'auto-landscape' && (
+              <div className="text-xs text-green-600 font-medium mb-2 flex items-center gap-1">
+                <span className="w-2 h-2 bg-green-500 rounded-full" />
+                Page rotated to landscape for wide table
+              </div>
+            )}
+            {block.metadata?.oversizedPolicy === 'dedicated-page' && (
+              <div className="text-xs text-blue-600 font-medium mb-2 flex items-center gap-1">
+                <span className="w-2 h-2 bg-blue-500 rounded-full" />
+                Wide table on dedicated page
+              </div>
+            )}
             {isTableChunk && chunkIndex! > 0 && (
               <div className="text-xs text-accent font-medium mb-2 flex items-center gap-1">
                 <Table className="w-3 h-3" />
                 Table continued from previous page/column
               </div>
             )}
-            <div className="border border-border rounded overflow-hidden bg-background">
+            <div className="border border-border rounded overflow-hidden bg-background"
+                 style={block.metadata?.oversizedPolicy === 'scaled' && block.metadata?.scaleRatio ? {
+                   transform: `scale(${block.metadata.scaleRatio})`,
+                   transformOrigin: 'top left',
+                   width: `${100 / block.metadata.scaleRatio}%`
+                 } : {}}>
               <table className="w-full text-xs">
                 <thead className="bg-muted/50">
                   <tr>
@@ -115,6 +222,11 @@ export const BlockRenderer = ({ block, className = '' }: BlockRendererProps) => 
             {tableData.caption && (
               <div className="text-xs text-center text-muted-foreground italic mt-2">
                 <strong>Table {tableData.number || '1'}:</strong> {tableData.caption}
+                {block.metadata?.policyApplied && (
+                  <span className="ml-2 text-xs opacity-70">
+                    ({block.metadata.policyApplied})
+                  </span>
+                )}
               </div>
             )}
           </div>

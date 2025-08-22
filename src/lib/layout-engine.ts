@@ -40,6 +40,107 @@ const estimateTableWidth = (tableData: any, baseColumnWidth: number): number => 
   return estimatedWidth
 }
 
+// Add helper for figure width estimation
+const estimateFigureWidth = (figureData: any, baseColumnWidth: number): number => {
+  if (!figureData) return baseColumnWidth
+  
+  // Check if figure has explicit width
+  if (figureData.width) {
+    return figureData.width
+  }
+  
+  // Default to natural image width or full column
+  return figureData.naturalWidth ? figureData.naturalWidth / 72 : baseColumnWidth // Convert pixels to inches
+}
+
+// Oversized element policies - cascade through these approaches
+const applyOversizedElementPolicies = (
+  block: Block,
+  availableWidth: number,
+  contentWidth: number,
+  pageMaster: PageMaster
+): { 
+  newPageMaster?: PageMaster,
+  scaledBlock?: Block,
+  requiresDedicatedPage?: boolean,
+  policyApplied?: string 
+} => {
+  let elementWidth = 0
+  
+  // Determine element width
+  if (block.type === 'table') {
+    elementWidth = estimateTableWidth(block.content, availableWidth)
+  } else if (block.type === 'figure') {
+    elementWidth = estimateFigureWidth(block.content, availableWidth)
+  } else {
+    return {} // Not an oversized element type
+  }
+  
+  // Policy 1: Scale above minimum legibility (if within 150% of available width)
+  const MIN_LEGIBILITY_SCALE = 0.7 // Don't scale below 70%
+  const SCALE_THRESHOLD = 1.5 // Scale if within 150% of available width
+  
+  if (elementWidth > availableWidth && elementWidth <= availableWidth * SCALE_THRESHOLD) {
+    const scaleRatio = Math.max(MIN_LEGIBILITY_SCALE, availableWidth / elementWidth)
+    
+    const scaledBlock = {
+      ...block,
+      metadata: {
+        ...block.metadata,
+        oversizedPolicy: 'scaled',
+        originalWidth: elementWidth,
+        scaleRatio,
+        scaledWidth: elementWidth * scaleRatio
+      }
+    }
+    
+    return { 
+      scaledBlock, 
+      policyApplied: `scaled-${Math.round(scaleRatio * 100)}%` 
+    }
+  }
+  
+  // Policy 2: Auto landscape page (if portrait and element fits in landscape)
+  if (pageMaster.orientation === 'portrait') {
+    // Calculate landscape dimensions
+    const PAGE_SIZES = {
+      Letter: { width: 8.5, height: 11 },
+      A4: { width: 8.27, height: 11.69 },
+      Legal: { width: 8.5, height: 14 },
+      Tabloid: { width: 11, height: 17 }
+    }
+    
+    const basePage = PAGE_SIZES[pageMaster.pageSize]
+    const landscapeContentWidth = basePage.height - pageMaster.margins.left - pageMaster.margins.right
+    const landscapeColumnWidth = (landscapeContentWidth - (pageMaster.columns - 1) * pageMaster.columnGap) / pageMaster.columns
+    
+    if (elementWidth <= landscapeColumnWidth) {
+      const newPageMaster = {
+        ...pageMaster,
+        orientation: 'landscape' as const,
+        allowTableRotation: true
+      }
+      
+      return { 
+        newPageMaster, 
+        policyApplied: 'auto-landscape' 
+      }
+    }
+  }
+  
+  // Policy 3: Dedicate full page (use full content width)
+  const fullPageColumnWidth = contentWidth // Single column using full width
+  
+  if (elementWidth > availableWidth) {
+    return { 
+      requiresDedicatedPage: true, 
+      policyApplied: 'dedicated-page' 
+    }
+  }
+  
+  return {}
+}
+
 // Global context holder (you may want to implement this differently)
 let currentSectionContext: any = null
 const getCurrentSection = () => currentSectionContext
@@ -382,23 +483,128 @@ export const generateLayout = (section: Section): LayoutResult => {
     allBlocks.push(...flow.blocks.sort((a, b) => a.order - b.order))
   })
   
+  // Process blocks and apply oversized element policies
+  const processedBlocks: Block[] = []
+  let currentPageMaster = { ...pageMaster }
+  
+  // Pre-process blocks to apply oversized element policies
+  for (const block of allBlocks) {
+    if (block.type === 'table' || block.type === 'figure') {
+      const policy = applyOversizedElementPolicies(block, columnWidth, contentWidth, currentPageMaster)
+      
+      if (policy.scaledBlock) {
+        processedBlocks.push(policy.scaledBlock)
+      } else if (policy.newPageMaster) {
+        // Apply landscape orientation for this and subsequent blocks
+        currentPageMaster = policy.newPageMaster
+        processedBlocks.push({
+          ...block,
+          metadata: {
+            ...block.metadata,
+            oversizedPolicy: 'auto-landscape',
+            policyApplied: policy.policyApplied
+          }
+        })
+      } else if (policy.requiresDedicatedPage) {
+        processedBlocks.push({
+          ...block,
+          metadata: {
+            ...block.metadata,
+            oversizedPolicy: 'dedicated-page',
+            policyApplied: policy.policyApplied,
+            requiresDedicatedPage: true
+          }
+        })
+      } else {
+        processedBlocks.push(block)
+      }
+    } else {
+      processedBlocks.push(block)
+    }
+  }
+
   // Process blocks and split them as needed during layout
   const pages: PageBox[] = []
   let currentPageNumber = 1
-  let blockQueue = [...allBlocks] // Queue of blocks to be placed
+  let blockQueue = [...processedBlocks] // Queue of blocks to be placed
+  
+  // Recalculate dimensions with potentially updated page master
+  const updatedBasePage = PAGE_SIZES[currentPageMaster.pageSize]
+  const updatedIsLandscape = currentPageMaster.orientation === 'landscape'
+  
+  const updatedPageSize = {
+    width: updatedIsLandscape ? updatedBasePage.height : updatedBasePage.width,
+    height: updatedIsLandscape ? updatedBasePage.width : updatedBasePage.height
+  }
+  
+  const updatedContentWidth = updatedPageSize.width - currentPageMaster.margins.left - currentPageMaster.margins.right
+  const updatedContentHeight = updatedPageSize.height - currentPageMaster.margins.top - currentPageMaster.margins.bottom
+  
+  const updatedAvailableHeight = updatedContentHeight - 
+    (currentPageMaster.hasHeader ? 0.5 : 0) - 
+    (currentPageMaster.hasFooter ? 0.5 : 0)
+  
+  const updatedTotalGapWidth = (currentPageMaster.columns - 1) * currentPageMaster.columnGap
+  const updatedColumnWidth = (updatedContentWidth - updatedTotalGapWidth) / currentPageMaster.columns
   
   // Always create at least one page, even if empty
   do {
     const columnBoxes: ColumnBox[] = []
     let pageHasContent = false
+    let currentPageMasterForPage = currentPageMaster
+    let dedicatedPageCreated = false
     
-    // Create column boxes for this page
-    for (let colIndex = 0; colIndex < pageMaster.columns; colIndex++) {
+    // Check if the next block needs a dedicated page
+    if (blockQueue.length > 0 && blockQueue[0].metadata?.requiresDedicatedPage) {
+      const block = blockQueue.shift()!
+      
+      // Create dedicated page with single column using full content width
+      const dedicatedColumnBox: ColumnBox = {
+        id: `page-${currentPageNumber}-dedicated`,
+        columnIndex: 0,
+        width: updatedContentWidth,
+        height: updatedAvailableHeight,
+        content: [block],
+        isFull: true,
+        metadata: {
+          endReason: 'dedicated-page-complete',
+          blocksRemaining: blockQueue.length
+        }
+      }
+      
+      const dedicatedPageBox: PageBox = {
+        id: `page-${currentPageNumber}`,
+        pageNumber: currentPageNumber,
+        pageMaster: {
+          ...currentPageMasterForPage,
+          columns: 1 // Force single column for dedicated page
+        },
+        columnBoxes: [dedicatedColumnBox],
+        hasOverflow: blockQueue.length > 0
+      }
+      
+      pages.push(dedicatedPageBox)
+      currentPageNumber++
+      dedicatedPageCreated = true
+      
+      // Mark block placement
+      if (block.metadata) {
+        block.metadata.placementReason = 'dedicated-page'
+      }
+    }
+    
+    // If we created a dedicated page, continue to next iteration
+    if (dedicatedPageCreated) {
+      continue
+    }
+    
+    // Create column boxes for this page (normal multi-column layout)
+    for (let colIndex = 0; colIndex < currentPageMasterForPage.columns; colIndex++) {
       const columnBox: ColumnBox = {
         id: `page-${currentPageNumber}-col-${colIndex}`,
         columnIndex: colIndex,
-        width: columnWidth,
-        height: availableHeight,
+        width: updatedColumnWidth,
+        height: updatedAvailableHeight,
         content: [],
         isFull: false
       }
@@ -409,14 +615,24 @@ export const generateLayout = (section: Section): LayoutResult => {
       while (blockQueue.length > 0) {
         const nextBlock = blockQueue[0]
         const followingBlock = blockQueue.length > 1 ? blockQueue[1] : null
-        const remainingHeight = availableHeight - currentColumnHeight
+        const remainingHeight = updatedAvailableHeight - currentColumnHeight
+        
+        // Skip dedicated page blocks in normal columns (handled above)
+        if (nextBlock.metadata?.requiresDedicatedPage) {
+          columnBox.isFull = true
+          columnBox.metadata = {
+            endReason: 'dedicated-page-required',
+            blocksRemaining: blockQueue.length
+          }
+          break
+        }
         
         // Check pagination rules
         const ruleCheck = checkPaginationRules(
           nextBlock, 
           followingBlock, 
           remainingHeight, 
-          columnWidth, 
+          updatedColumnWidth, 
           blockQueue
         )
         
@@ -424,7 +640,7 @@ export const generateLayout = (section: Section): LayoutResult => {
           // Block can be placed, add it
           const block = blockQueue.shift()!
           columnBox.content.push(block)
-          currentColumnHeight += estimateBlockHeight(block, columnWidth)
+          currentColumnHeight += estimateBlockHeight(block, updatedColumnWidth)
           pageHasContent = true
           
           // Add debug info about rule application
@@ -435,15 +651,15 @@ export const generateLayout = (section: Section): LayoutResult => {
           // Block cannot be placed due to pagination rules
           if (ruleCheck.reason === 'insufficient-space' || ruleCheck.reason === 'break-avoid') {
             // Try splitting if possible
-            const splitCheck = canSplitWithRules(nextBlock, remainingHeight, columnWidth)
+            const splitCheck = canSplitWithRules(nextBlock, remainingHeight, updatedColumnWidth)
             
             if (splitCheck.canSplit && ['paragraph', 'quote', 'table'].includes(nextBlock.type) && remainingHeight > 0.5) {
               let splitBlocks: Block[]
               
               if (nextBlock.type === 'table') {
-                splitBlocks = splitTable(nextBlock, remainingHeight, columnWidth)
+                splitBlocks = splitTable(nextBlock, remainingHeight, updatedColumnWidth)
               } else {
-                splitBlocks = splitBlock(nextBlock, remainingHeight, columnWidth)
+                splitBlocks = splitBlock(nextBlock, remainingHeight, updatedColumnWidth)
               }
               
               if (splitBlocks.length > 1) {
@@ -454,7 +670,7 @@ export const generateLayout = (section: Section): LayoutResult => {
                 // Place first chunk
                 const firstChunk = blockQueue.shift()!
                 columnBox.content.push(firstChunk)
-                currentColumnHeight += estimateBlockHeight(firstChunk, columnWidth)
+                currentColumnHeight += estimateBlockHeight(firstChunk, updatedColumnWidth)
                 pageHasContent = true
                 
                 // Mark as split due to pagination rules
@@ -484,16 +700,19 @@ export const generateLayout = (section: Section): LayoutResult => {
       if (blockQueue.length === 0) break
     }
     
-    const pageBox: PageBox = {
-      id: `page-${currentPageNumber}`,
-      pageNumber: currentPageNumber,
-      pageMaster,
-      columnBoxes,
-      hasOverflow: blockQueue.length > 0
+    // Only create regular page if we didn't create a dedicated page
+    if (!dedicatedPageCreated) {
+      const pageBox: PageBox = {
+        id: `page-${currentPageNumber}`,
+        pageNumber: currentPageNumber,
+        pageMaster: currentPageMasterForPage,
+        columnBoxes,
+        hasOverflow: blockQueue.length > 0
+      }
+      
+      pages.push(pageBox)
+      currentPageNumber++
     }
-    
-    pages.push(pageBox)
-    currentPageNumber++
     
     // Continue if there are remaining blocks or if this is the first page (always show at least one)
   } while (blockQueue.length > 0 || pages.length === 0)
