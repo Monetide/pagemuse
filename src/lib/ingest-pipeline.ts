@@ -65,111 +65,585 @@ export class IngestPipeline {
   }
 
   /**
-   * Processes plain text and markdown files
+   * Processes plain text and markdown files with enhanced parsing
    */
   private async processTextFile(file: File): Promise<IRDocument> {
     const text = await file.text()
     const title = file.name.replace(/\.(txt|md)$/, '')
+    const extension = file.name.split('.').pop()?.toLowerCase()
     
     const irDoc = createIRDocument(title)
     const section = createIRSection('Content', 1)
     
-    const lines = text.split('\n')
-    let blockOrder = 1
-    
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim()
-      
-      if (!line) continue
-      
-      if (line.startsWith('#')) {
-        // Markdown heading
-        const level = (line.match(/^#+/) || [''])[0].length
-        const text = line.replace(/^#+\s*/, '')
-        const heading = createIRHeading(level, text)
-        
-        section.blocks.push(createIRBlock('heading', heading, blockOrder++))
-        
-      } else if (line.startsWith('- ') || line.startsWith('* ')) {
-        // Unordered list
-        const listItems: string[] = []
-        let j = i
-        
-        while (j < lines.length) {
-          const listLine = lines[j].trim()
-          if (listLine.startsWith('- ') || listLine.startsWith('* ')) {
-            listItems.push(listLine.replace(/^[-*]\s*/, ''))
-            j++
-          } else if (!listLine) {
-            j++
-          } else {
-            break
-          }
-        }
-        
-        const list = createIRList('unordered', listItems)
-        section.blocks.push(createIRBlock('list', list, blockOrder++))
-        i = j - 1
-        
-      } else if (/^\d+\.\s/.test(line)) {
-        // Ordered list
-        const listItems: string[] = []
-        let j = i
-        
-        while (j < lines.length) {
-          const listLine = lines[j].trim()
-          if (/^\d+\.\s/.test(listLine)) {
-            listItems.push(listLine.replace(/^\d+\.\s*/, ''))
-            j++
-          } else if (!listLine) {
-            j++
-          } else {
-            break
-          }
-        }
-        
-        const list = createIRList('ordered', listItems)
-        section.blocks.push(createIRBlock('list', list, blockOrder++))
-        i = j - 1
-        
-      } else if (line.startsWith('>')) {
-        // Quote
-        const quoteText = line.replace(/^>\s*/, '')
-        const quote = createIRQuote(quoteText)
-        
-        section.blocks.push(createIRBlock('quote', quote, blockOrder++))
-        
-      } else if (line === '---' || line === '***') {
-        // Horizontal rule
-        section.blocks.push(createIRBlock('horizontal-rule', null, blockOrder++))
-        
-      } else if (line.startsWith('```')) {
-        // Code block
-        const language = line.substring(3).trim()
-        const codeLines: string[] = []
-        let j = i + 1
-        
-        while (j < lines.length && !lines[j].trim().startsWith('```')) {
-          codeLines.push(lines[j])
-          j++
-        }
-        
-        section.blocks.push(createIRBlock('code', {
-          language: language || undefined,
-          content: codeLines.join('\n'),
-          inline: false
-        }, blockOrder++))
-        
-        i = j
-        
-      } else {
-        // Regular paragraph
-        section.blocks.push(createIRBlock('paragraph', line, blockOrder++))
-      }
+    if (extension === 'md') {
+      await this.parseMarkdownContent(text, section)
+    } else {
+      await this.parsePlainTextContent(text, section)
     }
     
     irDoc.sections.push(section)
     return irDoc
+  }
+
+  /**
+   * Parses Markdown content with CommonMark + GitHub extensions
+   */
+  private async parseMarkdownContent(text: string, section: IRSection) {
+    const lines = text.split('\n')
+    let blockOrder = 1
+    let i = 0
+    
+    while (i < lines.length) {
+      const line = lines[i].trim()
+      
+      if (!line) {
+        i++
+        continue
+      }
+      
+      // Headings: # to ######
+      if (line.startsWith('#')) {
+        const match = line.match(/^(#{1,6})\s+(.+)$/)
+        if (match) {
+          const level = match[1].length
+          const text = match[2].trim()
+          const heading = createIRHeading(level, text)
+          section.blocks.push(createIRBlock('heading', heading, blockOrder++))
+        }
+        i++
+        continue
+      }
+      
+      // Horizontal rules: --- or ***
+      if (/^(-{3,}|\*{3,}|_{3,})$/.test(line)) {
+        section.blocks.push(createIRBlock('horizontal-rule', null, blockOrder++))
+        i++
+        continue
+      }
+      
+      // Code fences: ```
+      if (line.startsWith('```')) {
+        const result = this.parseCodeFence(lines, i)
+        if (result) {
+          section.blocks.push(createIRBlock('code', result.code, blockOrder++))
+          i = result.nextIndex
+          continue
+        }
+      }
+      
+      // Tables: | header | header |
+      if (line.includes('|') && this.looksLikeTableRow(line)) {
+        const result = this.parseMarkdownTable(lines, i)
+        if (result) {
+          const table = createIRTable(result.headers, result.rows, result.caption)
+          section.blocks.push(createIRBlock('table', table, blockOrder++))
+          i = result.nextIndex
+          continue
+        }
+      }
+      
+      // Blockquotes and Callouts: >
+      if (line.startsWith('>')) {
+        const result = this.parseBlockquote(lines, i)
+        if (result.isCallout) {
+          const callout = createIRCallout(result.calloutType!, result.content, result.title)
+          section.blocks.push(createIRBlock('callout', callout, blockOrder++))
+        } else {
+          const quote = createIRQuote(result.content, result.citation)
+          section.blocks.push(createIRBlock('quote', quote, blockOrder++))
+        }
+        i = result.nextIndex
+        continue
+      }
+      
+      // Lists: - or * for unordered, 1. for ordered
+      if (/^[\s]*[-*+]\s/.test(line) || /^[\s]*\d+\.\s/.test(line)) {
+        const result = this.parseMarkdownList(lines, i)
+        const listType = result.type === 'ordered' ? 'ordered' : 'unordered'
+        const list = createIRList(listType, result.items)
+        section.blocks.push(createIRBlock('list', list, blockOrder++))
+        i = result.nextIndex
+        continue
+      }
+      
+      // Images: ![alt](src "caption")
+      const imageMatch = line.match(/!\[([^\]]*)\]\(([^)]+?)(?:\s+"([^"]*)")?\)/)
+      if (imageMatch) {
+        const [, alt, src, caption] = imageMatch
+        const figure = createIRFigure(
+          {
+            id: `asset-${Date.now()}`,
+            filename: src.split('/').pop() || 'image',
+            mimeType: this.getMimeTypeFromExtension(src),
+            url: src,
+            alt: alt
+          },
+          caption || '',
+          alt
+        )
+        section.blocks.push(createIRBlock('figure', figure, blockOrder++))
+        i++
+        continue
+      }
+      
+      // Regular paragraph - collect consecutive non-empty lines
+      const result = this.parseMarkdownParagraph(lines, i)
+      if (result.content.trim()) {
+        section.blocks.push(createIRBlock('paragraph', result.content, blockOrder++, {
+          marks: result.marks
+        }))
+      }
+      i = result.nextIndex
+    }
+  }
+
+  /**
+   * Parses plain text with structure detection
+   */
+  private async parsePlainTextContent(text: string, section: IRSection) {
+    const lines = text.split('\n')
+    let blockOrder = 1
+    let i = 0
+    
+    while (i < lines.length) {
+      const line = lines[i].trim()
+      
+      if (!line) {
+        i++
+        continue
+      }
+      
+      // Structure detection for headings
+      const headingMatch = this.detectStructuralHeading(line)
+      if (headingMatch) {
+        const heading = createIRHeading(headingMatch.level, headingMatch.text)
+        section.blocks.push(createIRBlock('heading', heading, blockOrder++))
+        i++
+        continue
+      }
+      
+      // Simple list detection
+      if (/^[\s]*[-*•]\s/.test(line) || /^[\s]*\d+[\.)]\s/.test(line)) {
+        const result = this.parsePlainTextList(lines, i)
+        const listType = /^\d/.test(line.trim()) ? 'ordered' : 'unordered'
+        const list = createIRList(listType, result.items)
+        section.blocks.push(createIRBlock('list', list, blockOrder++))
+        i = result.nextIndex
+        continue
+      }
+      
+      // Quote detection (lines that start with quotes)
+      if (line.startsWith('"') && line.endsWith('"')) {
+        const quote = createIRQuote(line.slice(1, -1))
+        section.blocks.push(createIRBlock('quote', quote, blockOrder++))
+        i++
+        continue
+      }
+      
+      // Paragraph - collect lines until blank line
+      const result = this.parsePlainTextParagraph(lines, i)
+      if (result.content.trim()) {
+        section.blocks.push(createIRBlock('paragraph', result.content, blockOrder++))
+      }
+      i = result.nextIndex
+    }
+  }
+
+  /**
+   * Parses a code fence block
+   */
+  private parseCodeFence(lines: string[], startIndex: number): { code: any; nextIndex: number } | null {
+    const startLine = lines[startIndex].trim()
+    const language = startLine.substring(3).trim() || undefined
+    const codeLines: string[] = []
+    let i = startIndex + 1
+    
+    while (i < lines.length) {
+      if (lines[i].trim().startsWith('```')) {
+        break
+      }
+      codeLines.push(lines[i])
+      i++
+    }
+    
+    return {
+      code: {
+        language,
+        content: codeLines.join('\n'),
+        inline: false
+      },
+      nextIndex: i + 1
+    }
+  }
+
+  /**
+   * Checks if a line looks like a table row
+   */
+  private looksLikeTableRow(line: string): boolean {
+    const trimmed = line.trim()
+    return trimmed.startsWith('|') && trimmed.endsWith('|') && trimmed.split('|').length >= 3
+  }
+
+  /**
+   * Parses a Markdown table
+   */
+  private parseMarkdownTable(lines: string[], startIndex: number): { 
+    headers: string[], 
+    rows: string[][], 
+    caption?: string,
+    nextIndex: number 
+  } | null {
+    let i = startIndex
+    const tableLines: string[] = []
+    
+    // Collect all consecutive table rows
+    while (i < lines.length && this.looksLikeTableRow(lines[i])) {
+      tableLines.push(lines[i].trim())
+      i++
+    }
+    
+    if (tableLines.length < 2) return null
+    
+    // Parse header row
+    const headerRow = tableLines[0]
+    const headers = this.parseTableRow(headerRow)
+    
+    // Skip separator row if it exists (| --- | --- |)
+    let dataStartIndex = 1
+    if (tableLines[1] && /^[\s]*\|[\s]*:?-+:?[\s]*\|/.test(tableLines[1])) {
+      dataStartIndex = 2
+    }
+    
+    // Parse data rows
+    const rows: string[][] = []
+    for (let j = dataStartIndex; j < tableLines.length; j++) {
+      const row = this.parseTableRow(tableLines[j])
+      if (row.length > 0) {
+        rows.push(row)
+      }
+    }
+    
+    return {
+      headers,
+      rows,
+      nextIndex: i
+    }
+  }
+
+  /**
+   * Parses a single table row
+   */
+  private parseTableRow(line: string): string[] {
+    return line
+      .split('|')
+      .slice(1, -1) // Remove first and last empty elements
+      .map(cell => cell.trim())
+  }
+
+  /**
+   * Parses blockquotes and detects callouts
+   */
+  private parseBlockquote(lines: string[], startIndex: number): {
+    content: string,
+    citation?: string,
+    isCallout: boolean,
+    calloutType?: 'info' | 'warning' | 'error' | 'success' | 'note',
+    title?: string,
+    nextIndex: number
+  } {
+    const quoteLines: string[] = []
+    let i = startIndex
+    
+    // Collect all consecutive quote lines
+    while (i < lines.length && lines[i].trim().startsWith('>')) {
+      const quoteLine = lines[i].trim().substring(1).trim()
+      quoteLines.push(quoteLine)
+      i++
+    }
+    
+    const fullContent = quoteLines.join(' ').trim()
+    
+    // Check for callout patterns: **Note:** or **Warning:** etc.
+    const calloutMatch = fullContent.match(/^\*\*(Note|Warning|Error|Success|Info|Tip|Important)\*\*:?\s*(.+)$/i)
+    if (calloutMatch) {
+      const matchedType = calloutMatch[1].toLowerCase()
+      let actualType: 'info' | 'warning' | 'error' | 'success' | 'note'
+      
+      switch (matchedType) {
+        case 'tip':
+        case 'important':
+        case 'info':
+          actualType = 'info'
+          break
+        case 'warning':
+          actualType = 'warning'
+          break
+        case 'error':
+          actualType = 'error'
+          break
+        case 'success':
+          actualType = 'success'
+          break
+        case 'note':
+        default:
+          actualType = 'note'
+          break
+      }
+      
+      return {
+        content: calloutMatch[2].trim(),
+        isCallout: true,
+        calloutType: actualType,
+        title: calloutMatch[1],
+        nextIndex: i
+      }
+    }
+    
+    // Check for citation pattern (ending with -- Author)
+    const citationMatch = fullContent.match(/^(.+?)\s*--\s*(.+)$/)
+    if (citationMatch) {
+      return {
+        content: citationMatch[1].trim(),
+        citation: citationMatch[2].trim(),
+        isCallout: false,
+        nextIndex: i
+      }
+    }
+    
+    return {
+      content: fullContent,
+      isCallout: false,
+      nextIndex: i
+    }
+  }
+
+  /**
+   * Parses Markdown lists with nesting support
+   */
+  private parseMarkdownList(lines: string[], startIndex: number): {
+    type: 'ordered' | 'unordered',
+    items: string[],
+    nextIndex: number
+  } {
+    const items: string[] = []
+    let i = startIndex
+    const firstLine = lines[i].trim()
+    const isOrdered = /^\d+\./.test(firstLine)
+    
+    while (i < lines.length) {
+      const line = lines[i].trim()
+      
+      if (!line) {
+        i++
+        continue
+      }
+      
+      const orderedMatch = line.match(/^(\s*)\d+\.\s+(.+)$/)
+      const unorderedMatch = line.match(/^(\s*)[-*+]\s+(.+)$/)
+      
+      if ((isOrdered && orderedMatch) || (!isOrdered && unorderedMatch)) {
+        const match = orderedMatch || unorderedMatch
+        const content = match![2]
+        items.push(content)
+        i++
+      } else if (/^[\s]*[-*+]\s/.test(line) || /^[\s]*\d+\.\s/.test(line)) {
+        // Different list type, stop here
+        break
+      } else {
+        // Not a list item, stop
+        break
+      }
+    }
+    
+    return {
+      type: isOrdered ? 'ordered' : 'unordered',
+      items,
+      nextIndex: i
+    }
+  }
+
+  /**
+   * Parses a markdown paragraph and extracts inline formatting
+   */
+  private parseMarkdownParagraph(lines: string[], startIndex: number): {
+    content: string,
+    marks: any[],
+    nextIndex: number
+  } {
+    const paragraphLines: string[] = []
+    let i = startIndex
+    
+    // Collect lines until blank line or special syntax
+    while (i < lines.length) {
+      const line = lines[i].trim()
+      
+      if (!line) {
+        i++
+        break
+      }
+      
+      // Stop at special syntax
+      if (line.startsWith('#') || line.startsWith('>') || line.startsWith('```') || 
+          line.includes('|') || /^[-*+]\s/.test(line) || /^\d+\.\s/.test(line)) {
+        break
+      }
+      
+      paragraphLines.push(line)
+      i++
+    }
+    
+    const content = paragraphLines.join(' ')
+    const marks = this.extractMarkdownMarks(content)
+    
+    return {
+      content: this.stripMarkdownSyntax(content),
+      marks,
+      nextIndex: i
+    }
+  }
+
+  /**
+   * Detects structural headings in plain text
+   */
+  private detectStructuralHeading(line: string): { level: number, text: string } | null {
+    // Common patterns for headings
+    const patterns = [
+      { regex: /^(Chapter|CHAPTER)\s+(\d+|[IVX]+):?\s*(.+)$/i, level: 1 },
+      { regex: /^(Section|SECTION)\s+(\d+):?\s*(.+)$/i, level: 2 },
+      { regex: /^(Part|PART)\s+(\d+):?\s*(.+)$/i, level: 1 },
+      { regex: /^(\d+)\.\s+(.+)$/, level: 2 },
+      { regex: /^([A-Z][A-Z\s]{2,})$/, level: 2 }, // ALL CAPS
+    ]
+    
+    for (const pattern of patterns) {
+      const match = line.match(pattern.regex)
+      if (match) {
+        const text = pattern.level === 2 && match[3] ? match[3] : 
+                     pattern.level === 2 && match[2] ? match[2] :
+                     match[match.length - 1] || line
+        return { level: pattern.level, text: text.trim() }
+      }
+    }
+    
+    return null
+  }
+
+  /**
+   * Parses plain text lists
+   */
+  private parsePlainTextList(lines: string[], startIndex: number): {
+    items: string[],
+    nextIndex: number
+  } {
+    const items: string[] = []
+    let i = startIndex
+    
+    while (i < lines.length) {
+      const line = lines[i].trim()
+      
+      if (!line) {
+        i++
+        continue
+      }
+      
+      const match = line.match(/^[\s]*(?:[-*•]|\d+[\.)])\s+(.+)$/)
+      if (match) {
+        items.push(match[1])
+        i++
+      } else {
+        break
+      }
+    }
+    
+    return { items, nextIndex: i }
+  }
+
+  /**
+   * Parses plain text paragraph
+   */
+  private parsePlainTextParagraph(lines: string[], startIndex: number): {
+    content: string,
+    nextIndex: number
+  } {
+    const paragraphLines: string[] = []
+    let i = startIndex
+    
+    while (i < lines.length) {
+      const line = lines[i].trim()
+      
+      if (!line) {
+        i++
+        break
+      }
+      
+      // Stop at potential structure or list
+      if (this.detectStructuralHeading(line) || /^[\s]*[-*•]\s/.test(line) || /^[\s]*\d+[\.)]\s/.test(line)) {
+        break
+      }
+      
+      paragraphLines.push(line)
+      i++
+    }
+    
+    return {
+      content: paragraphLines.join(' '),
+      nextIndex: i
+    }
+  }
+
+  /**
+   * Extracts markdown formatting marks
+   */
+  private extractMarkdownMarks(text: string): any[] {
+    const marks = []
+    
+    if (/\*\*[^*]+\*\*/.test(text) || /__[^_]+__/.test(text)) {
+      marks.push({ type: 'bold' })
+    }
+    
+    if (/\*[^*]+\*/.test(text) || /_[^_]+_/.test(text)) {
+      marks.push({ type: 'italic' })
+    }
+    
+    if (/`[^`]+`/.test(text)) {
+      marks.push({ type: 'code' })
+    }
+    
+    const linkMatch = text.match(/\[([^\]]+)\]\(([^)]+)\)/)
+    if (linkMatch) {
+      marks.push({ type: 'link', attrs: { href: linkMatch[2] } })
+    }
+    
+    return marks
+  }
+
+  /**
+   * Strips markdown syntax from text
+   */
+  private stripMarkdownSyntax(text: string): string {
+    return text
+      .replace(/\*\*([^*]+)\*\*/g, '$1')  // Bold
+      .replace(/__([^_]+)__/g, '$1')      // Bold alt
+      .replace(/\*([^*]+)\*/g, '$1')      // Italic
+      .replace(/_([^_]+)_/g, '$1')        // Italic alt
+      .replace(/`([^`]+)`/g, '$1')        // Inline code
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Links
+  }
+
+  /**
+   * Gets MIME type from file extension
+   */
+  private getMimeTypeFromExtension(filename: string): string {
+    const ext = filename.split('.').pop()?.toLowerCase()
+    const mimeTypes: Record<string, string> = {
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'webp': 'image/webp',
+      'svg': 'image/svg+xml'
+    }
+    return mimeTypes[ext || ''] || 'image/jpeg'
   }
 
   /**
