@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, KeyboardEvent, useEffect } from 'react'
 import { Block } from '@/lib/document-model'
 import { SlashCommand } from './SlashCommand'
+import { PasteAutoStructureOverlay } from './PasteAutoStructureOverlay'
 
 interface EditableTextProps {
   content: string
@@ -10,6 +11,7 @@ interface EditableTextProps {
   onBlur?: () => void
   onKeyDown?: (e: KeyboardEvent<HTMLDivElement>) => void
   onNewBlock?: (blockType: Block['type'], content?: any, metadata?: any) => void
+  onMultipleBlocks?: (blocks: Block[]) => void
   showInvisibles?: boolean
   autoFocus?: boolean
   multiline?: boolean
@@ -29,6 +31,7 @@ export const EditableText = ({
   onBlur,
   onKeyDown,
   onNewBlock,
+  onMultipleBlocks,
   showInvisibles = false,
   autoFocus = false,
   multiline = true
@@ -38,6 +41,13 @@ export const EditableText = ({
     visible: false,
     query: '',
     position: { x: 0, y: 0 }
+  })
+  const [pasteOverlay, setPasteOverlay] = useState<{
+    visible: boolean
+    content: string
+  }>({
+    visible: false,
+    content: ''
   })
   const textRef = useRef<HTMLDivElement>(null)
 
@@ -138,6 +148,41 @@ export const EditableText = ({
     setSlashCommand(prev => ({ ...prev, visible: false }))
   }, [])
 
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
+    const pastedText = e.clipboardData.getData('text/plain')
+    
+    // Only show overlay for large pastes (>100 characters) with structure indicators
+    const hasStructure = pastedText.includes('\n\n') || 
+                         pastedText.match(/^#+\s/m) || 
+                         pastedText.match(/^\s*[-*+]\s/m) ||
+                         pastedText.match(/^\s*\d+\.\s/m) ||
+                         pastedText.includes('|') ||
+                         pastedText.match(/^>/m)
+    
+    if (pastedText.length > 100 && hasStructure) {
+      e.preventDefault()
+      setPasteOverlay({
+        visible: true,
+        content: pastedText
+      })
+    }
+    // For smaller pastes or unstructured content, let default paste behavior work
+  }, [])
+
+  const handlePasteOverlayConfirm = useCallback((blocks: Block[]) => {
+    setPasteOverlay({ visible: false, content: '' })
+    
+    if (blocks.length === 1) {
+      onNewBlock?.(blocks[0].type, blocks[0].content, blocks[0].metadata)
+    } else if (blocks.length > 1) {
+      onMultipleBlocks?.(blocks)
+    }
+  }, [onNewBlock, onMultipleBlocks])
+
+  const handlePasteOverlayClose = useCallback(() => {
+    setPasteOverlay({ visible: false, content: '' })
+  }, [])
+
   const showPlaceholder = localContent.trim() === ''
 
   return (
@@ -152,6 +197,7 @@ export const EditableText = ({
         data-placeholder={showPlaceholder ? placeholder : ''}
         onInput={handleInput}
         onKeyDown={handleKeyDown}
+        onPaste={handlePaste}
         onBlur={onBlur}
         autoFocus={autoFocus}
         style={{
@@ -194,6 +240,14 @@ export const EditableText = ({
         visible={slashCommand.visible}
         onSelect={handleSlashCommandSelect}
         onClose={handleSlashCommandClose}
+      />
+
+      {/* Paste Auto-structure Overlay */}
+      <PasteAutoStructureOverlay
+        isOpen={pasteOverlay.visible}
+        pastedContent={pasteOverlay.content}
+        onConfirm={handlePasteOverlayConfirm}
+        onClose={handlePasteOverlayClose}
       />
     </div>
   )

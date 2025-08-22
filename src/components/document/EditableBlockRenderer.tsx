@@ -14,6 +14,7 @@ import { BoundarySlashCommand } from './BoundarySlashCommand'
 import { CrossReference } from './CrossReference'
 import { CrossReferenceInserter } from './CrossReferenceInserter'
 import { useCrossReferences } from '@/hooks/useCrossReferences'
+import { PasteAutoStructureOverlay } from './PasteAutoStructureOverlay'
 
 interface EditableBlockRendererProps {
   block: Block
@@ -22,6 +23,7 @@ interface EditableBlockRendererProps {
   className?: string
   onContentChange?: (blockId: string, newContent: any) => void
   onNewBlock?: (afterBlockId: string, type: Block['type'], content?: any, metadata?: any) => void
+  onMultipleBlocks?: (afterBlockId: string, blocks: Block[]) => void
   onDeleteBlock?: (blockId: string) => void
   onBlockTypeChange?: (blockId: string, type: Block['type'], metadata?: any) => void
   isSelected?: boolean
@@ -40,6 +42,7 @@ export const EditableBlockRenderer = ({
   className = '',
   onContentChange,
   onNewBlock,
+  onMultipleBlocks,
   onDeleteBlock,
   onBlockTypeChange,
   isSelected,
@@ -86,6 +89,13 @@ const [editContent, setEditContent] = useState(initialText)
   }>({
     visible: false,
     position: { x: 0, y: 0 }
+  })
+  const [pasteOverlay, setPasteOverlay] = useState<{
+    visible: boolean
+    content: string
+  }>({
+    visible: false,
+    content: ''
   })
   const [footnoteInserter, setFootnoteInserter] = useState(false)
   const textRef = useRef<HTMLDivElement>(null)
@@ -248,6 +258,41 @@ const [editContent, setEditContent] = useState(initialText)
     setSlashCommand(prev => ({ ...prev, visible: false }))
   }, [])
 
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
+    const pastedText = e.clipboardData.getData('text/plain')
+    
+    // Only show overlay for large pastes (>100 characters) with structure indicators
+    const hasStructure = pastedText.includes('\n\n') || 
+                         pastedText.match(/^#+\s/m) || 
+                         pastedText.match(/^\s*[-*+]\s/m) ||
+                         pastedText.match(/^\s*\d+\.\s/m) ||
+                         pastedText.includes('|') ||
+                         pastedText.match(/^>/m)
+    
+    if (pastedText.length > 100 && hasStructure) {
+      e.preventDefault()
+      setPasteOverlay({
+        visible: true,
+        content: pastedText
+      })
+    }
+    // For smaller pastes or unstructured content, let default paste behavior work
+  }, [])
+
+  const handlePasteOverlayConfirm = useCallback((blocks: Block[]) => {
+    setPasteOverlay({ visible: false, content: '' })
+    
+    if (blocks.length === 1) {
+      onNewBlock?.(block.id, blocks[0].type, blocks[0].content, blocks[0].metadata)
+    } else if (blocks.length > 1) {
+      onMultipleBlocks?.(block.id, blocks)
+    }
+  }, [block.id, onNewBlock, onMultipleBlocks])
+
+  const handlePasteOverlayClose = useCallback(() => {
+    setPasteOverlay({ visible: false, content: '' })
+  }, [])
+
   const handleFormat = useCallback((command: string, value?: string) => {
     if (!textRef.current) return
 
@@ -393,6 +438,7 @@ const [editContent, setEditContent] = useState(initialText)
               data-placeholder="Type / for commands"
               onInput={(e) => handleContentEdit(e.currentTarget.textContent || '')}
               onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
               onBlur={handleBlur}
               onMouseUp={handleMouseUp}
               autoFocus
@@ -805,6 +851,14 @@ const [editContent, setEditContent] = useState(initialText)
         isOpen={footnoteInserter}
         onClose={handleFootnoteClose}
         onInsert={handleFootnoteInsert}
+      />
+
+      {/* Paste Auto-structure Overlay */}
+      <PasteAutoStructureOverlay
+        isOpen={pasteOverlay.visible}
+        pastedContent={pasteOverlay.content}
+        onConfirm={handlePasteOverlayConfirm}
+        onClose={handlePasteOverlayClose}
       />
     </div>
   )

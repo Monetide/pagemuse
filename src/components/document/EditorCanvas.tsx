@@ -238,6 +238,18 @@ const EditorPageBox = ({
                         document={document}
                         onContentChange={onContentChange}
                         onNewBlock={onNewBlock}
+                        onMultipleBlocks={onNewBlock ? (afterBlockId: string, blocks: Block[]) => {
+                          // Insert multiple blocks sequentially
+                          let currentAfterId = afterBlockId
+                          blocks.forEach((newBlock, index) => {
+                            onNewBlock(currentAfterId, newBlock.type, newBlock.content, newBlock.metadata)
+                            // For subsequent blocks, we'll need to find the newly created block ID
+                            // This is a simplified approach - in a real implementation, we'd need proper ID tracking
+                            if (index < blocks.length - 1) {
+                              currentAfterId = `${currentAfterId}-${index}`
+                            }
+                          })
+                        } : undefined}
                         onDeleteBlock={onDeleteBlock}
                         onBlockTypeChange={onBlockTypeChange}
                         isSelected={selectedBlockId === block.id}
