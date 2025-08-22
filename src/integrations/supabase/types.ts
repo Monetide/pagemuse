@@ -159,6 +159,97 @@ export type Database = {
           },
         ]
       }
+      document_activities: {
+        Row: {
+          activity_type: string
+          created_at: string
+          description: string
+          document_id: string
+          id: string
+          ip_address: unknown | null
+          metadata: Json | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string
+          description: string
+          document_id: string
+          id?: string
+          ip_address?: unknown | null
+          metadata?: Json | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string
+          description?: string
+          document_id?: string
+          id?: string
+          ip_address?: unknown | null
+          metadata?: Json | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_activities_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by_user_id: string | null
+          created_at: string
+          document_id: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by_user_id: string
+          role: Database["public"]["Enums"]["document_role"]
+          token: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by_user_id?: string | null
+          created_at?: string
+          document_id: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by_user_id: string
+          role?: Database["public"]["Enums"]["document_role"]
+          token?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by_user_id?: string | null
+          created_at?: string
+          document_id?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by_user_id?: string
+          role?: Database["public"]["Enums"]["document_role"]
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_invitations_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_pages: {
         Row: {
           containers: Json | null
@@ -193,6 +284,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "document_pages_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_shares: {
+        Row: {
+          created_at: string
+          document_id: string
+          expires_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["document_role"]
+          shared_by_user_id: string
+          shared_with_user_id: string
+          status: Database["public"]["Enums"]["share_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          expires_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["document_role"]
+          shared_by_user_id: string
+          shared_with_user_id: string
+          status?: Database["public"]["Enums"]["share_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          expires_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["document_role"]
+          shared_by_user_id?: string
+          shared_with_user_id?: string
+          status?: Database["public"]["Enums"]["share_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_shares_document_id_fkey"
             columns: ["document_id"]
             isOneToOne: false
             referencedRelation: "documents"
@@ -547,6 +682,112 @@ export type Database = {
         }
         Relationships: []
       }
+      published_documents: {
+        Row: {
+          content: Json
+          document_id: string
+          id: string
+          is_current: boolean
+          metadata: Json | null
+          public_url_token: string
+          published_at: string
+          published_by_user_id: string
+          title: string
+          version_number: number
+        }
+        Insert: {
+          content: Json
+          document_id: string
+          id?: string
+          is_current?: boolean
+          metadata?: Json | null
+          public_url_token?: string
+          published_at?: string
+          published_by_user_id: string
+          title: string
+          version_number?: number
+        }
+        Update: {
+          content?: Json
+          document_id?: string
+          id?: string
+          is_current?: boolean
+          metadata?: Json | null
+          public_url_token?: string
+          published_at?: string
+          published_by_user_id?: string
+          title?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "published_documents_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      share_links: {
+        Row: {
+          allow_download: boolean
+          created_at: string
+          created_by_user_id: string
+          document_id: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          max_views: number | null
+          password_hash: string | null
+          role: Database["public"]["Enums"]["document_role"]
+          token: string
+          updated_at: string
+          view_count: number
+          watermark_text: string | null
+        }
+        Insert: {
+          allow_download?: boolean
+          created_at?: string
+          created_by_user_id: string
+          document_id: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_views?: number | null
+          password_hash?: string | null
+          role?: Database["public"]["Enums"]["document_role"]
+          token?: string
+          updated_at?: string
+          view_count?: number
+          watermark_text?: string | null
+        }
+        Update: {
+          allow_download?: boolean
+          created_at?: string
+          created_by_user_id?: string
+          document_id?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          max_views?: number | null
+          password_hash?: string | null
+          role?: Database["public"]["Enums"]["document_role"]
+          token?: string
+          updated_at?: string
+          view_count?: number
+          watermark_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "share_links_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       template_pages: {
         Row: {
           content_scaffold: Json | null
@@ -704,12 +945,30 @@ export type Database = {
           role: Database["public"]["Enums"]["app_role"]
         }[]
       }
+      has_document_permission: {
+        Args: {
+          _document_id: string
+          _required_role: Database["public"]["Enums"]["document_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      log_document_activity: {
+        Args: {
+          _activity_type: string
+          _description: string
+          _document_id: string
+          _metadata?: Json
+          _user_id: string
+        }
+        Returns: string
       }
       update_media_usage_count: {
         Args: { media_uuid: string }
@@ -718,6 +977,8 @@ export type Database = {
     }
     Enums: {
       app_role: "user" | "admin"
+      document_role: "owner" | "editor" | "commenter" | "viewer"
+      share_status: "pending" | "accepted" | "declined"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -846,6 +1107,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["user", "admin"],
+      document_role: ["owner", "editor", "commenter", "viewer"],
+      share_status: ["pending", "accepted", "declined"],
     },
   },
 } as const
