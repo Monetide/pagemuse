@@ -25,7 +25,7 @@ export default function Dashboard() {
   const { documents, loading: documentsLoading } = useDocuments()
   const { templates, loading: templatesLoading } = useTemplates()
   const { stats: userStats, loading: statsLoading } = useUserStats()
-  const { importFiles } = useImport()
+  const { importFiles, PDFDialog } = useImport()
   
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   
@@ -309,6 +309,9 @@ export default function Dashboard() {
         onImport={handleImport}
         defaultMode="new-document"
       />
+      
+      {/* PDF Processing Dialog */}
+      <PDFDialog />
     </div>
   )
 }

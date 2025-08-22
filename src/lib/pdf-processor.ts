@@ -19,7 +19,7 @@ import {
 } from './ir-types'
 
 // Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.js`
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`
 
 export interface PDFProcessingOptions {
   ocrLanguage?: string
@@ -87,7 +87,9 @@ export class PDFProcessor {
    */
   async processFile(file: File): Promise<IRDocument> {
     const arrayBuffer = await file.arrayBuffer()
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+    
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer })
+    const pdf = await loadingTask.promise
     
     const title = file.name.replace(/\.pdf$/, '')
     const irDoc = createIRDocument(title)
