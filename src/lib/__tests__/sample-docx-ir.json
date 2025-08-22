@@ -1,0 +1,203 @@
+{
+  "title": "Sample Word Document",
+  "sections": [
+    {
+      "id": "section-1",
+      "title": "Document Content",
+      "order": 1,
+      "blocks": [
+        {
+          "id": "block-1",
+          "type": "heading",
+          "order": 1,
+          "content": {
+            "level": 1,
+            "text": "Company Report 2024",
+            "anchor": "company-report-2024"
+          }
+        },
+        {
+          "id": "block-2",
+          "type": "paragraph",
+          "order": 2,
+          "content": "This comprehensive report outlines our company's performance and achievements throughout 2024.",
+          "marks": [
+            { "type": "bold" }
+          ]
+        },
+        {
+          "id": "block-3",
+          "type": "heading",
+          "order": 3,
+          "content": {
+            "level": 2,
+            "text": "Executive Summary"
+          }
+        },
+        {
+          "id": "block-4",
+          "type": "paragraph",
+          "order": 4,
+          "content": "Our organization has demonstrated remarkable growth this year, with key achievements in innovation, customer satisfaction, and market expansion.",
+          "marks": [
+            { "type": "italic" }
+          ]
+        },
+        {
+          "id": "block-5",
+          "type": "list",
+          "order": 5,
+          "content": {
+            "type": "unordered",
+            "items": [
+              { "content": "Revenue increased by 25% year-over-year" },
+              { "content": "Expanded into 3 new international markets" },
+              { "content": "Launched 5 innovative product lines" },
+              { "content": "Achieved 98% customer satisfaction rating" }
+            ]
+          }
+        },
+        {
+          "id": "block-6",
+          "type": "heading",
+          "order": 6,
+          "content": {
+            "level": 2,
+            "text": "Financial Performance"
+          }
+        },
+        {
+          "id": "block-7",
+          "type": "table",
+          "order": 7,
+          "content": {
+            "headers": ["Quarter", "Revenue (M)", "Profit (M)", "Growth %"],
+            "rows": [
+              ["Q1 2024", "$12.5", "$2.1", "15%"],
+              ["Q2 2024", "$14.2", "$2.8", "18%"], 
+              ["Q3 2024", "$16.1", "$3.4", "22%"],
+              ["Q4 2024", "$18.3", "$4.2", "28%"]
+            ],
+            "caption": "Quarterly Financial Results 2024",
+            "headerRow": true
+          }
+        },
+        {
+          "id": "block-8",
+          "type": "paragraph",
+          "order": 8,
+          "content": "As shown in the table above, our financial trajectory demonstrates consistent upward growth throughout all four quarters of 2024."
+        },
+        {
+          "id": "block-9",
+          "type": "figure",
+          "order": 9,
+          "content": {
+            "image": {
+              "id": "asset-chart-1",
+              "filename": "revenue-chart.png",
+              "mimeType": "image/png",
+              "url": "/assets/revenue-chart.png",
+              "alt": "Revenue growth chart showing quarterly progression"
+            },
+            "caption": "Figure 1: Quarterly Revenue Growth Trend",
+            "alt": "Revenue growth chart showing quarterly progression",
+            "size": "large",
+            "alignment": "center"
+          }
+        },
+        {
+          "id": "block-10",
+          "type": "heading",
+          "order": 10,
+          "content": {
+            "level": 3,
+            "text": "Key Performance Indicators"
+          }
+        },
+        {
+          "id": "block-11",
+          "type": "list",
+          "order": 11,
+          "content": {
+            "type": "ordered",
+            "items": [
+              { "content": "Customer Acquisition Cost reduced by 15%" },
+              { "content": "Employee retention rate at 94%" },
+              { "content": "Net Promoter Score improved to 72" },
+              { "content": "Market share increased to 23%" }
+            ]
+          }
+        },
+        {
+          "id": "block-12",
+          "type": "quote",
+          "order": 12,
+          "content": {
+            "content": "This year has been transformational for our company. We've not only met our ambitious goals but exceeded them in every key metric.",
+            "citation": "CEO, Jane Smith"
+          }
+        },
+        {
+          "id": "block-13",
+          "type": "heading",
+          "order": 13,
+          "content": {
+            "level": 2,
+            "text": "Future Outlook"
+          }
+        },
+        {
+          "id": "block-14",
+          "type": "paragraph",
+          "order": 14,
+          "content": "Looking ahead to 2025, we are positioned for continued success with strategic initiatives in digital transformation and sustainability.",
+          "marks": [
+            { "type": "underline" }
+          ]
+        },
+        {
+          "id": "block-15",
+          "type": "callout",
+          "order": 15,
+          "content": {
+            "type": "info",
+            "title": "Investment Highlight",
+            "content": "Our R&D investment of $5.2M this year has already yielded 3 patents and 2 breakthrough innovations scheduled for Q1 2025 launch."
+          }
+        }
+      ],
+      "notes": [
+        {
+          "id": "footnote-1",
+          "number": 1,
+          "content": "Revenue figures are adjusted for currency fluctuations and exclude one-time gains from asset sales.",
+          "backlinks": ["block-7"]
+        },
+        {
+          "id": "footnote-2", 
+          "number": 2,
+          "content": "Customer satisfaction data collected through quarterly surveys with 95% response rate across all customer segments.",
+          "backlinks": ["block-5"]
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "author": "Corporate Strategy Team",
+    "created": "2024-12-15T09:00:00Z",
+    "modified": "2024-12-20T16:30:00Z",
+    "tags": ["report", "financial", "2024", "performance"],
+    "description": "Annual company performance report demonstrating DOCX parsing capabilities including headings, tables, figures, footnotes, and formatted text."
+  },
+  "assets": [
+    {
+      "id": "asset-chart-1",
+      "filename": "revenue-chart.png",
+      "mimeType": "image/png",
+      "size": 145600,
+      "alt": "Revenue growth chart showing quarterly progression",
+      "title": "Q4 2024 Revenue Growth Chart"
+    }
+  ]
+}

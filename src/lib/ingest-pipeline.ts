@@ -3,6 +3,7 @@
  * Processes files and converts them to Intermediate Representation (IR)
  */
 
+import mammoth from 'mammoth'
 import { 
   IRDocument, 
   IRSection, 
@@ -14,7 +15,10 @@ import {
   createIRList, 
   createIRTable,
   createIRQuote,
-  validateIRDocument
+  createIRFigure,
+  createIRCallout,
+  validateIRDocument,
+  IRAssetRef
 } from './ir-types'
 
 export interface IngestOptions {
@@ -285,19 +289,403 @@ export class IngestPipeline {
   }
 
   /**
-   * Placeholder for DOCX processing
+   * Processes DOCX files using mammoth.js
    */
   private async processDocxFile(file: File): Promise<IRDocument> {
-    const title = file.name.replace(/\.docx$/, '')
+    try {
+      const arrayBuffer = await file.arrayBuffer()
+      
+      // Configure mammoth with style mappings
+      const options = {
+        styleMap: [
+          // Headings
+          "p[style-name='Heading 1'] => h1:fresh",
+          "p[style-name='Heading 2'] => h2:fresh", 
+          "p[style-name='Heading 3'] => h3:fresh",
+          "p[style-name='Heading 4'] => h4:fresh",
+          "p[style-name='Heading 5'] => h5:fresh",
+          "p[style-name='Heading 6'] => h6:fresh",
+          // Lists
+          "p[style-name='List Paragraph'] => ul > li:fresh",
+          "p[style-name='List Number'] => ol > li:fresh",
+          // Other styles
+          "p[style-name='Quote'] => blockquote:fresh",
+          "p[style-name='Caption'] => p.caption:fresh"
+        ],
+        includeDefaultStyleMap: true,
+        ignoreEmptyParagraphs: false
+      }
+
+      const result = await mammoth.convertToHtml({ arrayBuffer }, options)
+      
+      if (result.messages.length > 0) {
+        console.warn('DOCX conversion warnings:', result.messages)
+      }
+
+      // Parse the HTML result and convert to IR
+      const title = file.name.replace(/\.docx$/, '')
+      const irDoc = await this.parseDocxHtml(result.value, title)
+      
+      // Note: Mammoth.js doesn't directly expose footnotes in the result
+      // Advanced footnote extraction would require custom processing
+      
+      return irDoc
+
+    } catch (error) {
+      console.error('Error processing DOCX:', error)
+      throw new Error(`Failed to process DOCX file: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+
+  /**
+   * Parses DOCX-generated HTML and converts to IR
+   */
+  private async parseDocxHtml(html: string, title: string): Promise<IRDocument> {
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(html, 'text/html')
+    
     const irDoc = createIRDocument(title)
-    const section = createIRSection('Imported Content', 1)
+    const section = createIRSection('Document Content', 1)
     
-    // Placeholder - in real implementation, use mammoth.js or similar
-    section.blocks.push(createIRBlock('paragraph', 
-      `DOCX content from ${file.name}. Full DOCX parsing requires additional libraries.`, 1))
+    let blockOrder = 1
+    let currentList: { type: 'ul' | 'ol'; items: string[] } | null = null
+    let footnoteCounter = 1
     
+    const processElement = (element: Element) => {
+      const tagName = element.tagName.toLowerCase()
+      const textContent = element.textContent?.trim() || ''
+      
+      if (!textContent && tagName !== 'img' && tagName !== 'table') return
+
+      switch (tagName) {
+        case 'h1':
+        case 'h2':
+        case 'h3':
+        case 'h4':
+        case 'h5':
+        case 'h6':
+          // Flush any pending list
+          if (currentList) {
+            this.flushCurrentList(section, currentList, blockOrder++)
+            currentList = null
+          }
+          
+          const level = parseInt(tagName[1])
+          const heading = createIRHeading(level, textContent)
+          section.blocks.push(createIRBlock('heading', heading, blockOrder++))
+          break
+
+        case 'p':
+          const className = element.getAttribute('class') || ''
+          
+          if (className.includes('caption')) {
+            // Handle figure caption - look for preceding image
+            const prevImg = this.findPrecedingImage(element)
+            if (prevImg) {
+              const figure = createIRFigure(
+                {
+                  id: `asset-${Date.now()}`,
+                  filename: prevImg.src.split('/').pop() || 'image',
+                  mimeType: 'image/jpeg', // Default, would need proper detection
+                  url: prevImg.src,
+                  alt: prevImg.alt || ''
+                },
+                textContent,
+                prevImg.alt
+              )
+              section.blocks.push(createIRBlock('figure', figure, blockOrder++))
+              break
+            }
+          }
+
+          // Flush any pending list
+          if (currentList) {
+            this.flushCurrentList(section, currentList, blockOrder++)
+            currentList = null
+          }
+
+          // Extract formatting marks
+          const marks = this.extractFormattingMarks(element)
+          const block = createIRBlock('paragraph', textContent, blockOrder++, { marks })
+          section.blocks.push(block)
+          break
+
+        case 'ul':
+          if (currentList && currentList.type !== 'ul') {
+            this.flushCurrentList(section, currentList, blockOrder++)
+          }
+          if (!currentList) {
+            currentList = { type: 'ul', items: [] }
+          }
+          
+          const ulItems = Array.from(element.querySelectorAll('li'))
+            .map(li => li.textContent?.trim() || '')
+            .filter(text => text)
+          currentList.items.push(...ulItems)
+          break
+
+        case 'ol':
+          if (currentList && currentList.type !== 'ol') {
+            this.flushCurrentList(section, currentList, blockOrder++)
+          }
+          if (!currentList) {
+            currentList = { type: 'ol', items: [] }
+          }
+          
+          const olItems = Array.from(element.querySelectorAll('li'))
+            .map(li => li.textContent?.trim() || '')
+            .filter(text => text)
+          currentList.items.push(...olItems)
+          break
+
+        case 'blockquote':
+          // Flush any pending list
+          if (currentList) {
+            this.flushCurrentList(section, currentList, blockOrder++)
+            currentList = null
+          }
+          
+          const quote = createIRQuote(textContent)
+          section.blocks.push(createIRBlock('quote', quote, blockOrder++))
+          break
+
+        case 'table':
+          // Flush any pending list
+          if (currentList) {
+            this.flushCurrentList(section, currentList, blockOrder++)
+            currentList = null
+          }
+          
+          const table = this.parseDocxTable(element)
+          if (table) {
+            section.blocks.push(createIRBlock('table', table, blockOrder++))
+          }
+          break
+
+        case 'img':
+          // Handle standalone images
+          const figure = createIRFigure(
+            {
+              id: `asset-${Date.now()}`,
+              filename: element.getAttribute('src')?.split('/').pop() || 'image',
+              mimeType: 'image/jpeg', // Default
+              url: element.getAttribute('src') || '',
+              alt: element.getAttribute('alt') || ''
+            },
+            '', // No caption yet
+            element.getAttribute('alt') || ''
+          )
+          section.blocks.push(createIRBlock('figure', figure, blockOrder++))
+          break
+
+        case 'hr':
+          // Flush any pending list
+          if (currentList) {
+            this.flushCurrentList(section, currentList, blockOrder++)
+            currentList = null
+          }
+          
+          section.blocks.push(createIRBlock('horizontal-rule', null, blockOrder++))
+          break
+
+        default:
+          // For other elements, process children
+          Array.from(element.children).forEach(child => {
+            if (child instanceof Element) {
+              processElement(child)
+            }
+          })
+      }
+    }
+
+    // Process all body elements
+    if (doc.body) {
+      Array.from(doc.body.children).forEach(child => {
+        if (child instanceof Element) {
+          processElement(child)
+        }
+      })
+    }
+
+    // Flush any remaining list
+    if (currentList) {
+      this.flushCurrentList(section, currentList, blockOrder++)
+    }
+
     irDoc.sections.push(section)
     return irDoc
+  }
+
+  /**
+   * Extracts formatting marks from an element
+   */
+  private extractFormattingMarks(element: Element) {
+    const marks = []
+    const htmlElement = element as HTMLElement
+    
+    // Check for bold
+    if (element.querySelector('strong, b') || 
+        htmlElement.style?.fontWeight === 'bold' ||
+        htmlElement.style?.fontWeight === '700') {
+      marks.push({ type: 'bold' })
+    }
+
+    // Check for italic
+    if (element.querySelector('em, i') || 
+        htmlElement.style?.fontStyle === 'italic') {
+      marks.push({ type: 'italic' })
+    }
+
+    // Check for underline
+    if (element.querySelector('u') || 
+        htmlElement.style?.textDecoration?.includes('underline')) {
+      marks.push({ type: 'underline' })
+    }
+
+    // Check for strikethrough
+    if (element.querySelector('s, strike, del') || 
+        htmlElement.style?.textDecoration?.includes('line-through')) {
+      marks.push({ type: 'strikethrough' })
+    }
+
+    // Check for links
+    const link = element.querySelector('a')
+    if (link) {
+      marks.push({ 
+        type: 'link', 
+        attrs: { href: link.getAttribute('href') } 
+      })
+    }
+
+    return marks
+  }
+
+  /**
+   * Flushes current list to IR blocks
+   */
+  private flushCurrentList(section: IRSection, currentList: { type: 'ul' | 'ol'; items: string[] }, order: number) {
+    if (currentList.items.length === 0) return
+
+    const listType = currentList.type === 'ul' ? 'unordered' : 'ordered'
+    const list = createIRList(listType, currentList.items)
+    section.blocks.push(createIRBlock('list', list, order))
+  }
+
+  /**
+   * Finds preceding image element for caption association
+   */
+  private findPrecedingImage(element: Element): HTMLImageElement | null {
+    let prev = element.previousElementSibling
+    
+    while (prev) {
+      if (prev.tagName.toLowerCase() === 'img') {
+        return prev as HTMLImageElement
+      }
+      
+      const img = prev.querySelector('img')
+      if (img) {
+        return img
+      }
+      
+      prev = prev.previousElementSibling
+    }
+    
+    return null
+  }
+
+  /**
+   * Parses DOCX table structure
+   */
+  private parseDocxTable(tableElement: Element) {
+    const headers: string[] = []
+    const rows: string[][] = []
+    let hasHeaderRow = false
+
+    // Get all rows
+    const tableRows = Array.from(tableElement.querySelectorAll('tr'))
+    
+    if (tableRows.length === 0) return null
+
+    // Process first row - check if it's a header
+    const firstRow = tableRows[0]
+    const firstRowCells = Array.from(firstRow.querySelectorAll('th, td'))
+    
+    // If first row has th elements or looks like a header, treat as header
+    if (firstRow.querySelectorAll('th').length > 0 || 
+        this.looksLikeHeaderRow(firstRowCells)) {
+      hasHeaderRow = true
+      firstRowCells.forEach(cell => {
+        headers.push(cell.textContent?.trim() || '')
+      })
+      
+      // Process remaining rows as data
+      tableRows.slice(1).forEach(row => {
+        const cells = Array.from(row.querySelectorAll('td, th'))
+        const rowData: string[] = []
+        cells.forEach(cell => {
+          rowData.push(cell.textContent?.trim() || '')
+        })
+        if (rowData.length > 0) {
+          rows.push(rowData)
+        }
+      })
+    } else {
+      // No header row, all rows are data
+      tableRows.forEach(row => {
+        const cells = Array.from(row.querySelectorAll('td, th'))
+        const rowData: string[] = []
+        cells.forEach(cell => {
+          rowData.push(cell.textContent?.trim() || '')
+        })
+        if (rowData.length > 0) {
+          rows.push(rowData)
+        }
+      })
+    }
+
+    return createIRTable(headers, rows, undefined)
+  }
+
+  /**
+   * Heuristic to determine if a row looks like a header
+   */
+  private looksLikeHeaderRow(cells: Element[]): boolean {
+    if (cells.length === 0) return false
+
+    // Check for bold styling
+    const boldCells = cells.filter(cell => {
+      const hasStrongOrB = cell.querySelector('strong, b')
+      const htmlCell = cell as HTMLElement
+      const hasBoldStyle = htmlCell.style?.fontWeight === 'bold' || htmlCell.style?.fontWeight === '700'
+      return hasStrongOrB || hasBoldStyle
+    })
+
+    // If more than half the cells are bold, likely a header
+    return boldCells.length > cells.length / 2
+  }
+
+  /**
+   * Processes DOCX footnotes
+   */
+  private async processDocxFootnotes(irDoc: IRDocument, footnotes: any[]) {
+    if (!footnotes || footnotes.length === 0) return
+
+    footnotes.forEach((footnote, index) => {
+      const footnoteObj = {
+        id: `footnote-${index + 1}`,
+        number: index + 1,
+        content: footnote.body || footnote.content || '',
+        backlinks: [] // Would need more complex processing to link back to references
+      }
+
+      // Add to first section's notes (could be more sophisticated)
+      if (irDoc.sections.length > 0) {
+        if (!irDoc.sections[0].notes) {
+          irDoc.sections[0].notes = []
+        }
+        irDoc.sections[0].notes.push(footnoteObj)
+      }
+    })
   }
 
   /**
