@@ -219,7 +219,24 @@ export const useDocumentModel = () => {
         triggerAutoSave(updatedDocument)
         return newBlock
       } else {
-        console.log('Missing first section or flow, cannot create first block')
+        console.log('Missing first section or flow, creating them...')
+        // Create a default section and flow, then insert the block
+        const defaultSection = createSection('Main Section', 0)
+        const defaultFlow = createFlow('Main Content', 'linear', 0)
+        const sectionWithFlow = addFlowToSection(defaultSection, defaultFlow)
+        const newBlock = createBlock(type, content, 0)
+        if (cleanMetadata && Object.keys(cleanMetadata).length > 0) {
+          newBlock.metadata = { ...newBlock.metadata, ...cleanMetadata }
+        }
+        const flowWithBlock = addBlockToFlow(sectionWithFlow.flows[0], newBlock)
+        const sectionWithBlock = {
+          ...sectionWithFlow,
+          flows: [flowWithBlock]
+        }
+        const updatedDocument = addSectionToDocument(document, sectionWithBlock)
+        setDocument(updatedDocument)
+        triggerAutoSave(updatedDocument)
+        return newBlock
       }
       return
     }
