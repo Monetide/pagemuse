@@ -4,10 +4,12 @@ import { Template } from './useSupabaseData'
 import { TemplateEngine } from '@/lib/template-engine'
 import { createTemplate } from '@/lib/template-model'
 import { useToast } from '@/hooks/use-toast'
+import { useDocumentPersistence } from '@/hooks/useDocumentPersistence'
 
 export function useTemplateApplication() {
   const navigate = useNavigate()
   const { toast } = useToast()
+  const { saveDocument } = useDocumentPersistence()
   const [loading, setLoading] = useState(false)
 
   const createFromTemplate = async (template: Template, title?: string) => {
@@ -22,8 +24,15 @@ export function useTemplateApplication() {
         replaceContent: true
       })
 
-      // Navigate to editor with new document
-      navigate(`/editor/${document.id}`)
+      // Save the document to the database
+      const documentId = await saveDocument(document)
+      
+      if (!documentId) {
+        throw new Error('Failed to save document')
+      }
+
+      // Navigate to editor with saved document
+      navigate(`/documents/${documentId}/editor`)
       
       toast({
         title: "Template Applied",
