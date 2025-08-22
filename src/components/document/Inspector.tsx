@@ -15,6 +15,7 @@ import { ChartInspector } from './ChartInspector'
 import { PageMasterSettings } from './PageMasterSettings'
 import { LayoutPresetSelector } from './LayoutPresetSelector'
 import { useAccessibility } from '../accessibility/AccessibilityProvider'
+import { RotateCcw } from 'lucide-react'
 
 interface InspectorProps {
   selectedBlock?: Block
@@ -574,6 +575,19 @@ export const Inspector = ({
           >
             {showPresets ? 'Manual Settings' : 'Layout Presets'}
           </Button>
+          
+          {/* Data Appendix Status Indicator */}
+          {currentSection.layoutIntent === 'data-appendix' && (
+            <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg">
+              <div className="flex items-center gap-2 text-primary font-medium text-sm mb-1">
+                <RotateCcw className="w-4 h-4" />
+                Data Appendix Mode Active
+              </div>
+              <p className="text-xs text-primary/80">
+                ✓ Landscape rotation rules enabled for tables and wide content
+              </p>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
