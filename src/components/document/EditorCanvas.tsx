@@ -230,6 +230,15 @@ const EditorPageBox = ({
                   {columnBox.content.length === 0 && !hasContent ? (
                     <EmptyCanvasState 
                       onNewBlock={onNewBlock}
+                      onMultipleBlocks={onNewBlock ? (blocks: Block[]) => {
+                        // Insert multiple blocks sequentially
+                        let currentAfterId = 'create-first'
+                        blocks.forEach((block, index) => {
+                          onNewBlock(currentAfterId, block.type, block.content, { sectionId: section.id, ...block.metadata })
+                          // For subsequent blocks, update the afterId
+                          currentAfterId = block.id || `block-${index}`
+                        })
+                      } : undefined}
                       sectionId={section.id}
                       documentTitle={document?.title}
                       onTitleChange={onTitleChange}
