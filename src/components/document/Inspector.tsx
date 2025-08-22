@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { FigureInspector } from './FigureInspector'
 import { TableInspector } from './TableInspector'
+import { ChartInspector } from './ChartInspector'
 
 interface InspectorProps {
   selectedBlock?: Block
@@ -117,6 +118,24 @@ export const Inspector = ({
           block={selectedBlock}
           onContentChange={(blockId, content) => onBlockUpdate?.(blockId, { content })}
           onMetadataChange={(blockId, metadata) => onBlockUpdate?.(blockId, { metadata })}
+        />
+      </div>
+    )
+  }
+
+  // Handle chart blocks with dedicated inspector
+  if (selectedBlock?.type === 'chart') {
+    return (
+      <div className="w-80 border-l border-border bg-background p-4 overflow-y-auto">
+        <ChartInspector
+          block={selectedBlock}
+          onUpdate={(updates) => onBlockUpdate?.(selectedBlock.id, updates)}
+          onDelete={() => onDeleteBlock?.(selectedBlock.id)}
+          onDuplicate={() => {
+            if (onNewBlock) {
+              onNewBlock(selectedBlock.id, selectedBlock.type, selectedBlock.content, selectedBlock.metadata)
+            }
+          }}
         />
       </div>
     )

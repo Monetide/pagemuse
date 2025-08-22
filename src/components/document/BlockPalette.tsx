@@ -9,6 +9,7 @@ import {
   ListOrdered, 
   Image, 
   Table, 
+  BarChart,
   Link, 
   Minus, 
   Move,
@@ -75,6 +76,13 @@ const blockTypes: BlockType[] = [
     name: 'Table',
     description: 'Data table',
     icon: Table,
+    category: 'atomic'
+  },
+  {
+    type: 'chart',
+    name: 'Chart',
+    description: 'Data visualization',
+    icon: BarChart,
     category: 'atomic'
   },
   {

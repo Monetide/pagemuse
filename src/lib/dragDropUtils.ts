@@ -30,6 +30,23 @@ export function getDefaultBlockContent(blockType?: string): any {
         caption: 'Table caption',
         number: 1
       }
+    case 'chart':
+      return {
+        chartType: 'bar',
+        title: 'New Chart',
+        caption: 'Add your caption here',
+        data: [
+          { name: 'Item 1', value: 400 },
+          { name: 'Item 2', value: 300 },
+          { name: 'Item 3', value: 500 }
+        ],
+        xField: 'name',
+        yFields: ['value'],
+        size: 'column-width',
+        showGrid: true,
+        showLegend: true,
+        altText: 'Bar chart showing three data items'
+      }
     case 'cross-reference':
       return { text: 'Reference text', target: '' }
     case 'divider':
@@ -52,7 +69,7 @@ export function getBlockIdFromDropTarget(dropTarget: DropTarget): string | null 
 
 // Check if a block type is atomic (can't be nested)
 export function isAtomicBlockType(blockType: string): boolean {
-  const atomicBlocks = ['figure', 'table']
+  const atomicBlocks = ['figure', 'table', 'chart']
   return atomicBlocks.includes(blockType)
 }
 

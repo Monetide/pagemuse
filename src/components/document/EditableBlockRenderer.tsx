@@ -6,6 +6,7 @@ import { FormattingToolbar } from './FormattingToolbar'
 import { TextInvisibles, InvisibleMarkers } from './TextInvisibles'
 import { FigureBlock } from './FigureBlock'
 import { TableEditor } from './TableEditor'
+import { ChartBlock } from './ChartBlock'
 import { BoundarySlashCommand } from './BoundarySlashCommand'
 import { CrossReference } from './CrossReference'
 import { CrossReferenceInserter } from './CrossReferenceInserter'
@@ -584,6 +585,32 @@ export const EditableBlockRenderer = ({
               content={block.content}
               document={document}
               className="text-sm"
+            />
+          </div>
+        )
+      
+      case 'chart':
+        const chartData = block.content || {}
+        return (
+          <div
+            id={`block-${block.id}`}
+            tabIndex={0}
+            onKeyDown={handleBoundaryKeyDown}
+            className="outline-none relative"
+          >
+            {currentElement && (
+              <div className="absolute -left-16 top-2 text-xs text-muted-foreground font-medium">
+                {currentElement.label}
+              </div>
+            )}
+            <ChartBlock
+              data={chartData}
+              isSelected={isSelected}
+              isEditing={isEditing}
+              showInvisibles={showInvisibles}
+              onDataChange={(newData) => onContentChange?.(block.id, newData)}
+              onEditToggle={() => setIsEditing(!isEditing)}
+              onClick={handleClick}
             />
           </div>
         )

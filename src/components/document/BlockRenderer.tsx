@@ -1,5 +1,5 @@
 import { Block } from '@/lib/document-model'
-import { Minus, Image, Table } from 'lucide-react'
+import { Minus, Image, Table, BarChart } from 'lucide-react'
 
 interface BlockRendererProps {
   block: Block
@@ -115,6 +115,31 @@ export const BlockRenderer = ({ block, className = '' }: BlockRendererProps) => 
             {tableData.caption && (
               <div className="text-xs text-center text-muted-foreground italic mt-2">
                 <strong>Table {tableData.number || '1'}:</strong> {tableData.caption}
+              </div>
+            )}
+          </div>
+        )
+      
+      case 'chart':
+        const chartData = block.content || {}
+        return (
+          <div className="mb-4">
+            {chartData.title && (
+              <h3 className="text-base font-semibold mb-2 text-center">{chartData.title}</h3>
+            )}
+            <div className="border border-border rounded p-4 bg-muted/10">
+              <div className="flex items-center justify-center bg-muted/20 border border-dashed border-muted-foreground/30 rounded mb-2" 
+                   style={{ height: `${chartData.size === 'full-width' ? 400 : 300}px` }}>
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <BarChart className="w-8 h-8" />
+                  <span className="text-xs">{chartData.chartType || 'Bar'} Chart</span>
+                  <span className="text-xs opacity-60">{chartData.data?.length || 0} data points</span>
+                </div>
+              </div>
+            </div>
+            {chartData.caption && (
+              <div className="text-xs text-center text-muted-foreground italic mt-2">
+                <strong>Chart {chartData.number || '1'}:</strong> {chartData.caption}
               </div>
             )}
           </div>

@@ -3,7 +3,7 @@ import { SemanticDocument, Block } from '@/lib/document-model'
 
 export interface ReferenceableElement {
   id: string
-  type: 'heading' | 'figure' | 'table'
+  type: 'heading' | 'figure' | 'table' | 'chart'
   label: string
   number: number | string
   title?: string
@@ -25,6 +25,7 @@ export const useCrossReferences = (document: SemanticDocument | null) => {
     let headingCounters = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
     let figureCounter = 0
     let tableCounter = 0
+    let chartCounter = 0
 
     // Traverse all sections, flows, and blocks
     document.sections.forEach(section => {
@@ -78,6 +79,17 @@ export const useCrossReferences = (document: SemanticDocument | null) => {
                   label: `Table ${tableCounter}`,
                   number: tableCounter,
                   title: block.content?.caption || 'Untitled Table'
+                })
+                break
+
+              case 'chart':
+                chartCounter++
+                elements.push({
+                  id: block.id,
+                  type: 'chart',
+                  label: `Chart ${chartCounter}`,
+                  number: chartCounter,
+                  title: block.content?.caption || block.content?.title || 'Untitled Chart'
                 })
                 break
             }
