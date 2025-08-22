@@ -5,6 +5,7 @@ import { SlashCommand } from './SlashCommand'
 import { FormattingToolbar } from './FormattingToolbar'
 import { TextInvisibles, InvisibleMarkers } from './TextInvisibles'
 import { FigureBlock } from './FigureBlock'
+import { BoundarySlashCommand } from './BoundarySlashCommand'
 
 interface EditableBlockRendererProps {
   block: Block
@@ -49,6 +50,15 @@ export const EditableBlockRenderer = ({
     position: { x: 0, y: 0 },
     selectedText: ''
   })
+  const [boundarySlashCommand, setBoundarySlashCommand] = useState<{
+    visible: boolean
+    query: string
+    position: { x: number; y: number }
+  }>({
+    visible: false,
+    query: '',
+    position: { x: 0, y: 0 }
+  })
   const textRef = useRef<HTMLDivElement>(null)
   
   const isChunk = block.metadata?.isChunk
@@ -57,7 +67,15 @@ export const EditableBlockRenderer = ({
 
   const handleClick = useCallback(() => {
     onSelect?.(block.id)
-    if (['paragraph', 'heading', 'quote'].includes(block.type)) {
+    
+    // For non-text blocks, set up boundary slash command handling
+    if (!['paragraph', 'heading', 'quote'].includes(block.type)) {
+      // Enable keyboard events for boundary slash commands
+      const blockElement = document.getElementById(`block-${block.id}`)
+      if (blockElement) {
+        blockElement.focus()
+      }
+    } else if (['paragraph', 'heading', 'quote'].includes(block.type)) {
       setIsEditing(true)
     }
   }, [block.id, block.type, onSelect])
@@ -192,6 +210,55 @@ export const EditableBlockRenderer = ({
 
   const handleFormattingToolbarClose = useCallback(() => {
     setFormattingToolbar(prev => ({ ...prev, visible: false }))
+  }, [])
+
+  const handleBoundaryKeyDown = useCallback((e: KeyboardEvent) => {
+    // Handle boundary slash commands for non-text blocks
+    if (e.key === '/' && isSelected && !isEditing) {
+      e.preventDefault()
+      
+      // Get the position of the selected block
+      const blockElement = document.getElementById(`block-${block.id}`)
+      if (blockElement) {
+        const rect = blockElement.getBoundingClientRect()
+        
+        setBoundarySlashCommand({
+          visible: true,
+          query: '',
+          position: { 
+            x: rect.left + rect.width / 2, 
+            y: rect.bottom 
+          }
+        })
+      }
+    } else if (boundarySlashCommand.visible) {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        setBoundarySlashCommand(prev => ({ ...prev, visible: false }))
+      }
+      // Let BoundarySlashCommand handle other keys
+    }
+  }, [block.id, isSelected, isEditing, boundarySlashCommand.visible])
+
+  const handleBoundarySlashCommandSelect = useCallback((
+    blockType: Block['type'], 
+    scope: 'above' | 'below', 
+    content?: any, 
+    metadata?: any
+  ) => {
+    setBoundarySlashCommand(prev => ({ ...prev, visible: false }))
+    
+    if (scope === 'above') {
+      // Insert before current block (use previous block's ID or special handling)
+      onNewBlock?.(block.id, blockType, content, { ...metadata, insertBefore: true })
+    } else {
+      // Insert after current block
+      onNewBlock?.(block.id, blockType, content, metadata)
+    }
+  }, [block.id, onNewBlock])
+
+  const handleBoundarySlashCommandClose = useCallback(() => {
+    setBoundarySlashCommand(prev => ({ ...prev, visible: false }))
   }, [])
 
   const handleBlur = useCallback(() => {
@@ -381,15 +448,22 @@ export const EditableBlockRenderer = ({
       case 'figure':
         const figureData = block.content || {}
         return (
-          <FigureBlock
-            data={figureData}
-            isSelected={isSelected}
-            isEditing={isEditing}
-            showInvisibles={showInvisibles}
-            onDataChange={(newData) => onContentChange?.(block.id, newData)}
-            onEditToggle={() => setIsEditing(!isEditing)}
-            onClick={handleClick}
-          />
+          <div
+            id={`block-${block.id}`}
+            tabIndex={0}
+            onKeyDown={handleBoundaryKeyDown}
+            className="outline-none"
+          >
+            <FigureBlock
+              data={figureData}
+              isSelected={isSelected}
+              isEditing={isEditing}
+              showInvisibles={showInvisibles}
+              onDataChange={(newData) => onContentChange?.(block.id, newData)}
+              onEditToggle={() => setIsEditing(!isEditing)}
+              onClick={handleClick}
+            />
+          </div>
         )
       
       case 'table':
@@ -402,7 +476,13 @@ export const EditableBlockRenderer = ({
                 Table continued from previous page/column
               </div>
             )}
-            <div className={`border border-border rounded overflow-hidden bg-background cursor-pointer hover:bg-muted/10 ${isSelected ? 'ring-2 ring-primary' : ''}`} onClick={handleClick}>
+            <div 
+              id={`block-${block.id}`}
+              tabIndex={0}
+              onKeyDown={handleBoundaryKeyDown}
+              className={`border border-border rounded overflow-hidden bg-background cursor-pointer hover:bg-muted/10 outline-none ${isSelected ? 'ring-2 ring-primary' : ''}`} 
+              onClick={handleClick}
+            >
               <table className="w-full text-xs">
                 <thead className="bg-muted/50">
                   <tr>
@@ -455,7 +535,13 @@ export const EditableBlockRenderer = ({
       
       case 'divider':
         return (
-          <div className={`flex justify-center my-4 cursor-pointer hover:bg-accent/10 rounded p-2 ${isSelected ? 'ring-2 ring-primary' : ''}`} onClick={handleClick}>
+          <div 
+            id={`block-${block.id}`}
+            tabIndex={0}
+            onKeyDown={handleBoundaryKeyDown}
+            className={`flex justify-center my-4 cursor-pointer hover:bg-accent/10 rounded p-2 outline-none ${isSelected ? 'ring-2 ring-primary' : ''}`} 
+            onClick={handleClick}
+          >
             <Minus className="w-12 h-px text-border" />
           </div>
         )
@@ -464,7 +550,10 @@ export const EditableBlockRenderer = ({
         const height = block.metadata?.height || 0.5
         return (
           <div 
-            className={`w-full bg-transparent cursor-pointer hover:bg-accent/10 rounded border border-dashed border-transparent hover:border-accent/30 ${isSelected ? 'ring-2 ring-primary' : ''}`}
+            id={`block-${block.id}`}
+            tabIndex={0}
+            onKeyDown={handleBoundaryKeyDown}
+            className={`w-full bg-transparent cursor-pointer hover:bg-accent/10 rounded border border-dashed border-transparent hover:border-accent/30 outline-none ${isSelected ? 'ring-2 ring-primary' : ''}`}
             style={{ height: `${height * 24}px` }}
             onClick={handleClick}
           />
@@ -499,6 +588,16 @@ export const EditableBlockRenderer = ({
         visible={slashCommand.visible}
         onSelect={handleSlashCommandSelect}
         onClose={handleSlashCommandClose}
+      />
+      
+      {/* Boundary Slash Command Menu */}
+      <BoundarySlashCommand
+        position={boundarySlashCommand.position}
+        query={boundarySlashCommand.query}
+        visible={boundarySlashCommand.visible}
+        onSelect={handleBoundarySlashCommandSelect}
+        onClose={handleBoundarySlashCommandClose}
+        blockType={block.type}
       />
       
       {/* Formatting Toolbar */}

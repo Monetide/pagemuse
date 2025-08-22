@@ -172,8 +172,12 @@ export const useDocumentModel = () => {
     triggerAutoSave(updatedDocument)
   }, [document, triggerAutoSave])
 
-  const addBlockAfter = useCallback((afterBlockId: string, type: Block['type'], content: any = '') => {
+  const addBlockAfter = useCallback((afterBlockId: string, type: Block['type'], content: any = '', metadata?: any) => {
     if (!document) return
+
+    const insertBefore = metadata?.insertBefore
+    const cleanMetadata = metadata ? { ...metadata } : {}
+    delete cleanMetadata?.insertBefore
 
     // Special case: creating first block in empty document
     if (afterBlockId === 'create-first') {
@@ -182,6 +186,9 @@ export const useDocumentModel = () => {
       
       if (firstSection && firstFlow) {
         const newBlock = createBlock(type, content, 0)
+        if (cleanMetadata && Object.keys(cleanMetadata).length > 0) {
+          newBlock.metadata = { ...newBlock.metadata, ...cleanMetadata }
+        }
         const updatedDocument = {
           ...document,
           sections: document.sections.map(section => 
@@ -225,8 +232,15 @@ export const useDocumentModel = () => {
     }
 
     if (targetSectionId && targetFlowId) {
-      // Create new block with order after target block
-      const newBlock = createBlock(type, content, targetBlockOrder + 0.5)
+      // Create new block with order before or after target block
+      const newOrder = insertBefore ? 
+        targetBlockOrder - 0.1 : // Insert before
+        targetBlockOrder + 0.5   // Insert after
+        
+      const newBlock = createBlock(type, content, newOrder)
+      if (cleanMetadata && Object.keys(cleanMetadata).length > 0) {
+        newBlock.metadata = { ...newBlock.metadata, ...cleanMetadata }
+      }
       
       const updatedDocument = {
         ...document,
