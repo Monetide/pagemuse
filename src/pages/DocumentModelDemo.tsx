@@ -61,9 +61,9 @@ export default function DocumentModelDemo() {
   const [selectedSectionId, setSelectedSectionId] = useState<string>('')
   const [selectedSectionIds, setSelectedSectionIds] = useState<string[]>([])
   const [selectedBlockId, setSelectedBlockId] = useState<string>('')
-  const [debugMode, setDebugMode] = useState<boolean>(false)
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null)
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+  const [debugMode, setDebugMode] = useState<boolean>(false)
   const [showVersionHistory, setShowVersionHistory] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [sectionsToDelete, setSectionsToDelete] = useState<string[]>([])
@@ -277,18 +277,27 @@ export default function DocumentModelDemo() {
     }
   }, [documentId, document, loadDocument])
 
-  // Command palette keyboard shortcut
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Command palette
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
         setCommandPaletteOpen(true)
+      }
+      
+      // Delete section shortcut: Cmd+Backspace (Mac) or Ctrl+Backspace (Win)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Backspace') {
+        e.preventDefault()
+        if (selectedSectionId) {
+          handleDeleteSectionRequest([selectedSectionId])
+        }
       }
     }
 
     window.document.addEventListener('keydown', handleKeyDown)
     return () => window.document.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  }, [selectedSectionId])
 
   // Handle command palette block insertion
   const handleCommandPaletteInsert = (blockType: Block['type'], content?: any, metadata?: any) => {
@@ -596,16 +605,12 @@ export default function DocumentModelDemo() {
                       
                       return (
                         <div key={section.id} className="flex-1 flex flex-col">
-                          {/* Canvas Section Header - shows when cursor is in section */}
-                          {focusedBlockId && section.flows.some(flow => 
-                            flow.blocks.some(block => block.id === focusedBlockId)
-                          ) && (
-                            <CanvasSectionHeader
-                              section={section}
-                              canDelete={canDeleteSections([section.id])}
-                              onDeleteSection={() => handleDeleteSectionRequest([section.id])}
-                            />
-                          )}
+                           {/* Canvas Section Header */}
+                           <CanvasSectionHeader
+                             section={section}
+                             canDelete={canDeleteSections([section.id])}
+                             onDeleteSection={() => handleDeleteSectionRequest([section.id])}
+                           />
                           
                           <EditorCanvas
                             section={section}
