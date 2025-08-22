@@ -16,7 +16,8 @@ import {
   Share,
   Download,
   Settings,
-  Command
+  Command,
+  Bug
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -25,6 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Toggle } from '@/components/ui/toggle'
 import {
   Dialog,
   DialogContent,
@@ -44,6 +46,8 @@ interface DocumentHeaderProps {
   onTitleChange: (newTitle: string) => void
   onSaveAs: (newTitle: string) => void
   onClose: () => void
+  debugMode?: boolean
+  onDebugToggle?: (enabled: boolean) => void
 }
 
 export function DocumentHeader({
@@ -52,7 +56,9 @@ export function DocumentHeader({
   documentMetadata,
   onTitleChange,
   onSaveAs,
-  onClose
+  onClose,
+  debugMode = false,
+  onDebugToggle
 }: DocumentHeaderProps) {
   const navigate = useNavigate()
   const { id } = useParams()
@@ -220,6 +226,16 @@ export function DocumentHeader({
 
           {/* Action Buttons */}
           <div className="flex items-center gap-1">
+            <Toggle
+              pressed={debugMode}
+              onPressedChange={onDebugToggle}
+              variant="outline"
+              size="sm"
+              title={debugMode ? "Disable Debug Mode" : "Enable Debug Mode"}
+            >
+              <Bug className="w-4 h-4" />
+            </Toggle>
+            
             <Button
               variant="ghost"
               size="sm"

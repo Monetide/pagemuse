@@ -6,6 +6,8 @@ import { Navigator } from '@/components/document/Navigator'
 import { BlockPalette } from '@/components/document/BlockPalette'
 import { EditorCanvas } from '@/components/document/EditorCanvas'
 import { Inspector } from '@/components/document/Inspector'
+import { LayoutPreview } from '@/components/document/LayoutPreview'
+import { StructureTree } from '@/components/document/StructureTree'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -34,6 +36,7 @@ export default function DocumentModelDemo() {
   const [blockContent, setBlockContent] = useState('')
   const [selectedSectionId, setSelectedSectionId] = useState<string>('')
   const [selectedBlockId, setSelectedBlockId] = useState<string>('')
+  const [debugMode, setDebugMode] = useState<boolean>(false)
 
   const handleCreateDocument = () => {
     if (docTitle.trim()) {
@@ -220,6 +223,8 @@ export default function DocumentModelDemo() {
           onTitleChange={updateTitle}
           onSaveAs={handleSaveAs}
           onClose={persistence.closeDocument}
+          debugMode={debugMode}
+          onDebugToggle={setDebugMode}
         />
       )}
       
@@ -264,11 +269,18 @@ export default function DocumentModelDemo() {
         // 3-Pane Editor Layout
         <div className="flex-1 flex">
           {/* Left Sidebar */}
-          <div className="w-80 border-r border-border bg-muted/30">
+          <div className={`border-r border-border bg-muted/30 transition-all duration-200 ${
+            debugMode ? 'w-60' : 'w-80'
+          }`}>
             <Tabs defaultValue="navigator" className="h-full flex flex-col">
-              <TabsList className="grid w-full grid-cols-2 rounded-none border-b">
+              <TabsList className={`grid w-full rounded-none border-b ${
+                debugMode ? 'grid-cols-3' : 'grid-cols-2'
+              }`}>
                 <TabsTrigger value="navigator">Navigator</TabsTrigger>
                 <TabsTrigger value="blocks">Blocks</TabsTrigger>
+                {debugMode && (
+                  <TabsTrigger value="structure">Structure</TabsTrigger>
+                )}
               </TabsList>
               
               <TabsContent value="navigator" className="flex-1 mt-0">
@@ -381,6 +393,16 @@ export default function DocumentModelDemo() {
                   }}
                 />
               </TabsContent>
+              
+              {debugMode && (
+                <TabsContent value="structure" className="flex-1 mt-0">
+                  <StructureTree
+                    document={document}
+                    selectedBlockId={selectedBlockId}
+                    onBlockSelect={setSelectedBlockId}
+                  />
+                </TabsContent>
+              )}
             </Tabs>
           </div>
           
@@ -466,45 +488,54 @@ export default function DocumentModelDemo() {
             )}
           </div>
           
-          {/* Right Inspector */}
-          <Inspector
-            selectedBlock={selectedBlock}
-            currentSection={document.sections.find(s => s.id === (selectedSectionId || document.sections[0]?.id))!}
-            onBlockUpdate={(blockId, updates) => {
-              if (!document) return
-              
-              const updatedDoc = {
-                ...document,
-                sections: document.sections.map(section => ({
-                  ...section,
-                  flows: section.flows.map(flow => ({
-                    ...flow,
-                    blocks: flow.blocks.map(block => 
-                      block.id === blockId 
-                        ? { ...block, ...updates }
-                        : block
-                    )
-                  }))
-                })),
-                updated_at: new Date().toISOString()
-              }
-              setDocument(updatedDoc)
-            }}
-            onSectionUpdate={(sectionId, updates) => {
-              if (!document) return
-              
-              const updatedDoc = {
-                ...document,
-                sections: document.sections.map(section =>
-                  section.id === sectionId
-                    ? { ...section, ...updates }
-                    : section
-                ),
-                updated_at: new Date().toISOString()
-              }
-              setDocument(updatedDoc)
-            }}
-          />
+          {/* Right Inspector/Debug Panel */}
+          <div className="flex">
+            <Inspector
+              selectedBlock={selectedBlock}
+              currentSection={document.sections.find(s => s.id === (selectedSectionId || document.sections[0]?.id))!}
+              onBlockUpdate={(blockId, updates) => {
+                if (!document) return
+                
+                const updatedDoc = {
+                  ...document,
+                  sections: document.sections.map(section => ({
+                    ...section,
+                    flows: section.flows.map(flow => ({
+                      ...flow,
+                      blocks: flow.blocks.map(block => 
+                        block.id === blockId 
+                          ? { ...block, ...updates }
+                          : block
+                      )
+                    }))
+                  })),
+                  updated_at: new Date().toISOString()
+                }
+                setDocument(updatedDoc)
+              }}
+              onSectionUpdate={(sectionId, updates) => {
+                if (!document) return
+                
+                const updatedDoc = {
+                  ...document,
+                  sections: document.sections.map(section =>
+                    section.id === sectionId
+                      ? { ...section, ...updates }
+                      : section
+                  ),
+                  updated_at: new Date().toISOString()
+                }
+                setDocument(updatedDoc)
+              }}
+            />
+            
+            {/* Debug Layout Preview */}
+            {debugMode && (
+              <LayoutPreview 
+                section={document.sections.find(s => s.id === (selectedSectionId || document.sections[0]?.id))!} 
+              />
+            )}
+          </div>
         </div>
       )}
     </div>
