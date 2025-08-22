@@ -3,6 +3,10 @@ import { Minus, Image, Table, BarChart, FileText, BookOpen } from 'lucide-react'
 import { FootnoteMarkerRenderer } from './FootnoteMarkerRenderer'
 import { TOCRenderer } from './TOCRenderer'
 import { LayoutResult } from '@/lib/layout-engine'
+import { useViewMode } from '@/contexts/ViewModeContext'
+import { ScreenModeTable } from './ScreenModeTable'
+import { ScreenModeFootnotePopover } from './ScreenModeFootnotePopover'
+import { ViewModeAwareCrossReference } from './ViewModeAwareCrossReference'
 
 interface BlockRendererProps {
   block: Block
@@ -21,6 +25,7 @@ export const BlockRenderer = ({
   onTOCEntryClick,
   className = '' 
 }: BlockRendererProps) => {
+  const { viewMode } = useViewMode()
   const isChunk = block.metadata?.isChunk
   const chunkIndex = block.metadata?.chunkIndex
   const isTableChunk = block.metadata?.isTableChunk
@@ -45,9 +50,18 @@ export const BlockRenderer = ({
         return (
           <p className="text-sm text-foreground leading-relaxed mb-3">
             {content}
-            {footnoteMarkers.map((marker: any) => (
-              <FootnoteMarkerRenderer key={marker.id} marker={marker} />
-            ))}
+            {footnoteMarkers.map((marker: any) => {
+              if (viewMode === 'screen') {
+                return (
+                  <ScreenModeFootnotePopover
+                    key={marker.id}
+                    marker={marker}
+                    content={marker.content || 'Footnote content'}
+                  />
+                )
+              }
+              return <FootnoteMarkerRenderer key={marker.id} marker={marker} />
+            })}
           </p>
         )
       
@@ -81,7 +95,33 @@ export const BlockRenderer = ({
       case 'figure':
         const figureData = block.content || {}
         
-        // Apply oversized element policies for figures
+        // Screen mode: responsive figure
+        if (viewMode === 'screen') {
+          return (
+            <figure className="mb-6 p-4 border border-border rounded-lg bg-muted/10">
+              <div 
+                className="flex items-center justify-center bg-muted/20 border border-dashed border-muted-foreground/30 rounded mb-3"
+                style={{ 
+                  height: `${Math.min((block.metadata?.imageHeight || 2) * 24, 400)}px`,
+                  width: '100%'
+                }}
+              >
+                <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                  <Image className="w-8 h-8" />
+                  <span className="text-sm">{figureData.imageUrl || 'Image placeholder'}</span>
+                  <span className="text-xs opacity-60">Responsive width</span>
+                </div>
+              </div>
+              {figureData.caption && (
+                <figcaption className="text-sm text-center text-muted-foreground italic">
+                  <strong>Figure {figureData.number || '1'}:</strong> {figureData.caption}
+                </figcaption>
+              )}
+            </figure>
+          )
+        }
+        
+        // Apply oversized element policies for figures in print mode
         if (block.metadata?.oversizedPolicy === 'scaled' && block.metadata?.scaleRatio) {
           const scaleStyle = {
             transform: `scale(${block.metadata.scaleRatio})`,
@@ -183,6 +223,13 @@ export const BlockRenderer = ({
       
       case 'table':
         const tableData = block.content || { headers: [], rows: [] }
+        
+        // Use screen mode table for screen view
+        if (viewMode === 'screen') {
+          return <ScreenModeTable block={block} className="mb-4" />
+        }
+        
+        // Original table rendering for print mode
         return (
           <div className="mb-4">
             {/* Show oversized element policy indicators */}
@@ -323,11 +370,16 @@ export const BlockRenderer = ({
           />
         )
       
-      default:
+      case 'cross-reference':
         return (
-          <div className="text-xs text-muted-foreground p-2 bg-muted/50 rounded border border-dashed">
-            Unknown block type: {block.type}
-          </div>
+          <ViewModeAwareCrossReference
+            block={block}
+            document={document}
+            onNavigate={(targetId) => {
+              // Handle navigation to cross-referenced element
+              console.log('Navigate to:', targetId)
+            }}
+          />
         )
     }
   }

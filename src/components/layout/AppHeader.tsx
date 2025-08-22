@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
+import { ViewModeToggle } from '@/components/document/ViewModeToggle'
 import { useAuth } from '@/hooks/useAuth'
 import { User, LogOut, Settings, Shield } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
@@ -60,6 +61,12 @@ export function AppHeader() {
               </NavLink>
             ))}
           </nav>
+        </div>
+
+        {/* View Mode Toggle */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">View:</span>
+          <ViewModeToggle />
         </div>
 
         {/* User Menu */}

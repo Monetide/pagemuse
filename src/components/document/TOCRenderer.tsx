@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Block, SemanticDocument } from '@/lib/document-model'
+import { useViewMode } from '@/contexts/ViewModeContext'
 import { TOCEntry, TOCConfiguration, generateTOC, formatTOCEntry, defaultTOCConfig } from '@/lib/toc-generator'
 import { LayoutResult } from '@/lib/layout-engine'
 import { RefreshCw, BookOpen } from 'lucide-react'
@@ -25,11 +26,14 @@ export const TOCRenderer = ({
   const [entries, setEntries] = useState<TOCEntry[]>([])
   const [lastUpdate, setLastUpdate] = useState<string>(new Date().toISOString())
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const { viewMode } = useViewMode()
 
   // Get configuration from block content or use defaults
   const config: TOCConfiguration = {
     ...defaultTOCConfig,
-    ...block.content
+    ...block.content,
+    // Override page numbers based on view mode
+    showPageNumbers: viewMode === 'print' ? (block.content?.showPageNumbers ?? true) : false
   }
 
   // Generate TOC entries
@@ -85,7 +89,7 @@ export const TOCRenderer = ({
             <div className="flex-1 min-w-0">
               <div className="truncate pr-2">{entry.text}</div>
             </div>
-            {config.showPageNumbers && (
+            {config.showPageNumbers && viewMode === 'print' && (
               <div className="flex items-center gap-1 flex-shrink-0">
                 {config.leader === 'dots' && (
                   <div className="flex-1 border-b border-dotted border-muted-foreground opacity-50 min-w-4"></div>
@@ -102,7 +106,7 @@ export const TOCRenderer = ({
         ) : (
           <div className="flex-1">
             <span>{entry.text}</span>
-            {config.showPageNumbers && config.pageNumberAlignment === 'inline' && (
+            {config.showPageNumbers && config.pageNumberAlignment === 'inline' && viewMode === 'print' && (
               <span className="text-muted-foreground ml-1">(p. {entry.pageNumber})</span>
             )}
           </div>
