@@ -3,6 +3,7 @@ import { Minus, Image, Table } from 'lucide-react'
 import { useState, useRef, useCallback, KeyboardEvent } from 'react'
 import { SlashCommand } from './SlashCommand'
 import { FormattingToolbar } from './FormattingToolbar'
+import { TextInvisibles, InvisibleMarkers } from './TextInvisibles'
 
 interface EditableBlockRendererProps {
   block: Block
@@ -13,6 +14,7 @@ interface EditableBlockRendererProps {
   onBlockTypeChange?: (blockId: string, type: Block['type'], metadata?: any) => void
   isSelected?: boolean
   onSelect?: (blockId: string) => void
+  showInvisibles?: boolean
 }
 
 export const EditableBlockRenderer = ({ 
@@ -23,7 +25,8 @@ export const EditableBlockRenderer = ({
   onDeleteBlock,
   onBlockTypeChange,
   isSelected,
-  onSelect
+  onSelect,
+  showInvisibles = false
 }: EditableBlockRendererProps) => {
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState(block.content)
@@ -225,7 +228,14 @@ export const EditableBlockRenderer = ({
             className={`${headingClass} text-foreground mb-2 cursor-text hover:bg-accent/10 rounded px-1 ${isSelected ? 'ring-2 ring-primary' : ''}`}
             onClick={handleClick}
           >
-            {block.content || 'Click to edit heading...'}
+            <TextInvisibles
+              text={block.content || 'Click to edit heading...'}
+              showInvisibles={showInvisibles}
+            />
+            <InvisibleMarkers
+              showInvisibles={showInvisibles}
+              lineCount={block.content ? block.content.split('\n').length : 1}
+            />
           </HeadingTag>
         )
       
@@ -249,7 +259,18 @@ export const EditableBlockRenderer = ({
             className={`text-sm text-foreground leading-relaxed mb-3 cursor-text hover:bg-accent/10 rounded px-1 min-h-[1.2em] ${isSelected ? 'ring-2 ring-primary' : ''}`}
             onClick={handleClick}
           >
-            {block.content || 'Click to edit paragraph...'}
+            <TextInvisibles
+              text={block.content || 'Click to edit paragraph...'}
+              showInvisibles={showInvisibles}
+            />
+            <InvisibleMarkers
+              showInvisibles={showInvisibles}
+              lineCount={block.content ? block.content.split('\n').length : 1}
+              hasWidowOrphan={block.content && (
+                block.content.split('\n').length === 1 || // Single line (orphan)
+                block.content.split(' ').length < 4       // Short line (widow)
+              )}
+            />
           </p>
         )
       
@@ -275,7 +296,14 @@ export const EditableBlockRenderer = ({
             className={`border-l-4 border-accent pl-4 py-2 text-sm text-muted-foreground italic mb-3 bg-muted/20 cursor-text hover:bg-muted/30 rounded-r ${isSelected ? 'ring-2 ring-primary' : ''}`}
             onClick={handleClick}
           >
-            "{block.content || 'Click to edit quote...'}"
+            "<TextInvisibles
+              text={block.content || 'Click to edit quote...'}
+              showInvisibles={showInvisibles}
+            />"
+            <InvisibleMarkers
+              showInvisibles={showInvisibles}
+              lineCount={block.content ? block.content.split('\n').length : 1}
+            />
           </blockquote>
         )
       

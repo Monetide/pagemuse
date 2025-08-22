@@ -1,6 +1,8 @@
 import { Section, Block } from '@/lib/document-model'
 import { generateLayout, PageBox } from '@/lib/layout-engine'
 import { EditableBlockRenderer } from './EditableBlockRenderer'
+import { Rulers } from './Rulers'
+import { SnapGuides } from './SnapGuides'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -8,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Toggle } from '@/components/ui/toggle'
 import { useState, useCallback } from 'react'
-import { ZoomIn, ZoomOut, Maximize2, Grid3x3, Columns, Square } from 'lucide-react'
+import { ZoomIn, ZoomOut, Maximize2, Grid3x3, Columns, Square, Ruler, Eye, EyeOff } from 'lucide-react'
 
 interface EditorCanvasProps {
   section: Section
@@ -24,6 +26,9 @@ interface OverlaySettings {
   showMargins: boolean
   showColumns: boolean
   showGrid: boolean
+  showRulers: boolean
+  enableSnapping: boolean
+  showInvisibles: boolean
 }
 
 const PAGE_SIZES = {
@@ -101,6 +106,23 @@ const EditorPageBox = ({
           height: canvasHeight 
         }}
       >
+        {/* Rulers */}
+        <Rulers
+          canvasWidth={canvasWidth}
+          canvasHeight={canvasHeight}
+          scale={scale}
+          visible={overlaySettings.showRulers}
+        />
+
+        {/* Snap Guides */}
+        <SnapGuides
+          visible={overlaySettings.enableSnapping}
+          canvasWidth={canvasWidth}
+          canvasHeight={canvasHeight}
+          scale={scale}
+          margins={margins}
+        />
+
         {/* Margin Overlays */}
         {overlaySettings.showMargins && (
           <>
@@ -195,6 +217,7 @@ const EditorPageBox = ({
                       onBlockTypeChange={onBlockTypeChange}
                       isSelected={selectedBlockId === block.id}
                       onSelect={onSelectBlock}
+                      showInvisibles={overlaySettings.showInvisibles}
                     />
                   ))}
                   {columnBox.content.length === 0 && (
@@ -236,7 +259,10 @@ export const EditorCanvas = ({
   const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>({
     showMargins: false,
     showColumns: false,
-    showGrid: false
+    showGrid: false,
+    showRulers: false,
+    enableSnapping: false,
+    showInvisibles: false
   })
   const layoutResult = generateLayout(section)
 
@@ -301,6 +327,7 @@ export const EditorCanvas = ({
             onPressedChange={() => toggleOverlay('showMargins')}
             size="sm"
             variant="outline"
+            title="Show Margins"
           >
             <Square className="h-3 w-3" />
           </Toggle>
@@ -309,6 +336,7 @@ export const EditorCanvas = ({
             onPressedChange={() => toggleOverlay('showColumns')}
             size="sm"
             variant="outline"
+            title="Show Columns"
           >
             <Columns className="h-3 w-3" />
           </Toggle>
@@ -317,8 +345,39 @@ export const EditorCanvas = ({
             onPressedChange={() => toggleOverlay('showGrid')}
             size="sm"
             variant="outline"
+            title="Show Baseline Grid"
           >
             <Grid3x3 className="h-3 w-3" />
+          </Toggle>
+          
+          <Separator orientation="vertical" className="h-4 mx-1" />
+          
+          <Toggle 
+            pressed={overlaySettings.showRulers} 
+            onPressedChange={() => toggleOverlay('showRulers')}
+            size="sm"
+            variant="outline"
+            title="Show Rulers"
+          >
+            <Ruler className="h-3 w-3" />
+          </Toggle>
+          <Toggle 
+            pressed={overlaySettings.enableSnapping} 
+            onPressedChange={() => toggleOverlay('enableSnapping')}
+            size="sm"
+            variant="outline"
+            title="Enable Snapping"
+          >
+            <Grid3x3 className="h-3 w-3" />
+          </Toggle>
+          <Toggle 
+            pressed={overlaySettings.showInvisibles} 
+            onPressedChange={() => toggleOverlay('showInvisibles')}
+            size="sm"
+            variant="outline"
+            title="Show Invisibles"
+          >
+            {overlaySettings.showInvisibles ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
           </Toggle>
         </div>
 
