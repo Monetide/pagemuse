@@ -334,6 +334,126 @@ const missingAltTextRule: ValidationRule = {
   }
 }
 
+const orphanedCalloutRule: ValidationRule = {
+  id: 'orphaned-callout',
+  name: 'Orphaned Callout',
+  severity: 'warning',
+  enabled: true,
+  validate: (document, layoutResults) => {
+    const issues: ValidationIssue[] = []
+    
+    document.sections.forEach(section => {
+      section.flows.forEach(flow => {
+        flow.blocks.forEach((block, index) => {
+          if (block.type === 'callout') {
+            // Check if callout is isolated (less than 2 surrounding content blocks)
+            const prevBlock = flow.blocks[index - 1]
+            const nextBlock = flow.blocks[index + 1]
+            const hasMinimalContext = (!prevBlock || prevBlock.type === 'heading') && 
+                                     (!nextBlock || nextBlock.type === 'heading')
+            
+            if (hasMinimalContext) {
+              issues.push({
+                id: `orphaned-callout-${block.id}`,
+                ruleId: 'orphaned-callout',
+                severity: 'warning',
+                blockId: block.id,
+                sectionId: section.id,
+                message: 'Callout appears isolated with minimal surrounding content',
+                description: 'Callouts should be surrounded by sufficient context for better readability.',
+                canFix: true,
+                fixLabel: 'Keep together',
+                ignored: false,
+                snippet: typeof block.content === 'string' ? block.content.substring(0, 50) : 'Callout'
+              })
+            }
+          }
+        })
+      })
+    })
+    
+    return issues
+  },
+  fix: (document, issue) => {
+    const updatedDocument = { ...document }
+    updatedDocument.sections = document.sections.map(section => {
+      if (section.id === issue.sectionId) {
+        return {
+          ...section,
+          flows: section.flows.map(flow => ({
+            ...flow,
+            blocks: flow.blocks.map(block => {
+              if (block.id === issue.blockId) {
+                return {
+                  ...block,
+                  paginationRules: {
+                    ...block.paginationRules,
+                    keepTogether: true
+                  }
+                }
+              }
+              return block
+            })
+          }))
+        }
+      }
+      return section
+    })
+    return updatedDocument
+  }
+}
+
+const brokenCrossReferenceRule: ValidationRule = {
+  id: 'broken-cross-reference',
+  name: 'Broken Cross Reference',
+  severity: 'error',
+  enabled: true,
+  validate: (document) => {
+    const issues: ValidationIssue[] = []
+    
+    // Collect all valid target IDs
+    const validTargets = new Set<string>()
+    document.sections.forEach(section => {
+      validTargets.add(section.id)
+      section.flows.forEach(flow => {
+        flow.blocks.forEach(block => {
+          validTargets.add(block.id)
+          if (block.type === 'heading' || block.type === 'figure' || block.type === 'table') {
+            validTargets.add(block.id)
+          }
+        })
+      })
+    })
+    
+    // Check cross-references
+    document.sections.forEach(section => {
+      section.flows.forEach(flow => {
+        flow.blocks.forEach(block => {
+          if (block.type === 'cross-reference') {
+            const targetId = block.metadata?.targetId
+            if (targetId && !validTargets.has(targetId)) {
+              issues.push({
+                id: `broken-ref-${block.id}`,
+                ruleId: 'broken-cross-reference',
+                severity: 'error',
+                blockId: block.id,
+                sectionId: section.id,
+                message: 'Cross-reference points to non-existent target',
+                description: 'This reference links to content that no longer exists in the document.',
+                canFix: false,
+                ignored: false,
+                snippet: block.metadata?.label || 'Cross-reference'
+              })
+            }
+          }
+        })
+      })
+    })
+    
+    return issues
+  }
+}
+
 const longHeadingRule: ValidationRule = {
   id: 'long-heading',
   name: 'Long Heading',
@@ -376,6 +496,8 @@ export const validationRules: ValidationRule[] = [
   figureWithoutCaptionRule,
   tableWithoutHeaderRule,
   missingAltTextRule,
+  orphanedCalloutRule,
+  brokenCrossReferenceRule,
   longHeadingRule
 ]
 

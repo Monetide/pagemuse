@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { ViewModeToggle } from '@/components/document/ViewModeToggle'
+import { ValidationButton } from '@/components/document/ValidationButton'
 import { useAuth } from '@/hooks/useAuth'
 import { User, LogOut, Settings, Shield } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
@@ -63,11 +64,14 @@ export function AppHeader() {
           </nav>
         </div>
 
-        {/* View Mode Toggle - only show on document pages */}
+        {/* View Mode Toggle and Validation - only show on document pages */}
         {location.pathname.includes('/document') && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">View:</span>
-            <ViewModeToggle />
+          <div className="flex items-center gap-4">
+            <ValidationButton />
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">View:</span>
+              <ViewModeToggle />
+            </div>
           </div>
         )}
 

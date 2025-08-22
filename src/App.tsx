@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { AuthGate } from "@/components/auth/AuthGate";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { ValidationIntegratedLayout } from "@/components/layout/ValidationIntegratedLayout";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import MyDocuments from "./pages/MyDocuments";
@@ -51,24 +52,26 @@ const App = () => {
                   {/* Protected routes - require authentication */}
                   <Route path="/*" element={
                     <AuthGate>
-                      <AppLayout>
-                        <Routes>
-                          <Route path="/" element={<Index />} />
-                          <Route path="/dashboard" element={<Dashboard />} />
-                          <Route path="/documents" element={<MyDocuments />} />
-                          <Route path="/documents/:id/editor" element={<DocumentModelDemo />} />
-                          <Route path="/documents/:id/settings" element={<DocumentSettings />} />
-                          <Route path="/templates" element={<TemplateLibrary />} />
-                          <Route path="/media" element={<MediaLibrary />} />
-                          <Route path="/admin" element={<AdminPanel />} />
-                          <Route path="/settings" element={<div className="p-6">Settings coming soon...</div>} />
-                          {/* Redirects from old paths */}
-                          <Route path="/document-model" element={<DocumentModelRedirect />} />
-                          <Route path="/document-model/:documentId" element={<DocumentModelRedirect />} />
-                          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                          <Route path="*" element={<NotFound />} />
-                        </Routes>
-                      </AppLayout>
+                      <ValidationIntegratedLayout>
+                        <AppLayout>
+                          <Routes>
+                            <Route path="/" element={<Index />} />
+                            <Route path="/dashboard" element={<Dashboard />} />
+                            <Route path="/documents" element={<MyDocuments />} />
+                            <Route path="/documents/:id/editor" element={<DocumentModelDemo />} />
+                            <Route path="/documents/:id/settings" element={<DocumentSettings />} />
+                            <Route path="/templates" element={<TemplateLibrary />} />
+                            <Route path="/media" element={<MediaLibrary />} />
+                            <Route path="/admin" element={<AdminPanel />} />
+                            <Route path="/settings" element={<div className="p-6">Settings coming soon...</div>} />
+                            {/* Redirects from old paths */}
+                            <Route path="/document-model" element={<DocumentModelRedirect />} />
+                            <Route path="/document-model/:documentId" element={<DocumentModelRedirect />} />
+                            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                            <Route path="*" element={<NotFound />} />
+                          </Routes>
+                        </AppLayout>
+                      </ValidationIntegratedLayout>
                     </AuthGate>
                   } />
                 </Routes>

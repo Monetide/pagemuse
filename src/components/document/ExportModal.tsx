@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { SemanticDocument, Section } from '@/lib/document-model'
 import { ExportOptions, ExportFormat, ExportScope, exportEngine, PreflightResult } from '@/lib/export-engine'
+import { validationEngine } from '@/lib/validation-engine'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -67,32 +68,28 @@ export const ExportModal = ({ isOpen, onClose, document, onExportComplete }: Exp
 
   // Run preflight checks
   useEffect(() => {
-    if (isOpen) {
-      // Generate layouts for preflight (this would be optimized in real implementation)
-      const layoutResults = new Map()
-      // For now, simulate the preflight result
+    if (isOpen && document) {
+      // Use actual validation engine for preflight
+      const validationIssues = validationEngine.validate(document)
+      
       const mockPreflight: PreflightResult = {
-        pageCount: 12,
-        figureCount: 3,
-        tableCount: 2,
-        footnoteCount: 8,
-        warnings: [
-          {
-            type: 'missing-alt-text',
-            blockId: 'block-1',
-            blockType: 'figure',
-            message: 'Figure 1 is missing alt text',
-            severity: 'warning'
-          },
-          {
-            type: 'missing-caption',
-            blockId: 'block-2', 
-            blockType: 'figure',
-            message: 'Figure 2 has no caption',
-            severity: 'info'
-          }
-        ],
-        canExport: true
+        pageCount: 12, // This would come from layout engine
+        figureCount: document.sections.reduce((count, section) => 
+          count + section.flows.reduce((flowCount, flow) => 
+            flowCount + flow.blocks.filter(block => block.type === 'figure').length, 0), 0),
+        tableCount: document.sections.reduce((count, section) => 
+          count + section.flows.reduce((flowCount, flow) => 
+            flowCount + flow.blocks.filter(block => block.type === 'table').length, 0), 0),
+        footnoteCount: document.sections.reduce((count, section) => count + section.footnotes.length, 0),
+        warnings: validationIssues.map(issue => ({
+          type: issue.ruleId as any,
+          blockId: issue.blockId,
+          blockType: issue.ruleId.includes('figure') ? 'figure' : 
+                     issue.ruleId.includes('table') ? 'table' : 'block' as any,
+          message: issue.message,
+          severity: issue.severity
+        })),
+        canExport: validationIssues.filter(issue => issue.severity === 'error').length === 0
       }
       setPreflight(mockPreflight)
     }
@@ -427,7 +424,7 @@ export const ExportModal = ({ isOpen, onClose, document, onExportComplete }: Exp
                     <Separator />
 
                     <div className="space-y-2">
-                      <Label className="text-xs font-medium">Warnings</Label>
+                      <Label className="text-xs font-medium">Issues Found</Label>
                       {preflight.warnings.length === 0 ? (
                         <div className="flex items-center gap-2 text-xs text-green-600">
                           <CheckCircle className="w-3 h-3" />
