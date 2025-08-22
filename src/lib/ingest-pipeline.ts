@@ -647,7 +647,7 @@ export class IngestPipeline {
   }
 
   /**
-   * Processes HTML files
+   * Processes HTML files with comprehensive element mapping
    */
   private async processHtmlFile(file: File): Promise<IRDocument> {
     const html = await file.text()
@@ -659,80 +659,144 @@ export class IngestPipeline {
     const section = createIRSection('Content', 1)
     
     let blockOrder = 1
+    let footnoteCounter = 1
+    
+    const processElement = (element: Element): boolean => {
+      const tagName = element.tagName.toLowerCase()
+      const textContent = element.textContent?.trim() || ''
+      
+      switch (tagName) {
+        case 'h1':
+        case 'h2':
+        case 'h3':
+        case 'h4':
+        case 'h5':
+        case 'h6':
+          if (textContent) {
+            const level = parseInt(tagName[1])
+            const heading = createIRHeading(level, textContent)
+            section.blocks.push(createIRBlock('heading', heading, blockOrder++))
+            return true
+          }
+          break
+          
+        case 'p':
+          if (textContent) {
+            // Extract inline formatting and links
+            const { content, marks } = this.extractHtmlInlineFormatting(element)
+            section.blocks.push(createIRBlock('paragraph', content, blockOrder++, { marks }))
+            return true
+          }
+          break
+          
+        case 'blockquote':
+          if (textContent) {
+            // Check for citation pattern
+            const citationMatch = textContent.match(/^(.+?)\s*—\s*(.+)$/)
+            const quote = citationMatch 
+              ? createIRQuote(citationMatch[1].trim(), citationMatch[2].trim())
+              : createIRQuote(textContent)
+            section.blocks.push(createIRBlock('quote', quote, blockOrder++))
+            return true
+          }
+          break
+          
+        case 'ul':
+        case 'ol':
+          const listItems = this.extractHtmlListItems(element)
+          if (listItems.length > 0) {
+            const listType = tagName === 'ul' ? 'unordered' : 'ordered'
+            const list = createIRList(listType, listItems)
+            section.blocks.push(createIRBlock('list', list, blockOrder++))
+            return true
+          }
+          break
+          
+        case 'table':
+          const table = this.parseEnhancedHtmlTable(element)
+          if (table) {
+            section.blocks.push(createIRBlock('table', table, blockOrder++))
+            return true
+          }
+          break
+          
+        case 'figure':
+          const figure = this.parseHtmlFigure(element)
+          if (figure) {
+            section.blocks.push(createIRBlock('figure', figure, blockOrder++))
+            return true
+          }
+          break
+          
+        case 'img':
+          // Handle standalone images
+          const standaloneImg = this.parseStandaloneImage(element)
+          if (standaloneImg) {
+            section.blocks.push(createIRBlock('figure', standaloneImg, blockOrder++))
+            return true
+          }
+          break
+          
+        case 'hr':
+          section.blocks.push(createIRBlock('horizontal-rule', null, blockOrder++))
+          return true
+          
+        case 'pre':
+          const preContent = element.textContent || ''
+          const codeElement = element.querySelector('code')
+          const language = codeElement?.getAttribute('class')?.replace(/language-/, '') || undefined
+          
+          section.blocks.push(createIRBlock('code', {
+            content: preContent,
+            inline: false,
+            language
+          }, blockOrder++))
+          return true
+          
+        case 'code':
+          // Only handle inline code if not inside pre
+          if (element.parentElement?.tagName.toLowerCase() !== 'pre' && textContent) {
+            // This would be handled as an inline mark in paragraph processing
+            return false
+          }
+          break
+          
+        case 'div':
+        case 'section':
+        case 'article':
+        case 'main':
+          // Process children without creating a block
+          return false
+          
+        default:
+          return false
+      }
+      
+      return false
+    }
     
     const processNode = (node: Node) => {
       if (node.nodeType === Node.ELEMENT_NODE) {
         const element = node as Element
-        const tagName = element.tagName.toLowerCase()
-        const textContent = element.textContent?.trim()
+        const handled = processElement(element)
         
-        if (!textContent) return
-        
-        switch (tagName) {
-          case 'h1':
-          case 'h2':
-          case 'h3':
-          case 'h4':
-          case 'h5':
-          case 'h6':
-            const level = parseInt(tagName[1])
-            const heading = createIRHeading(level, textContent)
-            section.blocks.push(createIRBlock('heading', heading, blockOrder++))
-            break
-            
-          case 'p':
-            section.blocks.push(createIRBlock('paragraph', textContent, blockOrder++))
-            break
-            
-          case 'blockquote':
-            const quote = createIRQuote(textContent)
-            section.blocks.push(createIRBlock('quote', quote, blockOrder++))
-            break
-            
-          case 'ul':
-            const ulItems = Array.from(element.querySelectorAll('li'))
-              .map(li => li.textContent?.trim() || '')
-              .filter(text => text)
-            const ulList = createIRList('unordered', ulItems)
-            section.blocks.push(createIRBlock('list', ulList, blockOrder++))
-            break
-            
-          case 'ol':
-            const olItems = Array.from(element.querySelectorAll('li'))
-              .map(li => li.textContent?.trim() || '')
-              .filter(text => text)
-            const olList = createIRList('ordered', olItems)
-            section.blocks.push(createIRBlock('list', olList, blockOrder++))
-            break
-            
-          case 'table':
-            const table = this.parseHtmlTable(element)
-            if (table) {
-              section.blocks.push(createIRBlock('table', table, blockOrder++))
-            }
-            break
-            
-          case 'hr':
-            section.blocks.push(createIRBlock('horizontal-rule', null, blockOrder++))
-            break
-            
-          case 'pre':
-          case 'code':
-            const isInline = tagName === 'code' && element.parentElement?.tagName.toLowerCase() !== 'pre'
-            section.blocks.push(createIRBlock('code', {
-              content: textContent,
-              inline: isInline,
-              language: element.getAttribute('class')?.replace('language-', '') || undefined
-            }, blockOrder++))
-            break
-            
-          default:
-            // Recurse through children for other elements
-            Array.from(element.childNodes).forEach(processNode)
+        if (!handled) {
+          // Process children if this element wasn't handled as a block
+          Array.from(element.childNodes).forEach(processNode)
+        }
+      } else if (node.nodeType === Node.TEXT_NODE) {
+        const textContent = node.textContent?.trim()
+        if (textContent && textContent.length > 0) {
+          // Handle orphaned text as paragraph
+          section.blocks.push(createIRBlock('paragraph', textContent, blockOrder++))
         }
       }
     }
     
+    // Process footnotes first if they exist
+    this.processHtmlFootnotes(doc, section, footnoteCounter)
+    
+    // Process main content
     if (doc.body) {
       Array.from(doc.body.childNodes).forEach(processNode)
     }
@@ -1199,39 +1263,112 @@ export class IngestPipeline {
   }
 
   /**
-   * Parses HTML table to IR table format
+   * Parses HTML table to IR table format with enhanced header detection
    */
-  private parseHtmlTable(tableElement: Element) {
+  private parseEnhancedHtmlTable(tableElement: Element) {
     const headers: string[] = []
     const rows: string[][] = []
+    let hasHeaderRow = false
     
-    // Get headers
-    const headerRow = tableElement.querySelector('thead tr, tr:first-child')
-    if (headerRow) {
-      const headerCells = headerRow.querySelectorAll('th, td')
-      headerCells.forEach(cell => {
-        headers.push(cell.textContent?.trim() || '')
+    // Check for thead section
+    const thead = tableElement.querySelector('thead')
+    if (thead) {
+      const headerRow = thead.querySelector('tr')
+      if (headerRow) {
+        hasHeaderRow = true
+        const headerCells = headerRow.querySelectorAll('th, td')
+        headerCells.forEach(cell => {
+          headers.push(cell.textContent?.trim() || '')
+        })
+      }
+    }
+    
+    // Get tbody or all rows if no thead
+    const tbody = tableElement.querySelector('tbody')
+    const rowSelector = tbody ? 'tr' : (hasHeaderRow ? 'tr:not(thead tr)' : 'tr')
+    const dataRows = (tbody || tableElement).querySelectorAll(rowSelector)
+    
+    // If no explicit header found, check if first row looks like header
+    if (!hasHeaderRow && dataRows.length > 0) {
+      const firstRow = dataRows[0]
+      const firstRowCells = firstRow.querySelectorAll('th, td')
+      
+      if (this.looksLikeHtmlHeaderRow(firstRowCells)) {
+        hasHeaderRow = true
+        firstRowCells.forEach(cell => {
+          headers.push(cell.textContent?.trim() || '')
+        })
+        
+        // Process remaining rows as data
+        Array.from(dataRows).slice(1).forEach(row => {
+          const cells = row.querySelectorAll('td, th')
+          const rowData: string[] = []
+          cells.forEach(cell => {
+            rowData.push(cell.textContent?.trim() || '')
+          })
+          if (rowData.length > 0) {
+            rows.push(rowData)
+          }
+        })
+      } else {
+        // No header, all rows are data
+        dataRows.forEach(row => {
+          const cells = row.querySelectorAll('td, th')
+          const rowData: string[] = []
+          cells.forEach(cell => {
+            rowData.push(cell.textContent?.trim() || '')
+          })
+          if (rowData.length > 0) {
+            rows.push(rowData)
+          }
+        })
+      }
+    } else if (hasHeaderRow) {
+      // Process data rows
+      dataRows.forEach(row => {
+        const cells = row.querySelectorAll('td, th')
+        const rowData: string[] = []
+        cells.forEach(cell => {
+          rowData.push(cell.textContent?.trim() || '')
+        })
+        if (rowData.length > 0) {
+          rows.push(rowData)
+        }
       })
     }
     
-    // Get data rows
-    const dataRows = tableElement.querySelectorAll('tbody tr, tr:not(:first-child)')
-    dataRows.forEach(row => {
-      const cells = row.querySelectorAll('td, th')
-      const rowData: string[] = []
-      cells.forEach(cell => {
-        rowData.push(cell.textContent?.trim() || '')
-      })
-      if (rowData.length > 0) {
-        rows.push(rowData)
-      }
-    })
+    // Get table caption if exists
+    const caption = tableElement.querySelector('caption')?.textContent?.trim()
     
     if (headers.length > 0 || rows.length > 0) {
-      return createIRTable(headers, rows)
+      return createIRTable(headers, rows, caption)
     }
     
     return null
+  }
+  
+  /**
+   * Determines if HTML table row looks like a header
+   */
+  private looksLikeHtmlHeaderRow(cells: NodeListOf<Element>): boolean {
+    if (cells.length === 0) return false
+    
+    // Check if most cells are th elements
+    const thCount = Array.from(cells).filter(cell => cell.tagName.toLowerCase() === 'th').length
+    if (thCount > cells.length / 2) return true
+    
+    // Check for bold styling
+    const boldCells = Array.from(cells).filter(cell => {
+      const hasStrongOrB = cell.querySelector('strong, b')
+      const htmlCell = cell as HTMLElement
+      const hasBoldStyle = htmlCell.style?.fontWeight === 'bold' || 
+                           htmlCell.style?.fontWeight === '700' ||
+                           getComputedStyle(htmlCell).fontWeight === 'bold' ||
+                           getComputedStyle(htmlCell).fontWeight === '700'
+      return hasStrongOrB || hasBoldStyle
+    })
+    
+    return boldCells.length > cells.length / 2
   }
 
   /**
@@ -1308,6 +1445,211 @@ export class IngestPipeline {
     }
     
     return result
+  }
+  
+  /**
+   * Extracts inline formatting and links from HTML element
+   */
+  private extractHtmlInlineFormatting(element: Element): { content: string; marks: any[] } {
+    const marks: any[] = []
+    let content = ''
+    
+    const processTextNode = (node: Node, inheritedMarks: any[] = []): string => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        return node.textContent || ''
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        const el = node as Element
+        const tagName = el.tagName.toLowerCase()
+        const currentMarks = [...inheritedMarks]
+        
+        // Add formatting marks
+        switch (tagName) {
+          case 'strong':
+          case 'b':
+            currentMarks.push({ type: 'bold' })
+            break
+          case 'em':
+          case 'i':
+            currentMarks.push({ type: 'italic' })
+            break
+          case 'u':
+            currentMarks.push({ type: 'underline' })
+            break
+          case 's':
+          case 'strike':
+          case 'del':
+            currentMarks.push({ type: 'strikethrough' })
+            break
+          case 'code':
+            currentMarks.push({ type: 'code' })
+            break
+          case 'a':
+            const href = el.getAttribute('href')
+            if (href) {
+              currentMarks.push({ type: 'link', attrs: { href } })
+            }
+            break
+          case 'sup':
+            // Handle footnote markers
+            const text = el.textContent?.trim() || ''
+            if (/^\d+$/.test(text) || /^\[[\d,\s]+\]$/.test(text)) {
+              currentMarks.push({ type: 'footnote', attrs: { number: text } })
+            }
+            break
+        }
+        
+        // Process children and collect text
+        let childText = ''
+        Array.from(el.childNodes).forEach(child => {
+          childText += processTextNode(child, currentMarks)
+        })
+        
+        // Add marks to global marks array if we have text content
+        if (childText.trim() && currentMarks.length > 0) {
+          marks.push(...currentMarks)
+        }
+        
+        return childText
+      }
+      
+      return ''
+    }
+    
+    // Process all child nodes
+    Array.from(element.childNodes).forEach(child => {
+      content += processTextNode(child)
+    })
+    
+    return { content: content.trim(), marks }
+  }
+  
+  /**
+   * Extracts list items with proper nesting
+   */
+  private extractHtmlListItems(listElement: Element): string[] {
+    const items: string[] = []
+    
+    const processListItem = (li: Element, indent = 0): void => {
+      const text = li.childNodes[0]?.textContent?.trim() || ''
+      if (text) {
+        const prefix = '  '.repeat(indent)
+        items.push(prefix + text)
+      }
+      
+      // Handle nested lists
+      const nestedLists = li.querySelectorAll('ul, ol')
+      nestedLists.forEach(nestedList => {
+        const nestedItems = nestedList.querySelectorAll('li')
+        nestedItems.forEach(nestedLi => {
+          processListItem(nestedLi, indent + 1)
+        })
+      })
+    }
+    
+    const listItems = listElement.querySelectorAll(':scope > li')
+    listItems.forEach(li => processListItem(li))
+    
+    return items
+  }
+  
+  /**
+   * Parses HTML figure element (img + figcaption)
+   */
+  private parseHtmlFigure(figureElement: Element) {
+    const img = figureElement.querySelector('img')
+    if (!img) return null
+    
+    const figcaption = figureElement.querySelector('figcaption')
+    const caption = figcaption?.textContent?.trim() || ''
+    const alt = img.getAttribute('alt') || ''
+    const src = img.getAttribute('src') || ''
+    
+    if (!src) return null
+    
+    return createIRFigure(
+      {
+        id: `asset-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        filename: src.split('/').pop() || 'image',
+        mimeType: this.getMimeTypeFromExtension(src),
+        url: src,
+        alt,
+        title: img.getAttribute('title') || ''
+      },
+      caption,
+      alt
+    )
+  }
+  
+  /**
+   * Parses standalone image element
+   */
+  private parseStandaloneImage(imgElement: Element) {
+    const src = imgElement.getAttribute('src') || ''
+    const alt = imgElement.getAttribute('alt') || ''
+    const title = imgElement.getAttribute('title') || ''
+    
+    if (!src) return null
+    
+    // Check if next sibling is a caption-like element
+    let caption = ''
+    const nextSibling = imgElement.nextElementSibling
+    if (nextSibling) {
+      const tagName = nextSibling.tagName.toLowerCase()
+      const text = nextSibling.textContent?.trim() || ''
+      
+      if ((tagName === 'p' || tagName === 'div') && 
+          (text.toLowerCase().startsWith('figure') || 
+           text.toLowerCase().includes('caption') ||
+           nextSibling.className.includes('caption'))) {
+        caption = text
+      }
+    }
+    
+    return createIRFigure(
+      {
+        id: `asset-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        filename: src.split('/').pop() || 'image',
+        mimeType: this.getMimeTypeFromExtension(src),
+        url: src,
+        alt,
+        title
+      },
+      caption,
+      alt
+    )
+  }
+  
+  /**
+   * Processes HTML footnotes and footnote markers
+   */
+  private processHtmlFootnotes(doc: Document, section: IRSection, footnoteCounter: number) {
+    // Look for footnote definitions (common patterns)
+    const footnoteSelectors = [
+      '[id^="fn"]',       // id="fn1", id="fn2", etc.
+      '[id^="footnote"]', // id="footnote1", etc.
+      '.footnote',        // class="footnote"
+      '.fn'               // class="fn"
+    ]
+    
+    footnoteSelectors.forEach(selector => {
+      const footnotes = doc.querySelectorAll(selector)
+      footnotes.forEach((footnote, index) => {
+        const content = footnote.textContent?.trim() || ''
+        if (content) {
+          const footnoteObj = {
+            id: footnote.id || `footnote-${footnoteCounter + index}`,
+            number: footnoteCounter + index,
+            content,
+            backlinks: []
+          }
+          
+          if (!section.notes) {
+            section.notes = []
+          }
+          section.notes.push(footnoteObj)
+        }
+      })
+    })
   }
 }
 
