@@ -213,7 +213,10 @@ export const TableEditor = ({
       <div
         className="px-2 py-1 cursor-text min-h-[2rem] flex items-center"
         style={{ width: `${width}px`, textAlign: alignment }}
-        onClick={() => setEditingCell({ row, col })}
+        onClick={(e) => {
+          e.stopPropagation()
+          setEditingCell({ row, col })
+        }}
       >
         {content || (row === -1 ? `Column ${col + 1}` : '')}
       </div>
