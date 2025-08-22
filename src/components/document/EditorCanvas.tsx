@@ -13,6 +13,13 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { ZoomIn, ZoomOut, Maximize2, Grid3x3, Columns, Square, Ruler, Eye, EyeOff } from 'lucide-react'
 import { useAccessibility } from '@/components/accessibility/AccessibilityProvider'
 import { useKeyboardNavigation, useFocusManagement } from '@/hooks/useKeyboardNavigation'
+import { useDragDropContext } from '@/contexts/DragDropContext'
+import { useDropZoneDetection } from '@/hooks/useDropZoneDetection'
+import { getDefaultBlockContent } from '@/lib/dragDropUtils'
+import { DragGhost } from './DragGhost'
+import { DropLine } from './DropLine'
+import { BlockInsertionHotspots } from './BlockInsertionHotspots'
+import { toast } from '@/hooks/use-toast'
 
 interface EditorCanvasProps {
   section: Section
@@ -277,6 +284,8 @@ export const EditorCanvas = ({
   const { focusedSection, setFocusedSection, announce } = useAccessibility()
   const canvasRef = useRef<HTMLDivElement>(null)
   const { updateFocusableElements, focusNext, focusPrevious } = useFocusManagement()
+  const { dragState, updateDrag, endDrag, setContainer } = useDragDropContext()
+  const { hitTestDropZone } = useDropZoneDetection()
   const layoutResult = generateLayout(section)
   const isFocused = focusedSection === 'canvas'
 
@@ -287,8 +296,9 @@ export const EditorCanvas = ({
   useEffect(() => {
     if (canvasRef.current) {
       updateFocusableElements(canvasRef.current)
+      setContainer(canvasRef.current)
     }
-  }, [updateFocusableElements, section])
+  }, [updateFocusableElements, section, setContainer])
 
   // Keyboard navigation for blocks
   useKeyboardNavigation({
@@ -384,6 +394,202 @@ export const EditorCanvas = ({
       onNewBlock(dummyBlockId, 'paragraph')
     }
   }, [section.flows, onNewBlock])
+
+  // Handle mouse move for drag operations
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!dragState.isDragging) return
+
+    const clientX = e.clientX
+    const clientY = e.clientY
+    
+    const result = hitTestDropZone(clientX, clientY, dragState.dragData?.blockType)
+    
+    updateDrag(
+      { x: clientX, y: clientY },
+      result.dropTarget,
+      result.canDrop
+    )
+  }, [dragState.isDragging, dragState.dragData?.blockType, hitTestDropZone, updateDrag])
+
+  // Handle drop event
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (!dragState.isDragging || !dragState.canDrop || !dragState.dropTarget) {
+      endDrag()
+      return
+    }
+
+    const { dropTarget, dragData } = dragState
+    
+    try {
+      if (dragData?.type === 'block-type' && dragData.blockType && onNewBlock) {
+        // Get default content for the block type
+        const content = getDefaultBlockContent(dragData.blockType)
+        
+        // Find the target block using flow and index
+        const flow = section.flows.find(f => f.id === dropTarget.flowId)
+        let targetBlockId: string
+        
+        if (flow && flow.blocks.length > 0) {
+          if (dropTarget.position === 'append') {
+            // Insert at the end
+            targetBlockId = flow.blocks[flow.blocks.length - 1].id
+          } else {
+            // Find block at the specified index
+            const blockAtIndex = flow.blocks.find((_, idx) => idx === dropTarget.index)
+            if (blockAtIndex) {
+              targetBlockId = blockAtIndex.id
+            } else {
+              // Fallback to last block
+              targetBlockId = flow.blocks[flow.blocks.length - 1].id
+            }
+          }
+        } else {
+          targetBlockId = 'create-first'
+        }
+
+        // Add metadata for insertion position
+        const metadata: any = {}
+        if (dropTarget.position === 'before') {
+          metadata.insertBefore = true
+        }
+
+        // Create the new block
+        onNewBlock(targetBlockId, dragData.blockType as Block['type'], content, metadata)
+        
+        // Focus the new block (will be handled by the parent component)
+        announce(`Inserted ${dragData.blockType} block`)
+      }
+    } catch (error) {
+      console.warn('Drop failed:', {
+        dragSource: dragData,
+        dropTarget,
+        error
+      })
+      
+      // Fallback: insert at end of active flow
+      if (dragData?.blockType && onNewBlock) {
+        const content = getDefaultBlockContent(dragData.blockType)
+        const firstFlow = section.flows[0]
+        if (firstFlow) {
+          const lastBlock = firstFlow.blocks[firstFlow.blocks.length - 1]
+          const targetBlockId = lastBlock ? lastBlock.id : 'create-first'
+          onNewBlock(targetBlockId, dragData.blockType as Block['type'], content)
+          
+          toast({
+            title: "Block inserted",
+            description: "Dropped at end of section.",
+          })
+        }
+      }
+    }
+
+    endDrag()
+  }, [dragState, onNewBlock, section.flows, announce, endDrag])
+
+  // Handle block-specific drop
+  const handleBlockDrop = useCallback((blockId: string, position: 'before' | 'after') => {
+    if (!dragState.isDragging || !dragState.canDrop || !dragState.dragData) {
+      return
+    }
+
+    const { dragData } = dragState
+    
+    try {
+      if (dragData?.type === 'block-type' && dragData.blockType && onNewBlock) {
+        // Get default content for the block type
+        const content = getDefaultBlockContent(dragData.blockType)
+        
+        // Add metadata for insertion position
+        const metadata: any = {}
+        if (position === 'before') {
+          metadata.insertBefore = true
+        }
+
+        // Create the new block
+        onNewBlock(blockId, dragData.blockType as Block['type'], content, metadata)
+        
+        announce(`Inserted ${dragData.blockType} block ${position} existing block`)
+      }
+    } catch (error) {
+      console.warn('Block drop failed:', {
+        dragSource: dragData,
+        targetBlockId: blockId,
+        position,
+        error
+      })
+    }
+
+    endDrag()
+  }, [dragState, onNewBlock, announce, endDrag])
+
+  // Handle drag over
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    if (dragState.isDragging) {
+      e.preventDefault()
+      handleMouseMove(e as any)
+    }
+  }, [dragState.isDragging, handleMouseMove])
+
+  // Handle drag leave
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    // Only clear drop target if leaving the entire canvas
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      updateDrag({ x: 0, y: 0 }, null, false)
+    }
+  }, [updateDrag])
+
+  // Render drop targets for blocks
+  const renderBlockDropTargets = useCallback(() => {
+    if (!dragState.isDragging) return null
+
+    const dropLines: React.ReactElement[] = []
+    const hotspots: React.ReactElement[] = []
+
+    // Get all block elements and create drop targets
+    section.flows.forEach(flow => {
+      flow.blocks.forEach((block, index) => {
+        const blockElement = globalThis.document?.getElementById(`block-${block.id}`) as HTMLElement
+        if (!blockElement) return
+
+        // Add insertion hotspots for this block
+        hotspots.push(
+          <BlockInsertionHotspots
+            key={`hotspots-${block.id}`}
+            blockId={block.id}
+            sectionId={section.id}
+            flowId={flow.id}
+            index={index}
+            element={blockElement}
+            onDrop={(position) => handleBlockDrop(block.id, position)}
+          />
+        )
+
+        // Add drop line if this is the active drop target
+        if (dragState.dropTarget?.flowId === flow.id && dragState.dropTarget?.index === index) {
+          dropLines.push(
+            <DropLine
+              key={`dropline-${block.id}`}
+              sectionId={section.id}
+              flowId={flow.id}
+              index={index}
+              position={dragState.dropTarget.position || 'after'}
+              element={blockElement}
+            />
+          )
+        }
+      })
+    })
+
+    return (
+      <>
+        {hotspots}
+        {dropLines}
+      </>
+    )
+  }, [dragState.isDragging, dragState.dropTarget, section, handleBlockDrop])
 
   const hasContent = section.flows.some(flow => flow.blocks.length > 0)
 
@@ -499,10 +705,15 @@ export const EditorCanvas = ({
           className="space-y-8 p-8 min-h-full cursor-text"
           onClick={handleCanvasClick}
           onFocus={handleFocus}
+          onMouseMove={handleMouseMove}
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
           tabIndex={0}
           role="document"
           aria-label="Document content area"
           aria-describedby={selectedBlockId ? `block-${selectedBlockId}` : undefined}
+          style={{ cursor: dragState.isDragging ? (dragState.canDrop ? 'copy' : 'no-drop') : 'text' }}
         >
           {layoutResult.pages.map(pageBox => (
             <EditorPageBox 
@@ -535,6 +746,10 @@ export const EditorCanvas = ({
               </div>
             </div>
           )}
+
+          {/* Drag and Drop Visual Feedback */}
+          {renderBlockDropTargets()}
+          <DragGhost />
         </div>
       </ScrollArea>
     </div>
