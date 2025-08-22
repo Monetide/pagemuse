@@ -191,8 +191,10 @@ export default function DocumentModelDemo() {
 
   const createDemoDocument = () => {
     const doc = createNewDocument('Demo Document')
-    const section = addSection('Advanced Layout Showcase')
-    if (section) {
+    if (doc) {
+      setDocument(doc)
+      const section = addSection('Advanced Layout Showcase')
+      if (section) {
       setSelectedSectionId(section.id)
       const flow = addFlow(section.id, 'Main Content Flow')
       if (flow) {
@@ -256,6 +258,7 @@ export default function DocumentModelDemo() {
         
         addBlock(section.id, flow.id, 'quote', 'Professional document layout is not just about making things look good - it is about ensuring readability, maintaining data integrity, and following established typographic conventions that enhance comprehension.')
       }
+    }
     }
   }
 
