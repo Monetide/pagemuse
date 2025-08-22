@@ -159,6 +159,45 @@ export type Database = {
           },
         ]
       }
+      document_versions: {
+        Row: {
+          content: Json
+          created_at: string
+          created_by: string
+          document_id: string
+          id: string
+          metadata: Json | null
+          snapshot_name: string | null
+          title: string
+          version_number: number
+          version_type: string
+        }
+        Insert: {
+          content: Json
+          created_at?: string
+          created_by: string
+          document_id: string
+          id?: string
+          metadata?: Json | null
+          snapshot_name?: string | null
+          title: string
+          version_number: number
+          version_type?: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          created_by?: string
+          document_id?: string
+          id?: string
+          metadata?: Json | null
+          snapshot_name?: string | null
+          title?: string
+          version_number?: number
+          version_type?: string
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           archived: boolean | null
@@ -440,6 +479,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_document_version: {
+        Args: {
+          p_content: Json
+          p_document_id: string
+          p_snapshot_name?: string
+          p_title: string
+          p_version_type?: string
+        }
+        Returns: string
+      }
       get_folder_hierarchy: {
         Args: { folder_id: string }
         Returns: {
@@ -448,6 +497,10 @@ export type Database = {
           name: string
           path: string
         }[]
+      }
+      get_next_version_number: {
+        Args: { doc_id: string }
+        Returns: number
       }
       get_user_roles: {
         Args: { _user_id: string }
