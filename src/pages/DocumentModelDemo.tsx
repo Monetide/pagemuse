@@ -407,28 +407,41 @@ export default function DocumentModelDemo() {
                 )}
                 
                 {/* Editor Canvas */}
-                <div className="flex-1 overflow-auto">
+                <div className="flex-1 flex flex-col overflow-hidden">
                   {document.sections.map(section => {
                     const isActiveSection = (selectedSectionId || document.sections[0].id) === section.id
                     if (!isActiveSection) return null
                     
                     return (
-                      <div key={section.id} className="h-full">
-                        <EditorCanvas
-                          section={section}
-                          onContentChange={updateBlockContent}
-                          onNewBlock={(afterBlockId, type) => {
-                            if (afterBlockId === 'create-first') {
-                              addBlockAfter('create-first', type, '')
-                            } else {
-                              addBlockAfter(afterBlockId, type, '')
-                            }
-                          }}
-                          onDeleteBlock={deleteBlock}
-                        />
-                      </div>
+                      <EditorCanvas
+                        key={section.id}
+                        section={section}
+                        onContentChange={updateBlockContent}
+                        onNewBlock={(afterBlockId, type) => {
+                          if (afterBlockId === 'create-first') {
+                            addBlockAfter('create-first', type, '')
+                          } else {
+                            addBlockAfter(afterBlockId, type, '')
+                          }
+                        }}
+                        onDeleteBlock={deleteBlock}
+                      />
                     )
                   })}
+                  
+                  {document.sections.length === 0 && (
+                    <div className="flex-1 flex items-center justify-center">
+                      <div className="text-center space-y-4">
+                        <p className="text-muted-foreground">No sections found</p>
+                        <Button onClick={() => {
+                          setSectionName('Main Section')
+                          handleAddSection()
+                        }}>
+                          Add First Section
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </>
             ) : (

@@ -280,128 +280,114 @@ export const EditorCanvas = ({
   const hasContent = section.flows.some(flow => flow.blocks.length > 0)
 
   return (
-    <Card className="w-full">
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold">Document Editor</h3>
-          <div className="flex gap-2">
-            <Badge variant="outline">
-              {layoutResult.totalPages} page{layoutResult.totalPages !== 1 ? 's' : ''}
-            </Badge>
-            {layoutResult.hasOverflow && (
-              <Badge variant="destructive">
-                Overflow
-              </Badge>
-            )}
-          </div>
-        </div>
-
-        {/* Canvas Controls */}
-        <div className="flex items-center justify-between mb-4 p-3 bg-muted/20 rounded-lg">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">Overlays:</span>
-            <Toggle 
-              pressed={overlaySettings.showMargins} 
-              onPressedChange={() => toggleOverlay('showMargins')}
-              size="sm"
-            >
-              <Square className="h-3 w-3 mr-1" />
-              Margins
-            </Toggle>
-            <Toggle 
-              pressed={overlaySettings.showColumns} 
-              onPressedChange={() => toggleOverlay('showColumns')}
-              size="sm"
-            >
-              <Columns className="h-3 w-3 mr-1" />
-              Columns  
-            </Toggle>
-            <Toggle 
-              pressed={overlaySettings.showGrid} 
-              onPressedChange={() => toggleOverlay('showGrid')}
-              size="sm"
-            >
-              <Grid3x3 className="h-3 w-3 mr-1" />
-              Grid
-            </Toggle>
-          </div>
-
-          <Separator orientation="vertical" className="h-6" />
-
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">Zoom:</span>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleZoomOut} 
-              disabled={zoomLevel <= 0.5}
-            >
-              <ZoomOut className="h-3 w-3" />
-            </Button>
-            <span className="text-sm min-w-[50px] text-center">
-              {Math.round(zoomLevel * 100)}%
-            </span>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleZoomIn} 
-              disabled={zoomLevel >= 2}
-            >
-              <ZoomIn className="h-3 w-3" />
-            </Button>
-            <Separator orientation="vertical" className="h-6 mx-1" />
-            <Button variant="outline" size="sm" onClick={handleFitToWidth}>
-              Fit Width
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleFitToPage}>
-              <Maximize2 className="h-3 w-3 mr-1" />
-              Fit Page
-            </Button>
-          </div>
-        </div>
-        
-        <ScrollArea className="w-full h-[800px]">
-          <div 
-            className="space-y-8 pb-4 min-h-full cursor-text"
-            onClick={handleCanvasClick}
+    <div className="h-full flex flex-col bg-background">
+      {/* Canvas Toolbar */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-muted/30 shrink-0">
+        <div className="flex items-center gap-1">
+          <Toggle 
+            pressed={overlaySettings.showMargins} 
+            onPressedChange={() => toggleOverlay('showMargins')}
+            size="sm"
+            variant="outline"
           >
-            {layoutResult.pages.map(pageBox => (
-              <EditorPageBox 
-                key={pageBox.id} 
-                pageBox={pageBox}
-                onContentChange={onContentChange}
-                onNewBlock={onNewBlock}
-                onDeleteBlock={onDeleteBlock}
-                selectedBlockId={selectedBlockId}
-                onSelectBlock={handleSelectBlock}
-                hasContent={hasContent}
-                onCreateFirstBlock={handleCreateFirstBlock}
-                zoomLevel={zoomLevel}
-                overlaySettings={overlaySettings}
-              />
-            ))}
-          </div>
-        </ScrollArea>
-        
-        {!hasContent && (
-          <div className="flex items-center justify-center h-64 text-muted-foreground border-t">
-            <div className="text-center space-y-2">
-              <p>Your document is empty</p>
-              <button 
-                onClick={handleCreateFirstBlock}
-                className="text-primary hover:text-primary/80 underline"
-              >
-                Click here to start writing
-              </button>
-            </div>
-          </div>
-        )}
-        
-        <div className="mt-4 text-xs text-muted-foreground border-t pt-4">
-          <p><strong>Editing:</strong> Click on text to edit • Press Enter to create new paragraph • Press Backspace on empty block to delete</p>
-          <p><strong>Live pagination:</strong> Content automatically flows across columns and pages as you type</p>
+            <Square className="h-3 w-3" />
+          </Toggle>
+          <Toggle 
+            pressed={overlaySettings.showColumns} 
+            onPressedChange={() => toggleOverlay('showColumns')}
+            size="sm"
+            variant="outline"
+          >
+            <Columns className="h-3 w-3" />
+          </Toggle>
+          <Toggle 
+            pressed={overlaySettings.showGrid} 
+            onPressedChange={() => toggleOverlay('showGrid')}
+            size="sm"
+            variant="outline"
+          >
+            <Grid3x3 className="h-3 w-3" />
+          </Toggle>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-xs">
+            {layoutResult.totalPages} page{layoutResult.totalPages !== 1 ? 's' : ''}
+          </Badge>
+          {layoutResult.hasOverflow && (
+            <Badge variant="destructive" className="text-xs">
+              Overflow
+            </Badge>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleZoomOut} 
+            disabled={zoomLevel <= 0.5}
+          >
+            <ZoomOut className="h-3 w-3" />
+          </Button>
+          <span className="text-xs min-w-[40px] text-center">
+            {Math.round(zoomLevel * 100)}%
+          </span>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleZoomIn} 
+            disabled={zoomLevel >= 2}
+          >
+            <ZoomIn className="h-3 w-3" />
+          </Button>
+          <Separator orientation="vertical" className="h-4 mx-1" />
+          <Button variant="outline" size="sm" onClick={handleFitToWidth}>
+            Fit Width
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleFitToPage}>
+            <Maximize2 className="h-3 w-3" />
+          </Button>
         </div>
       </div>
-    </Card>
+        
+      {/* Canvas Area */}
+      <ScrollArea className="flex-1">
+        <div 
+          className="space-y-8 p-8 min-h-full cursor-text"
+          onClick={handleCanvasClick}
+        >
+          {layoutResult.pages.map(pageBox => (
+            <EditorPageBox 
+              key={pageBox.id} 
+              pageBox={pageBox}
+              onContentChange={onContentChange}
+              onNewBlock={onNewBlock}
+              onDeleteBlock={onDeleteBlock}
+              selectedBlockId={selectedBlockId}
+              onSelectBlock={handleSelectBlock}
+              hasContent={hasContent}
+              onCreateFirstBlock={handleCreateFirstBlock}
+              zoomLevel={zoomLevel}
+              overlaySettings={overlaySettings}
+            />
+          ))}
+          
+          {!hasContent && (
+            <div className="flex items-center justify-center h-64 text-muted-foreground">
+              <div className="text-center space-y-2">
+                <p className="text-lg">Start writing your document</p>
+                <button 
+                  onClick={handleCreateFirstBlock}
+                  className="text-primary hover:text-primary/80 underline"
+                >
+                  Click here to add your first paragraph
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+    </div>
   )
 }
