@@ -20,7 +20,7 @@ import { AltTextValidator } from '@/components/accessibility/AltTextValidator'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { PageMaster, Section, Block } from '@/lib/document-model'
+import { PageMaster, Section, Block, createDocument, createSection, createFlow, createBlock, addBlockToFlow, addFlowToSection, addSectionToDocument } from '@/lib/document-model'
 import { History, Trash2 } from 'lucide-react'
 
 export default function DocumentModelDemo() {
@@ -190,80 +190,78 @@ export default function DocumentModelDemo() {
   }
 
   const createDemoDocument = () => {
-    const doc = createNewDocument('Demo Document')
-    if (doc) {
-      setDocument(doc)
-      
-      // Use setTimeout to ensure document state is properly set before adding content
-      setTimeout(() => {
-        const section = addSection('Advanced Layout Showcase')
-        if (section) {
-          setSelectedSectionId(section.id)
-          const flow = addFlow(section.id, 'Main Content Flow')
-          if (flow) {
-            // Create content demonstrating figures and tables
-            let block = addBlock(section.id, flow.id, 'heading', 'Figures and Tables Demonstration')
-            if (block) block.metadata = { level: 1 }
-            
-            addBlock(section.id, flow.id, 'paragraph', 'This document showcases atomic blocks like figures and tables, which maintain their integrity during pagination. Figures never split, and tables repeat headers when spanning pages.')
-            
-            // Add a figure (atomic block)
-            let figureBlock = addBlock(section.id, flow.id, 'figure', {
-              imageUrl: 'document-structure-diagram.png',
-              caption: 'Semantic document structure showing the hierarchy from Document to Section to Flow to Block',
-              number: 1
-            })
-            if (figureBlock) figureBlock.metadata = { imageHeight: 3 }
-            
-            block = addBlock(section.id, flow.id, 'heading', 'Professional Table Layout')
-            if (block) block.metadata = { level: 2 }
-            
-            addBlock(section.id, flow.id, 'paragraph', 'Tables automatically repeat their headers when flowing across pages. They never split within a row, ensuring data integrity and readability.')
-            
-            // Add a large table to demonstrate pagination
-            addBlock(section.id, flow.id, 'table', {
-              headers: ['Feature', 'Description', 'Status'],
-              rows: [
-                ['Keep-with-next', 'Headings stay with following content', 'Implemented'],
-                ['Widow/Orphan Protection', 'Minimum 2 lines together', 'Implemented'],
-                ['Atomic Blocks', 'Figures never split', 'Implemented'],
-                ['Table Headers', 'Repeat on new pages', 'Implemented'],
-                ['Break Avoidance', 'Lists prefer to stay together', 'Implemented'],
-                ['Multi-column Layout', 'Content flows across columns', 'Implemented'],
-                ['Page Generation', 'Automatic page creation', 'Implemented'],
-                ['Professional Typography', 'Publication-quality rules', 'Implemented'],
-                ['Content Splitting', 'Smart paragraph breaks', 'Implemented'],
-                ['Layout Engine', 'Rule-based placement', 'Implemented']
-              ],
-              caption: 'Implementation status of professional typography features',
-              number: 1
-            })
-            
-            addBlock(section.id, flow.id, 'unordered-list', [
-              'Figures are atomic - they move as complete units',
-              'Tables can span pages but never split rows',
-              'Headers repeat automatically on continuation pages',
-              'Professional spacing maintained throughout'
-            ])
-            
-            block = addBlock(section.id, flow.id, 'heading', 'Layout Behavior')
-            if (block) block.metadata = { level: 2 }
-            
-            addBlock(section.id, flow.id, 'paragraph', 'When a figure is too tall for remaining column space, it moves entirely to the next column or page. Tables flow naturally but maintain row integrity - if a row cannot fit, the entire row moves to the next page along with a repeated header.')
-            
-            // Another figure to test multiple figures
-            figureBlock = addBlock(section.id, flow.id, 'figure', {
-              imageUrl: 'pagination-rules-diagram.png',
-              caption: 'Visual representation of pagination rules including widow/orphan protection and keep-with-next behavior',
-              number: 2
-            })
-            if (figureBlock) figureBlock.metadata = { imageHeight: 2.5 }
-            
-            addBlock(section.id, flow.id, 'quote', 'Professional document layout is not just about making things look good - it is about ensuring readability, maintaining data integrity, and following established typographic conventions that enhance comprehension.')
-          }
-        }
-      }, 0)
+    // Reset persistence context and build the entire demo document immutably
+    persistence.createNewDocument()
+    const base = createDocument('Demo Document')
+
+    // Section and flow
+    const section = createSection('Advanced Layout Showcase', 0)
+    let flow = createFlow('Main Content Flow', 'linear', 0)
+
+    // Helper to create block with optional metadata
+    let order = 0
+    const makeBlock = (type: Block['type'], content: any, metadata?: Record<string, any>) => {
+      const b = createBlock(type, content, order++)
+      if (metadata && Object.keys(metadata).length > 0) b.metadata = { ...b.metadata, ...metadata }
+      return b
     }
+
+    // Content blocks
+    flow = addBlockToFlow(flow, makeBlock('heading', 'Figures and Tables Demonstration', { level: 1 }))
+    flow = addBlockToFlow(flow, makeBlock('paragraph', 'This document showcases atomic blocks like figures and tables, which maintain their integrity during pagination. Figures never split, and tables repeat headers when spanning pages.'))
+
+    flow = addBlockToFlow(flow, makeBlock('figure', {
+      imageUrl: 'document-structure-diagram.png',
+      caption: 'Semantic document structure showing the hierarchy from Document to Section to Flow to Block',
+      number: 1
+    }, { imageHeight: 3 }))
+
+    flow = addBlockToFlow(flow, makeBlock('heading', 'Professional Table Layout', { level: 2 }))
+    flow = addBlockToFlow(flow, makeBlock('paragraph', 'Tables automatically repeat their headers when flowing across pages. They never split within a row, ensuring data integrity and readability.'))
+
+    flow = addBlockToFlow(flow, makeBlock('table', {
+      headers: ['Feature', 'Description', 'Status'],
+      rows: [
+        ['Keep-with-next', 'Headings stay with following content', 'Implemented'],
+        ['Widow/Orphan Protection', 'Minimum 2 lines together', 'Implemented'],
+        ['Atomic Blocks', 'Figures never split', 'Implemented'],
+        ['Table Headers', 'Repeat on new pages', 'Implemented'],
+        ['Break Avoidance', 'Lists prefer to stay together', 'Implemented'],
+        ['Multi-column Layout', 'Content flows across columns', 'Implemented'],
+        ['Page Generation', 'Automatic page creation', 'Implemented'],
+        ['Professional Typography', 'Publication-quality rules', 'Implemented'],
+        ['Content Splitting', 'Smart paragraph breaks', 'Implemented'],
+        ['Layout Engine', 'Rule-based placement', 'Implemented']
+      ],
+      caption: 'Implementation status of professional typography features',
+      number: 1
+    }))
+
+    flow = addBlockToFlow(flow, makeBlock('unordered-list', [
+      'Figures are atomic - they move as complete units',
+      'Tables can span pages but never split rows',
+      'Headers repeat automatically on continuation pages',
+      'Professional spacing maintained throughout'
+    ]))
+
+    flow = addBlockToFlow(flow, makeBlock('heading', 'Layout Behavior', { level: 2 }))
+    flow = addBlockToFlow(flow, makeBlock('paragraph', 'When a figure is too tall for remaining column space, it moves entirely to the next column or page. Tables flow naturally but maintain row integrity - if a row cannot fit, the entire row moves to the next page along with a repeated header.'))
+
+    flow = addBlockToFlow(flow, makeBlock('figure', {
+      imageUrl: 'pagination-rules-diagram.png',
+      caption: 'Visual representation of pagination rules including widow/orphan protection and keep-with-next behavior',
+      number: 2
+    }, { imageHeight: 2.5 }))
+
+    flow = addBlockToFlow(flow, makeBlock('quote', 'Professional document layout is not just about making things look good - it is about ensuring readability, maintaining data integrity, and following established typographic conventions that enhance comprehension.'))
+
+    // Assemble document
+    const sectionWithFlow = addFlowToSection(section, flow)
+    const fullDoc = addSectionToDocument(base, sectionWithFlow)
+
+    // Commit once and set selection
+    setDocument(fullDoc)
+    setSelectedSectionId(section.id)
   }
 
   const selectedSection = document?.sections.find(s => s.id === selectedSectionId)
