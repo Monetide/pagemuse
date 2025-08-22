@@ -115,13 +115,13 @@ const EditorPageBox = ({
         {pageBox.hasOverflow && " (overflow)"}
       </Badge>
       
-      <div 
-        className="relative border border-border bg-background shadow-lg"
-        style={{ 
-          width: canvasWidth, 
-          height: canvasHeight 
-        }}
-      >
+        <div 
+          className="relative border border-border bg-white shadow-lg"
+          style={{ 
+            width: canvasWidth, 
+            height: canvasHeight 
+          }}
+        >
         {/* Rulers */}
         <Rulers
           canvasWidth={canvasWidth}
