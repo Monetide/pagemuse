@@ -229,6 +229,34 @@ export const ExportModal = ({ isOpen, onClose, document, onExportComplete }: Exp
                 </TabsTrigger>
               </TabsList>
 
+              <TabsContent value="pdf" className="space-y-4">
+                {/* PDF specific options */}
+                <div className="text-sm text-muted-foreground">PDF-specific settings are included in the common options below.</div>
+              </TabsContent>
+
+              <TabsContent value="docx" className="space-y-4">
+                {/* DOCX specific options */}
+                <div className="text-sm text-muted-foreground">DOCX export will use native Word styles and formatting.</div>
+              </TabsContent>
+
+              <TabsContent value="google-docs" className="space-y-4">
+                <div className="space-y-3">
+                  <Label>Google Drive Options</Label>
+                  <div className="space-y-2">
+                    <Label htmlFor="folder-id" className="text-sm">Folder ID (optional)</Label>
+                    <Input
+                      id="folder-id"
+                      value={folderId}
+                      onChange={(e) => setFolderId(e.target.value)}
+                      placeholder="Google Drive folder ID"
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            {/* Common Export Options */}
+            <div className="space-y-6">
               {/* Filename */}
               <div className="space-y-2">
                 <Label htmlFor="filename">Filename</Label>
@@ -342,7 +370,6 @@ export const ExportModal = ({ isOpen, onClose, document, onExportComplete }: Exp
                     />
                     <Label htmlFor="embed-fonts" className="text-sm">Embed fonts</Label>
                   </div>
-
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="tagged-pdf"
@@ -351,7 +378,6 @@ export const ExportModal = ({ isOpen, onClose, document, onExportComplete }: Exp
                     />
                     <Label htmlFor="tagged-pdf" className="text-sm">Tagged PDF (accessibility)</Label>
                   </div>
-
                   <div className="space-y-2">
                     <Label className="text-sm">Image quality</Label>
                     <Select value={imageQuality} onValueChange={(value: any) => setImageQuality(value)}>
@@ -366,24 +392,8 @@ export const ExportModal = ({ isOpen, onClose, document, onExportComplete }: Exp
                     </Select>
                   </div>
                 </div>
-              </TabsContent>
-
-              <TabsContent value="google-docs" className="space-y-4">
-                <div className="space-y-3">
-                  <Label>Google Drive Options</Label>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="folder-id" className="text-sm">Folder ID (optional)</Label>
-                    <Input
-                      id="folder-id"
-                      value={folderId}
-                      onChange={(e) => setFolderId(e.target.value)}
-                      placeholder="Google Drive folder ID"
-                    />
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
+              </div>
+            </div>
           </div>
 
           {/* Preflight Panel */}

@@ -291,31 +291,18 @@ export class DOCXExporter {
 
       case 'paragraph':
         const content = typeof block.content === 'string' ? block.content : block.content?.text || ''
-        const footnoteMarkers = block.metadata?.footnoteMarkers || []
         
-        const children = [
-          {
-            type: 'text',
-            text: content
-          }
-        ]
-
-        // Add footnote references
-        footnoteMarkers.forEach((marker: any) => {
-          children.push({
-            type: 'footnoteReference',
-            properties: {
-              id: marker.footnoteId
-            }
-          })
-        })
-
         return {
           type: 'paragraph',
           properties: {
             style: 'Normal'
           },
-          children
+          children: [
+            {
+              type: 'text',
+              text: content
+            }
+          ]
         }
 
       case 'quote':
@@ -429,11 +416,11 @@ export class DOCXExporter {
                     style: 'Normal'
                   },
                   children: [
-            {
-              type: 'text',
-              text: content,
-              bold: true
-            }
+                    {
+                      type: 'text',
+                      text: header,
+                      bold: true
+                    }
                   ]
                 }
               ]
