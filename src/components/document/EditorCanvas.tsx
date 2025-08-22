@@ -61,7 +61,8 @@ const EditorPageBox = ({
   hasContent,
   onCreateFirstBlock,
   zoomLevel,
-  overlaySettings
+  overlaySettings,
+  section
 }: { 
   pageBox: PageBox
   document?: SemanticDocument | null
@@ -75,6 +76,7 @@ const EditorPageBox = ({
   onCreateFirstBlock?: () => void
   zoomLevel: number
   overlaySettings: OverlaySettings
+  section: Section
 }) => {
   const pageSize = PAGE_SIZES[pageBox.pageMaster.pageSize]
   
@@ -219,21 +221,33 @@ const EditorPageBox = ({
                 }}
               >
                 {/* Column content */}
-                <div className="h-full p-4 overflow-y-auto">
-                  {columnBox.content.map((block, blockIndex) => (
-                    <EditableBlockRenderer
-                      key={`${block.id}-${blockIndex}`}
-                      block={block}
-                      document={document}
-                      onContentChange={onContentChange}
-                      onNewBlock={onNewBlock}
-                      onDeleteBlock={onDeleteBlock}
-                      onBlockTypeChange={onBlockTypeChange}
-                      isSelected={selectedBlockId === block.id}
-                      onSelect={onSelectBlock}
-                      showInvisibles={overlaySettings.showInvisibles}
-                    />
-                  ))}
+                <div className="h-full p-4 overflow-y-auto" data-flow-id={section.flows[0]?.id || 'default-flow'} data-section-id={section.id}>
+                  {columnBox.content.map((block, blockIndex) => {
+                    const flowInfo = (() => {
+                      for (const f of section.flows) {
+                        const idx = f.blocks.findIndex(b => b.id === block.id)
+                        if (idx !== -1) return { flowId: f.id, index: idx }
+                      }
+                      return { flowId: section.flows[0]?.id || 'default-flow', index: blockIndex }
+                    })()
+                    return (
+                      <EditableBlockRenderer
+                        key={`${block.id}-${blockIndex}`}
+                        block={block}
+                        document={document}
+                        onContentChange={onContentChange}
+                        onNewBlock={onNewBlock}
+                        onDeleteBlock={onDeleteBlock}
+                        onBlockTypeChange={onBlockTypeChange}
+                        isSelected={selectedBlockId === block.id}
+                        onSelect={onSelectBlock}
+                        showInvisibles={overlaySettings.showInvisibles}
+                        sectionId={section.id}
+                        flowId={flowInfo.flowId}
+                        index={flowInfo.index}
+                      />
+                    )
+                  })}
                   {columnBox.content.length === 0 && (
                     <div className="text-sm text-muted-foreground text-center italic mt-8">
                       {!hasContent ? (
@@ -730,6 +744,7 @@ export const EditorCanvas = ({
               onCreateFirstBlock={handleCreateFirstBlock}
               zoomLevel={zoomLevel}
               overlaySettings={overlaySettings}
+              section={section}
             />
           ))}
           

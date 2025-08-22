@@ -24,6 +24,9 @@ interface EditableBlockRendererProps {
   isSelected?: boolean
   onSelect?: (blockId: string) => void
   showInvisibles?: boolean
+  sectionId: string
+  flowId: string
+  index: number
 }
 
 export const EditableBlockRenderer = ({ 
@@ -36,7 +39,10 @@ export const EditableBlockRenderer = ({
   onBlockTypeChange,
   isSelected,
   onSelect,
-  showInvisibles = false
+  showInvisibles = false,
+  sectionId,
+  flowId,
+  index
 }: EditableBlockRendererProps) => {
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState(block.content)
@@ -535,7 +541,6 @@ export const EditableBlockRenderer = ({
         const figureData = block.content || {}
         return (
           <div
-            id={`block-${block.id}`}
             tabIndex={0}
             onKeyDown={handleBoundaryKeyDown}
             className="outline-none relative"
@@ -560,7 +565,6 @@ export const EditableBlockRenderer = ({
       case 'table':
         return (
           <div
-            id={`block-${block.id}`}
             tabIndex={0}
             onKeyDown={handleBoundaryKeyDown}
             className="outline-none relative"
@@ -593,7 +597,6 @@ export const EditableBlockRenderer = ({
         const chartData = block.content || {}
         return (
           <div
-            id={`block-${block.id}`}
             tabIndex={0}
             onKeyDown={handleBoundaryKeyDown}
             className="outline-none relative"
@@ -618,7 +621,6 @@ export const EditableBlockRenderer = ({
       case 'divider':
         return (
           <div 
-            id={`block-${block.id}`}
             tabIndex={0}
             onKeyDown={handleBoundaryKeyDown}
             className={`flex justify-center my-4 cursor-pointer hover:bg-accent/10 rounded p-2 outline-none ${isSelected ? 'ring-2 ring-primary' : ''}`} 
@@ -632,7 +634,6 @@ export const EditableBlockRenderer = ({
         const height = block.metadata?.height || 0.5
         return (
           <div 
-            id={`block-${block.id}`}
             tabIndex={0}
             onKeyDown={handleBoundaryKeyDown}
             className={`w-full bg-transparent cursor-pointer hover:bg-accent/10 rounded border border-dashed border-transparent hover:border-accent/30 outline-none ${isSelected ? 'ring-2 ring-primary' : ''}`}
@@ -651,7 +652,7 @@ export const EditableBlockRenderer = ({
   }
 
   return (
-    <div className={`block-content ${className} relative`}>
+    <div id={`block-${block.id}`} data-block-id={block.id} data-block-type={block.type} data-block-index={index} data-flow-id={flowId} data-section-id={sectionId} className={`block-content ${className} relative`}>
       {(isChunk || isTableChunk) && (
         <div className="text-xs text-accent font-medium mb-1 flex items-center gap-1">
           <span className="w-2 h-2 bg-accent rounded-full" />
