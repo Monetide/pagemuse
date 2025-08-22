@@ -1,0 +1,117 @@
+{
+  "title": "Sample Document",
+  "sections": [
+    {
+      "id": "section-1",
+      "title": "Introduction",
+      "order": 1,
+      "blocks": [
+        {
+          "id": "block-1",
+          "type": "heading",
+          "order": 1,
+          "content": {
+            "level": 1,
+            "text": "Welcome to Our Platform",
+            "anchor": "welcome-to-our-platform"
+          }
+        },
+        {
+          "id": "block-2", 
+          "type": "paragraph",
+          "order": 2,
+          "content": "This document demonstrates the power of our Intermediate Representation system."
+        },
+        {
+          "id": "block-3",
+          "type": "list",
+          "order": 3,
+          "content": {
+            "type": "unordered",
+            "items": [
+              { "content": "Format-agnostic document processing" },
+              { "content": "Semantic structure preservation" },
+              { "content": "Easy mapping to PageMuse format" }
+            ]
+          }
+        }
+      ],
+      "notes": []
+    },
+    {
+      "id": "section-2", 
+      "title": "Features",
+      "order": 2,
+      "blocks": [
+        {
+          "id": "block-4",
+          "type": "heading",
+          "order": 1,
+          "content": {
+            "level": 2,
+            "text": "Key Features"
+          }
+        },
+        {
+          "id": "block-5",
+          "type": "table",
+          "order": 2,
+          "content": {
+            "headers": ["Feature", "Description", "Status"],
+            "rows": [
+              ["Text Processing", "Markdown and plain text support", "Complete"],
+              ["HTML Import", "Full HTML structure parsing", "Complete"],
+              ["Asset Management", "Image and media handling", "In Progress"]
+            ],
+            "caption": "Feature Implementation Status",
+            "headerRow": true
+          }
+        },
+        {
+          "id": "block-6",
+          "type": "quote",
+          "order": 3,
+          "content": {
+            "content": "The best way to predict the future is to create it.",
+            "citation": "Peter Drucker"
+          }
+        },
+        {
+          "id": "block-7",
+          "type": "callout",
+          "order": 4,
+          "content": {
+            "type": "info",
+            "title": "Pro Tip",
+            "content": "Use the IR system to maintain document structure across different formats and ensure consistent processing."
+          }
+        }
+      ],
+      "notes": [
+        {
+          "id": "footnote-1",
+          "number": 1,
+          "content": "This is a sample footnote to demonstrate footnote handling in the IR system.",
+          "backlinks": ["block-5"]
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "author": "IR System",
+    "created": "2024-01-15T10:00:00Z",
+    "modified": "2024-01-15T15:30:00Z",
+    "tags": ["demo", "IR", "PageMuse"],
+    "description": "A demonstration document showcasing the IR to PageMuse mapping capabilities."
+  },
+  "assets": [
+    {
+      "id": "asset-1",
+      "filename": "sample-image.jpg",
+      "mimeType": "image/jpeg",
+      "size": 256000,
+      "alt": "Sample image for demonstration",
+      "title": "Demo Image"
+    }
+  ]
+}
