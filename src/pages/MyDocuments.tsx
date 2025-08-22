@@ -5,6 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { useDocuments } from '@/hooks/useSupabaseData'
+import { supabase } from '@/integrations/supabase/client'
+import { toast } from '@/hooks/use-toast'
 import { 
   Plus, 
   Search, 
@@ -27,6 +29,7 @@ export default function MyDocuments() {
   const navigate = useNavigate()
   const { documents, loading } = useDocuments()
   const [searchQuery, setSearchQuery] = useState('')
+  const [deletingDocId, setDeletingDocId] = useState<string | null>(null)
 
   const filteredDocuments = documents.filter(doc =>
     doc.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -56,6 +59,40 @@ export default function MyDocuments() {
     if (!hasContent) return 'Draft'
     if (isRecent) return 'Active'
     return 'Completed'
+  }
+
+  const handleDeleteDocument = async (docId: string, docTitle: string) => {
+    if (!confirm(`Are you sure you want to delete "${docTitle}"? This action cannot be undone.`)) {
+      return
+    }
+
+    setDeletingDocId(docId)
+    
+    try {
+      const { error } = await supabase
+        .from('documents')
+        .delete()
+        .eq('id', docId)
+
+      if (error) throw error
+
+      toast({
+        title: "Document deleted",
+        description: `"${docTitle}" has been deleted successfully.`,
+      })
+
+      // Refresh the page to update the documents list
+      window.location.reload()
+    } catch (error) {
+      console.error('Error deleting document:', error)
+      toast({
+        title: "Error",
+        description: "Failed to delete document. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setDeletingDocId(null)
+    }
   }
 
   return (
@@ -182,9 +219,13 @@ export default function MyDocuments() {
                           <Edit className="w-4 h-4 mr-2" />
                           Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
+                        <DropdownMenuItem 
+                          className="text-destructive" 
+                          disabled={deletingDocId === doc.id}
+                          onClick={() => handleDeleteDocument(doc.id, doc.title)}
+                        >
                           <Trash2 className="w-4 h-4 mr-2" />
-                          Delete
+                          {deletingDocId === doc.id ? 'Deleting...' : 'Delete'}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
