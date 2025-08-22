@@ -5,14 +5,14 @@ import { DropTarget } from '@/hooks/useDragAndDrop'
 export function getDefaultBlockContent(blockType?: string): any {
   switch (blockType) {
     case 'heading':
-      return { text: 'New Heading', level: 1 }
+      return 'New Heading'
     case 'paragraph':
-      return { text: 'Start typing...' }
+      return 'Start typing...'
     case 'quote':
-      return { text: 'Add a quote here...', author: '' }
+      return 'Add a quote here...'
     case 'unordered-list':
     case 'ordered-list':
-      return { items: ['New item'] }
+      return ['New item']
     case 'figure':
       return {
         imageUrl: 'placeholder-image.jpg',
@@ -48,13 +48,13 @@ export function getDefaultBlockContent(blockType?: string): any {
         altText: 'Bar chart showing three data items'
       }
     case 'cross-reference':
-      return { text: 'Reference text', target: '' }
+      return { targetId: '', type: 'reference', format: 'full' }
     case 'divider':
-      return { style: 'solid' }
+      return null
     case 'spacer':
-      return { height: '1rem' }
+      return null
     default:
-      return { text: 'New block' }
+      return 'New block'
   }
 }
 

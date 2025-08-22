@@ -368,10 +368,10 @@ export const EditableBlockRenderer = ({
                 text={block.content || ''}
                 showInvisibles={showInvisibles}
               />
-              <InvisibleMarkers
-                showInvisibles={showInvisibles}
-                lineCount={block.content ? block.content.split('\n').length : 1}
-              />
+            <InvisibleMarkers
+              showInvisibles={showInvisibles}
+              lineCount={block.content && typeof block.content === 'string' ? block.content.split('\n').length : 1}
+            />
             </HeadingTag>
           </div>
         )
@@ -410,8 +410,8 @@ export const EditableBlockRenderer = ({
             />
             <InvisibleMarkers
               showInvisibles={showInvisibles}
-              lineCount={block.content ? block.content.split('\n').length : 1}
-              hasWidowOrphan={block.content && (
+              lineCount={block.content && typeof block.content === 'string' ? block.content.split('\n').length : 1}
+              hasWidowOrphan={block.content && typeof block.content === 'string' && (
                 block.content.split('\n').length === 1 || // Single line (orphan)
                 block.content.split(' ').length < 4       // Short line (widow)
               )}
@@ -450,7 +450,7 @@ export const EditableBlockRenderer = ({
             />"
             <InvisibleMarkers
               showInvisibles={showInvisibles}
-              lineCount={block.content ? block.content.split('\n').length : 1}
+              lineCount={block.content && typeof block.content === 'string' ? block.content.split('\n').length : 1}
             />
           </blockquote>
         )
