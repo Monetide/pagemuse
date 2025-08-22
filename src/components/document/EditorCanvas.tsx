@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Toggle } from '@/components/ui/toggle'
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { ZoomIn, ZoomOut, Maximize2, Grid3x3, Columns, Square, Ruler, Eye, EyeOff } from 'lucide-react'
+import { ZoomIn, ZoomOut, Maximize2, Grid3x3, Columns, Square, Ruler, Eye, EyeOff, RotateCcw, HelpCircle } from 'lucide-react'
 import { useAccessibility } from '@/components/accessibility/AccessibilityProvider'
 import { useKeyboardNavigation, useFocusManagement } from '@/hooks/useKeyboardNavigation'
 import { useDragDropContext } from '@/contexts/DragDropContext'
@@ -23,6 +23,8 @@ import { DragGhost } from './DragGhost'
 import { DropLine } from './DropLine'
 import { BlockInsertionHotspots } from './BlockInsertionHotspots'
 import { toast } from '@/hooks/use-toast'
+import { HelpDialog } from './HelpDialog'
+import { useOnboarding } from '@/hooks/useOnboarding'
 
 interface EditorCanvasProps {
   section: Section
@@ -303,19 +305,8 @@ const EditorPageBox = ({
   )
 }
 
-export const EditorCanvas = ({ 
-  section, 
-  document,
-  onContentChange, 
-  onNewBlock, 
-  onDeleteBlock,
-  onBlockTypeChange,
-  selectedBlockId: externalSelectedBlockId,
-  onBlockSelect,
-  onFocusChange,
-  onTitleChange,
-  onImport
-}: EditorCanvasProps) => {
+export const EditorCanvas = ({ section, document, onContentChange, onNewBlock, onDeleteBlock, onBlockTypeChange, selectedBlockId: externalSelectedBlockId, onBlockSelect, onFocusChange, onTitleChange, onImport }: EditorCanvasProps) => {
+  const { triggerCoachMarks } = useOnboarding()
   const [internalSelectedBlockId, setInternalSelectedBlockId] = useState<string>()
   const selectedBlockId = externalSelectedBlockId || internalSelectedBlockId
   const [zoomLevel, setZoomLevel] = useState<number>(1)
@@ -801,6 +792,18 @@ export const EditorCanvas = ({
         </div>
 
         <div className="flex items-center gap-1">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={triggerCoachMarks}
+            title="Quick Start - Show onboarding hints"
+          >
+            <RotateCcw className="h-3 w-3" />
+          </Button>
+          <HelpDialog />
+          
+          <Separator orientation="vertical" className="h-4 mx-1" />
+          
           <Button 
             variant="outline" 
             size="sm" 
