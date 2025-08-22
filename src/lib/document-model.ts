@@ -252,13 +252,20 @@ export const createSection = (name: string, order: number = 0): Section => ({
   includeInTOC: true
 })
 
-export const createDocument = (title: string): SemanticDocument => ({
-  id: crypto.randomUUID(),
-  title,
-  sections: [],
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString()
-})
+export const createDocument = (title: string): SemanticDocument => {
+  // Create default "Body" section with "Main" flow
+  const mainFlow = createFlow('Main', 'linear', 0)
+  const bodySection = createSection('Body', 0)
+  const sectionWithFlow = addFlowToSection(bodySection, mainFlow)
+  
+  return {
+    id: crypto.randomUUID(),
+    title,
+    sections: [sectionWithFlow],
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+}
 
 // Helper functions
 export const addBlockToFlow = (flow: Flow, block: Block): Flow => ({
