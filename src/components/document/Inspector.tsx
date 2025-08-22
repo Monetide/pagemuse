@@ -16,7 +16,7 @@ import { TOCInspector } from './TOCInspector'
 import { PageMasterSettings } from './PageMasterSettings'
 import { LayoutPresetSelector } from './LayoutPresetSelector'
 import { useAccessibility } from '../accessibility/AccessibilityProvider'
-import { RotateCcw } from 'lucide-react'
+import { RotateCcw, Trash2 } from 'lucide-react'
 
 interface InspectorProps {
   selectedBlock?: Block
@@ -25,8 +25,10 @@ interface InspectorProps {
   onBlockUpdate?: (blockId: string, updates: Partial<Block>) => void
   onSectionUpdate?: (sectionId: string, updates: Partial<Section>) => void
   onDeleteBlock?: (blockId: string) => void
+  onDeleteSection?: (sectionId: string) => void
   onNewBlock?: (afterBlockId: string, type: Block['type'], content?: any, metadata?: any) => void
   onTOCRefresh?: () => void
+  canDeleteSection?: boolean
 }
 
 const PAGE_SIZES = [
@@ -43,8 +45,10 @@ export const Inspector = ({
   onBlockUpdate, 
   onSectionUpdate,
   onDeleteBlock,
+  onDeleteSection,
   onNewBlock,
-  onTOCRefresh
+  onTOCRefresh,
+  canDeleteSection = true
 }: InspectorProps) => {
   const [activeTab, setActiveTab] = useState('block')
   const [showPresets, setShowPresets] = useState(false)
@@ -571,6 +575,25 @@ export const Inspector = ({
                 </Select>
               </div>
             </div>
+          </div>
+
+          {/* Section Actions */}
+          <div className="pt-4 mt-4 border-t border-border">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => onDeleteSection?.(currentSection.id)}
+              disabled={!canDeleteSection}
+              className="w-full"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete section...
+            </Button>
+            {!canDeleteSection && (
+              <p className="text-xs text-muted-foreground mt-2 text-center">
+                Cannot delete the last section
+              </p>
+            )}
           </div>
         </TabsContent>
 

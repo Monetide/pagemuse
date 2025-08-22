@@ -11,7 +11,8 @@ import {
   Search,
   ArrowRight,
   Upload,
-  Play
+  Play,
+  Trash2
 } from 'lucide-react'
 import {
   CommandDialog,
@@ -28,17 +29,21 @@ interface CommandPaletteProps {
   onInsertBlock: (blockType: Block['type'], content?: any, metadata?: any) => void
   onImportContent?: () => void
   onValidateDocument?: () => void
+  onDeleteCurrentSection?: () => void
+  onDeleteSelectedSections?: () => void
+  hasSelectedSections?: boolean
+  currentSectionName?: string
 }
 
 interface CommandItem {
-  type: Block['type'] | 'import' | 'validate'
+  type: Block['type'] | 'import' | 'validate' | 'delete-section' | 'delete-selected-sections'
   label: string
   description: string
   icon: React.ReactNode
   keywords: string[]
   defaultContent?: any
   defaultMetadata?: any
-  action?: 'insert' | 'import' | 'validate'
+  action?: 'insert' | 'import' | 'validate' | 'delete-section' | 'delete-selected-sections'
 }
 
 const BLOCK_COMMANDS: CommandItem[] = [
@@ -140,35 +145,65 @@ const BLOCK_COMMANDS: CommandItem[] = [
   }
 ]
 
-const ACTION_COMMANDS: CommandItem[] = [
-  {
-    type: 'import',
-    label: 'Import Content',
-    description: 'Import documents from files',
-    icon: <Upload className="w-4 h-4" />,
-    keywords: ['import', 'upload', 'file', 'docx', 'pdf', 'txt', 'html'],
-    action: 'import'
-  },
-  {
-    type: 'validate',
-    label: 'Validate Document',
-    description: 'Run quality checks and validation',
-    icon: <Play className="w-4 h-4" />,
-    keywords: ['validate', 'check', 'quality', 'issues', 'problems'],
-    action: 'validate'
-  }
-]
+const ACTION_COMMANDS: CommandItem[] = []
 
 export const CommandPalette = ({ 
   open, 
   onOpenChange, 
   onInsertBlock, 
   onImportContent,
-  onValidateDocument 
+  onValidateDocument,
+  onDeleteCurrentSection,
+  onDeleteSelectedSections,
+  hasSelectedSections = false,
+  currentSectionName = ''
 }: CommandPaletteProps) => {
   const [selectedIndex, setSelectedIndex] = useState(0)
   
-  const allCommands = [...BLOCK_COMMANDS, ...ACTION_COMMANDS]
+  // Build dynamic action commands based on context
+  const contextualCommands: CommandItem[] = [
+    {
+      type: 'import',
+      label: 'Import Content',
+      description: 'Import documents from files',
+      icon: <Upload className="w-4 h-4" />,
+      keywords: ['import', 'upload', 'file', 'docx', 'pdf', 'txt', 'html'],
+      action: 'import'
+    },
+    {
+      type: 'validate',
+      label: 'Validate Document',
+      description: 'Run quality checks and validation',
+      icon: <Play className="w-4 h-4" />,
+      keywords: ['validate', 'check', 'quality', 'issues', 'problems'],
+      action: 'validate'
+    }
+  ]
+
+  // Add section deletion commands based on context
+  if (hasSelectedSections) {
+    contextualCommands.push({
+      type: 'delete-selected-sections',
+      label: 'Delete Selected Sections',
+      description: 'Delete all selected sections',
+      icon: <Trash2 className="w-4 h-4" />,
+      keywords: ['delete', 'remove', 'sections', 'selected', 'multiple'],
+      action: 'delete-selected-sections'
+    })
+  }
+
+  if (currentSectionName) {
+    contextualCommands.push({
+      type: 'delete-section',
+      label: `Delete Current Section`,
+      description: `Delete "${currentSectionName}" section`,
+      icon: <Trash2 className="w-4 h-4" />,
+      keywords: ['delete', 'remove', 'section', 'current'],
+      action: 'delete-section'
+    })
+  }
+  
+  const allCommands = [...BLOCK_COMMANDS, ...contextualCommands]
 
   // Filter commands based on query
   const [query, setQuery] = useState('')
@@ -198,9 +233,15 @@ export const CommandPalette = ({
       case 'validate':
         onValidateDocument?.()
         break
+      case 'delete-section':
+        onDeleteCurrentSection?.()
+        break
+      case 'delete-selected-sections':
+        onDeleteSelectedSections?.()
+        break
     }
     onOpenChange(false)
-  }, [onInsertBlock, onImportContent, onValidateDocument, onOpenChange])
+  }, [onInsertBlock, onImportContent, onValidateDocument, onDeleteCurrentSection, onDeleteSelectedSections, onOpenChange])
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
@@ -238,14 +279,17 @@ export const CommandPalette = ({
             </CommandItem>
           ))}
         </CommandGroup>
-        {filteredCommands.filter(cmd => cmd.action !== 'insert').length > 0 && (
+        
+        {filteredCommands.filter(cmd => cmd.action && cmd.action !== 'insert').length > 0 && (
           <CommandGroup heading="Actions">
-            {filteredCommands.filter(cmd => cmd.action !== 'insert').map((command) => (
+            {filteredCommands.filter(cmd => cmd.action && cmd.action !== 'insert').map((command) => (
               <CommandItem
                 key={command.type}
                 value={`${command.label} ${command.description} ${command.keywords.join(' ')}`}
                 onSelect={() => handleSelect(command)}
-                className="flex items-center gap-3 px-3 py-2 cursor-pointer"
+                className={`flex items-center gap-3 px-3 py-2 cursor-pointer ${
+                  command.action?.includes('delete') ? 'text-destructive' : ''
+                }`}
               >
                 <div className="flex-shrink-0 text-muted-foreground">
                   {command.icon}
