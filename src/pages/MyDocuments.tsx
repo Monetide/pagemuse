@@ -27,7 +27,7 @@ import {
 
 export default function MyDocuments() {
   const navigate = useNavigate()
-  const { documents, loading } = useDocuments()
+  const { documents, loading, removeDocument } = useDocuments()
   const [searchQuery, setSearchQuery] = useState('')
   const [deletingDocId, setDeletingDocId] = useState<string | null>(null)
 
@@ -76,13 +76,13 @@ export default function MyDocuments() {
 
       if (error) throw error
 
+      // Optimistically remove from local state immediately
+      removeDocument(docId)
+
       toast({
         title: "Document deleted",
         description: `"${docTitle}" has been deleted successfully.`,
       })
-
-      // Refresh the page to update the documents list
-      window.location.reload()
     } catch (error) {
       console.error('Error deleting document:', error)
       toast({

@@ -40,38 +40,47 @@ export const useDocuments = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
+  const fetchDocuments = async () => {
     if (!user) {
       setDocuments([])
       setLoading(false)
       return
     }
 
-    const fetchDocuments = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('documents')
-          .select(`
-            *,
-            template:templates(name)
-          `)
-          .eq('user_id', user.id)
-          .order('updated_at', { ascending: false })
-          .limit(10)
+    try {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('documents')
+        .select(`
+          *,
+          template:templates(name)
+        `)
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .limit(10)
 
-        if (error) throw error
-        setDocuments(data || [])
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch documents')
-      } finally {
-        setLoading(false)
-      }
+      if (error) throw error
+      setDocuments(data || [])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch documents')
+    } finally {
+      setLoading(false)
     }
+  }
 
+  useEffect(() => {
     fetchDocuments()
   }, [user])
 
-  return { documents, loading, error }
+  const refetch = () => {
+    fetchDocuments()
+  }
+
+  const removeDocument = (docId: string) => {
+    setDocuments(prev => prev.filter(doc => doc.id !== docId))
+  }
+
+  return { documents, loading, error, refetch, removeDocument }
 }
 
 export const useTemplates = () => {
