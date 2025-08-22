@@ -1,5 +1,6 @@
 import { Block } from '@/lib/document-model'
-import { Minus, Image, Table } from 'lucide-react'
+import { Minus, Image, Table, FileText } from 'lucide-react'
+import { FootnoteInserter } from './FootnoteInserter'
 import { useState, useRef, useCallback, KeyboardEvent, useEffect } from 'react'
 import { SlashCommand } from './SlashCommand'
 import { FormattingToolbar } from './FormattingToolbar'
@@ -81,6 +82,7 @@ const [editContent, setEditContent] = useState(initialText)
     visible: false,
     position: { x: 0, y: 0 }
   })
+  const [footnoteInserter, setFootnoteInserter] = useState(false)
   const textRef = useRef<HTMLDivElement>(null)
   const seededRef = useRef(false)
   
@@ -216,6 +218,13 @@ const [editContent, setEditContent] = useState(initialText)
       return
     }
 
+    if (blockType === 'footnote') {
+      // Show footnote inserter instead of creating a block directly
+      setFootnoteInserter(true)
+      setSlashCommand(prev => ({ ...prev, visible: false }))
+      return
+    }
+
     // Replace the slash and query with empty string
     const currentText = textRef.current?.textContent || ''
     const slashIndex = currentText.lastIndexOf('/')
@@ -317,6 +326,31 @@ const [editContent, setEditContent] = useState(initialText)
 
   const handleCrossRefClose = useCallback(() => {
     setCrossRefInserter({ visible: false, position: { x: 0, y: 0 } })
+  }, [])
+
+  const handleFootnoteInsert = useCallback((content: string) => {
+    // Create footnote marker in current text and footnote block
+    const footnoteId = crypto.randomUUID()
+    const marker = { id: crypto.randomUUID(), number: 1, footnoteId }
+    
+    // Add footnote marker to current block's metadata
+    const currentContent = textRef.current?.textContent || ''
+    const updatedMetadata = {
+      ...block.metadata,
+      footnoteMarkers: [...(block.metadata?.footnoteMarkers || []), marker]
+    }
+    
+    // Update current block content and metadata
+    onContentChange?.(block.id, currentContent)
+    
+    // Create footnote block
+    onNewBlock?.(block.id, 'footnote', { id: footnoteId, number: 1, content }, { isFootnote: true })
+    
+    setFootnoteInserter(false)
+  }, [block.id, block.metadata, onContentChange, onNewBlock])
+
+  const handleFootnoteClose = useCallback(() => {
+    setFootnoteInserter(false)
   }, [])
 
   const handleBlur = useCallback(() => {
@@ -634,6 +668,30 @@ const [editContent, setEditContent] = useState(initialText)
           </div>
         )
       
+      case 'footnote':
+        const footnoteData = block.content || {}
+        return (
+          <div 
+            className={`footnote-block mb-2 text-xs border-l-2 border-accent pl-2 bg-muted/10 rounded-r cursor-pointer hover:bg-muted/20 p-2 ${isSelected ? 'ring-2 ring-primary' : ''}`}
+            onClick={handleClick}
+            tabIndex={0}
+            onKeyDown={handleBoundaryKeyDown}
+            id={`block-${block.id}`}
+          >
+            <div className="flex items-start gap-2">
+              <FileText className="w-3 h-3 mt-0.5 text-accent flex-shrink-0" />
+              <div>
+                <div className="font-medium text-foreground mb-1">
+                  Footnote {footnoteData.number || '?'}
+                </div>
+                <div className="text-muted-foreground">
+                  {footnoteData.content || 'Footnote content'}
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+
       case 'divider':
         return (
           <div 
@@ -718,6 +776,12 @@ const [editContent, setEditContent] = useState(initialText)
           onClose={handleCrossRefClose}
         />
       )}
+      
+      <FootnoteInserter
+        isOpen={footnoteInserter}
+        onClose={handleFootnoteClose}
+        onInsert={handleFootnoteInsert}
+      />
     </div>
   )
 }

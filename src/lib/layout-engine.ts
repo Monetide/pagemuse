@@ -6,6 +6,8 @@ export interface PageBox {
   pageMaster: PageMaster
   columnBoxes: ColumnBox[]
   hasOverflow: boolean
+  footnotes?: { id: string, number: number, content: string }[]
+  footnoteHeight?: number
 }
 
 export interface ColumnBox {
@@ -442,6 +444,19 @@ const splitBlock = (block: Block, maxHeight: number, columnWidth: number): Block
   return chunks
 }
 
+// Helper function to estimate footnote height
+const estimateFootnoteHeight = (footnotes: { content: string }[]): number => {
+  if (footnotes.length === 0) return 0
+  
+  // Base height for separator line and padding
+  const baseHeight = 0.25 // inches
+  
+  // Estimate 2 lines per footnote on average (including number and content)
+  const footnoteHeight = footnotes.length * 0.25 // inches per footnote
+  
+  return baseHeight + footnoteHeight
+}
+
 export const generateLayout = (section: Section): LayoutResult => {
   const { pageMaster } = section
   
@@ -467,6 +482,9 @@ export const generateLayout = (section: Section): LayoutResult => {
   // Calculate content area
   const contentWidth = pageSize.width - pageMaster.margins.left - pageMaster.margins.right
   const contentHeight = pageSize.height - pageMaster.margins.top - pageMaster.margins.bottom
+  
+  // Get footnotes that need to be placed on pages
+  const sectionFootnotes = section.footnotes || []
   
   // Subtract header/footer space
   const availableHeight = contentHeight - 

@@ -9,7 +9,8 @@ import {
   Image, 
   Table2, 
   MessageSquare,
-  ArrowRight
+  ArrowRight,
+  FileText
 } from 'lucide-react'
 
 interface SlashCommandProps {
@@ -125,6 +126,14 @@ const COMMANDS: CommandItem[] = [
     icon: <MessageSquare className="w-4 h-4" />,
     keywords: ['reference', 'cross-ref', 'link', 'see', 'ref'],
     defaultContent: { targetId: '', type: 'see', format: 'full' }
+  },
+  {
+    type: 'footnote',
+    label: 'Footnote',
+    description: 'Add a footnote reference',
+    icon: <FileText className="w-4 h-4" />,
+    keywords: ['footnote', 'note', 'reference', 'citation'],
+    defaultContent: { number: 1, content: 'Footnote content' }
   }
 ]
 

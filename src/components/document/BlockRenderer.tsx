@@ -1,5 +1,6 @@
 import { Block } from '@/lib/document-model'
-import { Minus, Image, Table, BarChart } from 'lucide-react'
+import { Minus, Image, Table, BarChart, FileText } from 'lucide-react'
+import { FootnoteMarkerRenderer } from './FootnoteMarkerRenderer'
 
 interface BlockRendererProps {
   block: Block
@@ -25,9 +26,15 @@ export const BlockRenderer = ({ block, className = '' }: BlockRendererProps) => 
         )
       
       case 'paragraph':
+        const content = typeof block.content === 'string' ? block.content : block.content?.text || ''
+        const footnoteMarkers = block.metadata?.footnoteMarkers || []
+        
         return (
           <p className="text-sm text-foreground leading-relaxed mb-3">
-            {block.content}
+            {content}
+            {footnoteMarkers.map((marker: any) => (
+              <FootnoteMarkerRenderer key={marker.id} marker={marker} />
+            ))}
           </p>
         )
       
@@ -271,6 +278,24 @@ export const BlockRenderer = ({ block, className = '' }: BlockRendererProps) => 
             className="w-full bg-transparent"
             style={{ height: `${height * 24}px` }} // 24px per 0.5 inch approx
           />
+        )
+      
+      case 'footnote':
+        const footnoteData = block.content || {}
+        return (
+          <div className="mb-2 text-xs border-l-2 border-accent pl-2 bg-muted/10 rounded-r">
+            <div className="flex items-start gap-2">
+              <FileText className="w-3 h-3 mt-0.5 text-accent flex-shrink-0" />
+              <div>
+                <div className="font-medium text-foreground mb-1">
+                  Footnote {footnoteData.number || '?'}
+                </div>
+                <div className="text-muted-foreground">
+                  {footnoteData.content || 'Footnote content'}
+                </div>
+              </div>
+            </div>
+          </div>
         )
       
       default:

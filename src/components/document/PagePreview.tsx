@@ -135,6 +135,14 @@ export const PagePreview = ({ pageMaster, sectionName }: PagePreviewProps) => {
                 ))}
               </div>
             )}
+            
+            {/* Footnote area preview */}
+            <div 
+              className="absolute bottom-0 left-0 right-0 border-t border-gray-300/50 bg-gray-100/30 text-xs text-gray-400 flex items-center justify-center"
+              style={{ height: 18 }}
+            >
+              Footnote area
+            </div>
           </div>
           
           {/* Page info */}

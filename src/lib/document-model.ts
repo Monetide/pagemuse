@@ -18,12 +18,25 @@ export interface Theme {
 
 export interface Block {
   id: string
-  type: 'heading' | 'paragraph' | 'ordered-list' | 'unordered-list' | 'quote' | 'divider' | 'spacer' | 'figure' | 'table' | 'chart' | 'cross-reference' | 'callout'
+  type: 'heading' | 'paragraph' | 'ordered-list' | 'unordered-list' | 'quote' | 'divider' | 'spacer' | 'figure' | 'table' | 'chart' | 'cross-reference' | 'callout' | 'footnote'
   content: any
   styles?: Style[]
   metadata?: Record<string, any>
   order: number
   paginationRules?: PaginationRules
+}
+
+export interface FootnoteMarker {
+  id: string
+  number: number
+  footnoteId: string
+}
+
+export interface FootnoteContent {
+  id: string
+  number: number
+  content: string
+  sourceBlockId: string
 }
 
 export interface PaginationRules {
@@ -73,6 +86,8 @@ export interface Section {
   layoutIntent?: LayoutIntent
   metadata?: Record<string, any>
   order: number
+  footnotes: FootnoteContent[]
+  useEndnotes?: boolean
 }
 
 export type LayoutIntent = 
@@ -178,6 +193,11 @@ export const getDefaultPaginationRules = (type: Block['type']): PaginationRules 
         minOrphans: 2,
         minWidows: 2
       }
+    case 'footnote':
+      return {
+        breakAvoid: true, // Footnotes should not be broken
+        keepTogether: true
+      }
     default:
       return {}
   }
@@ -218,7 +238,9 @@ export const createSection = (name: string, order: number = 0): Section => ({
   name,
   flows: [],
   pageMaster: createPageMaster(),
-  order
+  order,
+  footnotes: [],
+  useEndnotes: false
 })
 
 export const createDocument = (title: string): SemanticDocument => ({
