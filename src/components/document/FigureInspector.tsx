@@ -16,7 +16,9 @@ import {
   Trash2,
   Copy,
   AlertTriangle,
-  Image
+  Image,
+  Crop,
+  Target
 } from 'lucide-react'
 
 interface FigureInspectorProps {
@@ -207,6 +209,36 @@ export const FigureInspector = ({
                     <strong>Aspect ratio:</strong> {figureData.aspectRatio.toFixed(2)}:1
                   </span>
                 )}
+              </div>
+            )}
+            
+            {/* Crop & Focal Point Status */}
+            {(figureData.crop || figureData.focalPoint) && (
+              <div className="text-xs text-muted-foreground p-2 bg-muted/30 rounded">
+                <div className="flex items-center gap-2 mb-1">
+                  <strong>Image Edits:</strong>
+                </div>
+                {figureData.crop && (
+                  <div className="flex items-center gap-1">
+                    <Crop className="w-3 h-3" />
+                    <span>Cropped: {(figureData.crop.width * 100).toFixed(0)}% × {(figureData.crop.height * 100).toFixed(0)}%</span>
+                  </div>
+                )}
+                {figureData.focalPoint && (
+                  <div className="flex items-center gap-1">
+                    <Target className="w-3 h-3" />
+                    <span>Focal point: {(figureData.focalPoint.x * 100).toFixed(0)}%, {(figureData.focalPoint.y * 100).toFixed(0)}%</span>
+                  </div>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 w-full"
+                  onClick={() => updateContent({ crop: undefined, focalPoint: undefined, cropAspectRatio: undefined })}
+                >
+                  <RotateCcw className="w-3 h-3 mr-2" />
+                  Reset Crop & Focal Point
+                </Button>
               </div>
             )}
           </div>

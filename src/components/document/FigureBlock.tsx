@@ -15,10 +15,25 @@ import {
   Maximize2, 
   Minimize2,
   AlertTriangle,
-  GripVertical
+  GripVertical,
+  Crop,
+  Edit3
 } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 import { toast } from 'sonner'
+import { ImageEditor } from './ImageEditor'
+
+interface CropData {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+interface FocalPoint {
+  x: number // 0-1
+  y: number // 0-1
+}
 
 interface FigureData {
   imageSrc?: string
@@ -30,6 +45,9 @@ interface FigureData {
   aspectLock?: boolean
   originalWidth?: number
   originalHeight?: number
+  crop?: CropData
+  focalPoint?: FocalPoint
+  cropAspectRatio?: number
 }
 
 interface FigureBlockProps {
@@ -56,6 +74,9 @@ export const FigureBlock = ({
   const [isUploading, setIsUploading] = useState(false)
   const [urlInput, setUrlInput] = useState('')
   const [showUrlInput, setShowUrlInput] = useState(false)
+  const [showImageEditor, setShowImageEditor] = useState(false)
+  const [showReplacePrompt, setShowReplacePrompt] = useState(false)
+  const [newImageSrc, setNewImageSrc] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const updateData = useCallback((updates: Partial<FigureData>) => {
@@ -103,17 +124,25 @@ export const FigureBlock = ({
         .from('media')
         .getPublicUrl(fileName)
 
-      // Get image dimensions
+      // Get image dimensions and check for replace
       const img = document.createElement('img')
       img.onload = () => {
-        updateData({
+        const newImageData = {
           imageSrc: urlData.publicUrl,
           originalWidth: img.naturalWidth,
           originalHeight: img.naturalHeight,
           aspectRatio: img.naturalWidth / img.naturalHeight,
           aspectLock: true,
           size: data.size || 'column-width'
-        })
+        }
+        
+        // If replacing existing image with crop/focal data, prompt user
+        if (data.imageSrc && (data.crop || data.focalPoint)) {
+          setNewImageSrc(urlData.publicUrl)
+          setShowReplacePrompt(true)
+        } else {
+          updateData(newImageData)
+        }
       }
       img.src = urlData.publicUrl
       
@@ -140,14 +169,23 @@ export const FigureBlock = ({
     // Load image to get dimensions
     const img = document.createElement('img')
     img.onload = () => {
-      updateData({
+      const newImageData = {
         imageSrc: urlInput,
         originalWidth: img.naturalWidth,
         originalHeight: img.naturalHeight,
         aspectRatio: img.naturalWidth / img.naturalHeight,
         aspectLock: true,
         size: data.size || 'column-width'
-      })
+      }
+      
+      // If replacing existing image with crop/focal data, prompt user
+      if (data.imageSrc && (data.crop || data.focalPoint)) {
+        setNewImageSrc(urlInput)
+        setShowReplacePrompt(true)
+      } else {
+        updateData(newImageData)
+      }
+      
       setUrlInput('')
       setShowUrlInput(false)
       toast.success('Image loaded successfully')
@@ -212,11 +250,74 @@ export const FigureBlock = ({
     </div>
   )
 
+  // Handle image editor save
+  const handleImageEditorSave = useCallback((editorData: { crop?: CropData, focalPoint?: FocalPoint, aspectRatio?: number }) => {
+    updateData({
+      crop: editorData.crop,
+      focalPoint: editorData.focalPoint,
+      cropAspectRatio: editorData.aspectRatio
+    })
+    setShowImageEditor(false)
+    toast.success('Image crop and focal point saved')
+  }, [updateData])
+
+  // Handle replace prompt
+  const handleReplaceKeepCrop = useCallback(() => {
+    if (!newImageSrc) return
+    
+    const img = document.createElement('img')
+    img.onload = () => {
+      updateData({
+        imageSrc: newImageSrc,
+        originalWidth: img.naturalWidth,
+        originalHeight: img.naturalHeight,
+        aspectRatio: img.naturalWidth / img.naturalHeight,
+        // Keep existing crop and focal point
+      })
+    }
+    img.src = newImageSrc
+    
+    setShowReplacePrompt(false)
+    setNewImageSrc('')
+  }, [newImageSrc, updateData])
+
+  const handleReplaceResetCrop = useCallback(() => {
+    if (!newImageSrc) return
+    
+    const img = document.createElement('img')
+    img.onload = () => {
+      updateData({
+        imageSrc: newImageSrc,
+        originalWidth: img.naturalWidth,
+        originalHeight: img.naturalHeight,
+        aspectRatio: img.naturalWidth / img.naturalHeight,
+        aspectLock: true,
+        crop: undefined,
+        focalPoint: undefined,
+        cropAspectRatio: undefined
+      })
+    }
+    img.src = newImageSrc
+    
+    setShowReplacePrompt(false)
+    setNewImageSrc('')
+  }, [newImageSrc, updateData])
+
   const renderImage = () => {
     if (!data.imageSrc) return null
 
     const sizeClass = data.size === 'full-width' ? 'w-full' : 'max-w-full'
     const maxWidthStyle = data.maxWidth ? { maxWidth: `${data.maxWidth}px` } : {}
+    
+    // Calculate crop and focal point styles
+    const cropStyle: React.CSSProperties = {}
+    if (data.crop) {
+      const { x, y, width, height } = data.crop
+      cropStyle.objectPosition = `${(x + width/2) * 100}% ${(y + height/2) * 100}%`
+      // Note: For true cropping, we'd need to use clip-path or container with overflow
+    } else if (data.focalPoint) {
+      cropStyle.objectPosition = `${data.focalPoint.x * 100}% ${data.focalPoint.y * 100}%`
+    }
 
     return (
       <div className="relative group">
@@ -228,18 +329,25 @@ export const FigureBlock = ({
         <img
           src={data.imageSrc}
           alt={data.altText || 'Figure'}
-          className={`${sizeClass} h-auto rounded-lg shadow-sm`}
+          className={`${sizeClass} h-auto rounded-lg shadow-sm cursor-pointer`}
           style={{
             ...maxWidthStyle,
-            aspectRatio: data.aspectLock && data.aspectRatio ? data.aspectRatio : 'auto'
+            ...cropStyle,
+            aspectRatio: data.aspectLock && data.aspectRatio ? data.aspectRatio : 'auto',
+            objectFit: data.crop ? 'cover' : 'contain'
           }}
           role="img"
           aria-describedby={data.caption ? `caption-${Math.random()}` : undefined}
+          onDoubleClick={() => setShowImageEditor(true)}
         />
         
         {isEditing && (
           <div className="absolute inset-0 bg-primary/10 border-2 border-primary rounded-lg flex items-center justify-center">
             <div className="bg-background/90 p-2 rounded shadow-lg flex gap-2">
+              <Button size="sm" variant="outline" onClick={() => setShowImageEditor(true)}>
+                <Edit3 className="w-3 h-3 mr-1" />
+                Edit Image
+              </Button>
               <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>
                 <RotateCcw className="w-3 h-3 mr-1" />
                 Replace
@@ -252,6 +360,16 @@ export const FigureBlock = ({
                 {data.size === 'full-width' ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
               </Button>
             </div>
+          </div>
+        )}
+        
+        {/* Crop/Focal indicators */}
+        {(data.crop || data.focalPoint) && !isEditing && (
+          <div className="absolute top-2 left-2">
+            <Badge variant="secondary" className="text-xs">
+              {data.crop && <Crop className="w-3 h-3 mr-1" />}
+              Edited
+            </Badge>
           </div>
         )}
         
@@ -370,21 +488,64 @@ export const FigureBlock = ({
   }
 
   return (
-    <figure 
-      className={`
-        relative mb-6 cursor-pointer transition-all
-        ${isSelected ? 'ring-2 ring-primary' : ''}
-        ${data.size === 'full-width' ? 'mx-auto' : ''}
-        ${className}
-      `}
-      onClick={onClick}
-      role="img"
-      aria-label={data.altText || 'Figure'}
-      tabIndex={0}
-    >
-      {data.imageSrc ? renderImage() : renderPlaceholder()}
-      {renderCaption()}
-      {renderPropertiesPanel()}
-    </figure>
+    <>
+      <figure 
+        className={`
+          relative mb-6 cursor-pointer transition-all
+          ${isSelected ? 'ring-2 ring-primary' : ''}
+          ${data.size === 'full-width' ? 'mx-auto' : ''}
+          ${className}
+        `}
+        onClick={onClick}
+        role="img"
+        aria-label={data.altText || 'Figure'}
+        tabIndex={0}
+      >
+        {data.imageSrc ? renderImage() : renderPlaceholder()}
+        {renderCaption()}
+        {renderPropertiesPanel()}
+      </figure>
+      
+      {/* Image Editor Modal */}
+      {showImageEditor && data.imageSrc && (
+        <ImageEditor
+          imageSrc={data.imageSrc}
+          data={{
+            crop: data.crop,
+            focalPoint: data.focalPoint,
+            aspectRatio: data.cropAspectRatio
+          }}
+          onSave={handleImageEditorSave}
+          onCancel={() => setShowImageEditor(false)}
+        />
+      )}
+      
+      {/* Replace Prompt Modal */}
+      {showReplacePrompt && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-background border rounded-lg shadow-lg p-6 max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Replace Image</h3>
+            <p className="text-sm text-muted-foreground mb-6">
+              This image has been cropped or has a focal point set. What would you like to do?
+            </p>
+            <div className="flex gap-3">
+              <Button onClick={handleReplaceKeepCrop} className="flex-1">
+                Keep Crop & Focal Point
+              </Button>
+              <Button onClick={handleReplaceResetCrop} variant="outline" className="flex-1">
+                Reset All Edits
+              </Button>
+            </div>
+            <Button 
+              variant="ghost" 
+              onClick={() => setShowReplacePrompt(false)}
+              className="w-full mt-3"
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
