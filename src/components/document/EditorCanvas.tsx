@@ -31,6 +31,7 @@ interface EditorCanvasProps {
   selectedBlockId?: string
   onBlockSelect?: (blockId: string) => void
   onFocusChange?: (blockId: string | null) => void
+  templateSnippets?: import('@/lib/template-model').TemplateSnippet[]
 }
 
 interface OverlaySettings {
@@ -475,6 +476,20 @@ export const EditorCanvas = ({
         
         // Focus the new block (will be handled by the parent component)
         announce(`Inserted ${dragData.blockType} block`)
+      } else if (dragData?.type === 'snippet' && dragData.snippet && onNewBlock) {
+        // Handle snippet insertion
+        const snippet = dragData.snippet
+        
+        // Find target block
+        const flow = section.flows.find(f => f.id === dropTarget.flowId)
+        const targetBlockId = flow?.blocks.length ? flow.blocks[flow.blocks.length - 1].id : 'create-first'
+        
+        // Insert snippet blocks
+        for (const block of snippet.content) {
+          onNewBlock(targetBlockId, block.type, block.content, block.metadata)
+        }
+        
+        announce(`Inserted ${snippet.name} snippet`)
       }
     } catch (error) {
       console.warn('Drop failed:', {

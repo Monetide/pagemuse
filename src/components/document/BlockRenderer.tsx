@@ -7,6 +7,8 @@ import { useViewMode } from '@/contexts/ViewModeContext'
 import { ScreenModeTable } from './ScreenModeTable'
 import { ScreenModeFootnotePopover } from './ScreenModeFootnotePopover'
 import { ViewModeAwareCrossReference } from './ViewModeAwareCrossReference'
+import { SnippetBlockRenderer } from './SnippetBlockRenderer'
+import { cn } from '@/lib/utils'
 
 interface BlockRendererProps {
   block: Block
@@ -94,6 +96,11 @@ export const BlockRenderer = ({
       
       case 'figure':
         const figureData = block.content || {}
+        
+        // Check if this is a snippet figure
+        if (figureData.type && ['kpi-strip', 'pull-quote', 'cta-card', 'feature-grid', 'timeline'].includes(figureData.type)) {
+          return <SnippetBlockRenderer block={block} />
+        }
         
         // Screen mode: responsive figure
         if (viewMode === 'screen') {
@@ -223,6 +230,51 @@ export const BlockRenderer = ({
       
       case 'table':
         const tableData = block.content || { headers: [], rows: [] }
+        
+        // Check if this is a comparison table snippet
+        if (tableData.style === 'comparison') {
+          return (
+            <div className="mb-4">
+              <div className="border border-border rounded-lg overflow-hidden bg-background">
+                <table className="w-full text-xs">
+                  <thead className="bg-primary/5">
+                    <tr>
+                      {(tableData.headers || []).map((header: string, index: number) => (
+                        <th key={index} className={cn(
+                          "px-3 py-2 text-left font-semibold border-r border-border last:border-r-0",
+                          index === 0 ? "bg-muted/50" : "text-primary"
+                        )}>
+                          {header}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(tableData.rows || []).map((row: string[], rowIndex: number) => (
+                      <tr key={rowIndex} className="border-t border-border hover:bg-muted/20">
+                        {row.map((cell, cellIndex) => (
+                          <td key={cellIndex} className={cn(
+                            "px-3 py-2 border-r border-border last:border-r-0",
+                            cellIndex === 0 ? "font-medium bg-muted/20" : "",
+                            cell === '✓' ? "text-success text-center" : "",
+                            cell === '✗' ? "text-muted-foreground text-center" : ""
+                          )}>
+                            {cell}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {tableData.caption && (
+                <div className="text-xs text-center text-muted-foreground italic mt-2">
+                  <strong>{tableData.caption}</strong>
+                </div>
+              )}
+            </div>
+          )
+        }
         
         // Use screen mode table for screen view
         if (viewMode === 'screen') {

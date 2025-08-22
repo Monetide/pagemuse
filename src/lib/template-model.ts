@@ -371,7 +371,7 @@ export function createTemplate(
     tocDefaults: createDefaultTOCDefaults(),
     exportDefaults: createDefaultExportDefaults(),
     
-    snippets: [],
+    snippets: createDefaultSnippets(),
     starterContent: {
       sections: []
     },
@@ -871,6 +871,140 @@ function createDefaultExportDefaults(): TemplateExportDefaults {
       responsiveDesign: true
     }
   }
+}
+
+/**
+ * Create default snippets
+ */
+export function createDefaultSnippets(): TemplateSnippet[] {
+  return [
+    // KPI Strip
+    {
+      id: 'kpi-strip',
+      name: 'KPI Strip',
+      description: 'A row of key performance indicators with numbers and labels',
+      category: 'metrics',
+      keywords: ['kpi', 'metrics', 'numbers', 'stats', 'performance'],
+      content: [
+        createBlock('figure', {
+          type: 'kpi-strip',
+          items: [
+            { value: '85%', label: 'Customer Satisfaction', trend: 'up' },
+            { value: '$2.4M', label: 'Revenue Growth', trend: 'up' },
+            { value: '12', label: 'New Markets', trend: 'neutral' },
+            { value: '99.9%', label: 'Uptime', trend: 'up' }
+          ]
+        }, 0),
+      ],
+      insertionPoint: 'cursor'
+    },
+    
+    // Pull Quote
+    {
+      id: 'pull-quote',
+      name: 'Pull Quote',
+      description: 'Highlighted quote with attribution for emphasis',
+      category: 'content',
+      keywords: ['quote', 'testimonial', 'pullquote', 'emphasis', 'citation'],
+      content: [
+        createBlock('figure', {
+          type: 'pull-quote',
+          quote: 'This solution transformed our entire workflow and increased productivity by 300%.',
+          attribution: 'Sarah Johnson, CEO',
+          company: 'TechCorp Solutions'
+        }, 0),
+      ],
+      insertionPoint: 'cursor'
+    },
+    
+    // CTA Card
+    {
+      id: 'cta-card',
+      name: 'CTA Card',
+      description: 'Call-to-action card with headline, description, and button',
+      category: 'marketing',
+      keywords: ['cta', 'call to action', 'button', 'card', 'conversion'],
+      content: [
+        createBlock('figure', {
+          type: 'cta-card',
+          headline: 'Ready to Get Started?',
+          description: 'Join thousands of professionals who trust our platform to streamline their workflow.',
+          buttonText: 'Start Free Trial',
+          buttonUrl: '#',
+          style: 'primary'
+        }, 0),
+      ],
+      insertionPoint: 'cursor'
+    },
+    
+    // Feature Grid
+    {
+      id: 'feature-grid',
+      name: 'Feature Grid',
+      description: 'Grid layout showcasing features with icons and descriptions',
+      category: 'marketing',
+      keywords: ['features', 'grid', 'benefits', 'icons', 'layout'],
+      content: [
+        createBlock('figure', {
+          type: 'feature-grid',
+          title: 'Key Features',
+          items: [
+            { icon: 'rocket', title: 'Fast Performance', description: 'Lightning-fast load times and responsive design' },
+            { icon: 'shield', title: 'Secure', description: 'Enterprise-grade security and data protection' },
+            { icon: 'users', title: 'Collaborative', description: 'Real-time collaboration with your team' },
+            { icon: 'chart', title: 'Analytics', description: 'Detailed insights and reporting dashboard' }
+          ]
+        }, 0),
+      ],
+      insertionPoint: 'cursor'
+    },
+    
+    // Timeline
+    {
+      id: 'timeline',
+      name: 'Timeline',
+      description: 'Vertical timeline showing process steps or milestones',
+      category: 'content',
+      keywords: ['timeline', 'process', 'steps', 'milestones', 'roadmap'],
+      content: [
+        createBlock('figure', {
+          type: 'timeline',
+          title: 'Project Timeline',
+          items: [
+            { date: 'Q1 2024', title: 'Planning Phase', description: 'Define requirements and set project scope' },
+            { date: 'Q2 2024', title: 'Development', description: 'Build core features and functionality' },
+            { date: 'Q3 2024', title: 'Testing', description: 'Quality assurance and user testing' },
+            { date: 'Q4 2024', title: 'Launch', description: 'Go live with full rollout' }
+          ]
+        }, 0),
+      ],
+      insertionPoint: 'cursor'
+    },
+    
+    // Comparison Table
+    {
+      id: 'comparison-table',
+      name: 'Comparison Table',
+      description: 'Side-by-side comparison of plans or features',
+      category: 'content',
+      keywords: ['comparison', 'table', 'plans', 'features', 'pricing'],
+      content: [
+        createBlock('table', {
+          headers: ['Feature', 'Basic', 'Pro', 'Enterprise'],
+          rows: [
+            ['Users', '5', '25', 'Unlimited'],
+            ['Storage', '10GB', '100GB', '1TB'],
+            ['Support', 'Email', '24/7 Chat', 'Dedicated Manager'],
+            ['Advanced Features', '✗', '✓', '✓'],
+            ['Custom Integrations', '✗', '✗', '✓']
+          ],
+          caption: 'Plan Comparison',
+          style: 'comparison'
+        }, 0),
+      ],
+      insertionPoint: 'cursor'
+    }
+  ]
 }
 
 /**

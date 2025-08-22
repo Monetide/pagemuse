@@ -1,10 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { Block } from '@/lib/document-model'
+import { TemplateSnippet } from '@/lib/template-model'
 
 export interface DragData {
-  type: 'block-type' | 'existing-block'
+  type: 'block-type' | 'existing-block' | 'snippet'
   blockType?: Block['type']
   blockId?: string
+  snippet?: TemplateSnippet
   sourceElement?: HTMLElement
 }
 
