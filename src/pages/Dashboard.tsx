@@ -1,8 +1,12 @@
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuth } from '@/hooks/useAuth'
 import { useDocuments, useTemplates, useUserStats } from '@/hooks/useSupabaseData'
 import { useNavigate } from 'react-router-dom'
+import { useImport } from '@/hooks/useImport'
+import { ImportDialog, ImportMode } from '@/components/import/ImportDialog'
+import { ImportDropZone } from '@/components/import/ImportDropZone'
 import { 
   Plus, 
   FileText, 
@@ -11,7 +15,8 @@ import {
   Clock,
   Star,
   Users,
-  BarChart3
+  BarChart3,
+  Upload
 } from 'lucide-react'
 
 export default function Dashboard() {
@@ -20,6 +25,9 @@ export default function Dashboard() {
   const { documents, loading: documentsLoading } = useDocuments()
   const { templates, loading: templatesLoading } = useTemplates()
   const { stats: userStats, loading: statsLoading } = useUserStats()
+  const { importFiles } = useImport()
+  
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
   
   const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'User'
 
@@ -48,6 +56,21 @@ export default function Dashboard() {
     if (!hasContent) return 'Draft'
     if (isRecent) return 'Active'
     return 'Completed'
+  }
+
+  const handleImport = async (files: File[], mode: ImportMode) => {
+    await importFiles(files, mode, undefined, (title, sections) => {
+      // For new document creation, we could navigate to a new document editor
+      console.log('Creating new document:', title, sections)
+      navigate('/document-model')
+    })
+    setImportDialogOpen(false)
+  }
+
+  const handleQuickImport = (files: File[]) => {
+    if (files.length > 0) {
+      setImportDialogOpen(true)
+    }
   }
 
   return (
@@ -226,7 +249,7 @@ export default function Dashboard() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Button 
               variant="outline" 
               className="h-24 flex-col gap-2 hover:shadow-soft transition-all"
@@ -234,6 +257,14 @@ export default function Dashboard() {
             >
               <FileText className="w-6 h-6 text-primary" />
               <span>Create Document</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              className="h-24 flex-col gap-2 hover:shadow-soft transition-all"
+              onClick={() => setImportDialogOpen(true)}
+            >
+              <Upload className="w-6 h-6 text-primary" />
+              <span>Import Documents</span>
             </Button>
             <Button 
               variant="outline" 
@@ -254,6 +285,30 @@ export default function Dashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Import Drop Zone */}
+      <Card className="border-0 shadow-soft">
+        <CardHeader>
+          <CardTitle>Import Documents</CardTitle>
+          <CardDescription>
+            Drag and drop files or click to import from various formats
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ImportDropZone 
+            onFileSelect={handleQuickImport}
+            compact={false}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Import Dialog */}
+      <ImportDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        onImport={handleImport}
+        defaultMode="new-document"
+      />
     </div>
   )
 }

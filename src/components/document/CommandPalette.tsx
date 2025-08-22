@@ -9,7 +9,9 @@ import {
   Image, 
   Table2, 
   Search,
-  ArrowRight
+  ArrowRight,
+  Upload,
+  Play
 } from 'lucide-react'
 import {
   CommandDialog,
@@ -24,19 +26,22 @@ interface CommandPaletteProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onInsertBlock: (blockType: Block['type'], content?: any, metadata?: any) => void
+  onImportContent?: () => void
+  onValidateDocument?: () => void
 }
 
 interface CommandItem {
-  type: Block['type']
+  type: Block['type'] | 'import' | 'validate'
   label: string
   description: string
   icon: React.ReactNode
   keywords: string[]
   defaultContent?: any
   defaultMetadata?: any
+  action?: 'insert' | 'import' | 'validate'
 }
 
-const COMMANDS: CommandItem[] = [
+const BLOCK_COMMANDS: CommandItem[] = [
   {
     type: 'heading',
     label: 'Heading',
@@ -44,7 +49,8 @@ const COMMANDS: CommandItem[] = [
     icon: <Hash className="w-4 h-4" />,
     keywords: ['heading', 'h1', 'h2', 'title'],
     defaultContent: 'Heading text',
-    defaultMetadata: { level: 2 }
+    defaultMetadata: { level: 2 },
+    action: 'insert'
   },
   {
     type: 'paragraph',
@@ -52,7 +58,8 @@ const COMMANDS: CommandItem[] = [
     description: 'Plain text paragraph',
     icon: <Type className="w-4 h-4" />,
     keywords: ['paragraph', 'text', 'p'],
-    defaultContent: 'Start writing...'
+    defaultContent: 'Start writing...',
+    action: 'insert'
   },
   {
     type: 'ordered-list',
@@ -60,7 +67,8 @@ const COMMANDS: CommandItem[] = [
     description: 'Numbered list items',
     icon: <List className="w-4 h-4" />,
     keywords: ['numbered', 'ordered', 'list', 'ol', '1.'],
-    defaultContent: ['First item', 'Second item', 'Third item']
+    defaultContent: ['First item', 'Second item', 'Third item'],
+    action: 'insert'
   },
   {
     type: 'unordered-list',
@@ -68,7 +76,8 @@ const COMMANDS: CommandItem[] = [
     description: 'Bulleted list items',
     icon: <List className="w-4 h-4" />,
     keywords: ['bullet', 'unordered', 'list', 'ul', '•'],
-    defaultContent: ['First item', 'Second item', 'Third item']
+    defaultContent: ['First item', 'Second item', 'Third item'],
+    action: 'insert'
   },
   {
     type: 'quote',
@@ -76,7 +85,8 @@ const COMMANDS: CommandItem[] = [
     description: 'Highlighted quote block',
     icon: <Quote className="w-4 h-4" />,
     keywords: ['quote', 'blockquote', 'citation'],
-    defaultContent: 'Enter your quote here...'
+    defaultContent: 'Enter your quote here...',
+    action: 'insert'
   },
   {
     type: 'figure',
@@ -89,7 +99,8 @@ const COMMANDS: CommandItem[] = [
       caption: '',
       size: 'column-width',
       aspectLock: true
-    }
+    },
+    action: 'insert'
   },
   {
     type: 'table',
@@ -105,7 +116,8 @@ const COMMANDS: CommandItem[] = [
       ],
       caption: 'Table caption',
       number: 1
-    }
+    },
+    action: 'insert'
   },
   {
     type: 'divider',
@@ -113,7 +125,8 @@ const COMMANDS: CommandItem[] = [
     description: 'Horizontal line separator',
     icon: <Minus className="w-4 h-4" />,
     keywords: ['divider', 'separator', 'line', 'hr'],
-    defaultContent: '---'
+    defaultContent: '---',
+    action: 'insert'
   },
   {
     type: 'spacer',
@@ -122,23 +135,84 @@ const COMMANDS: CommandItem[] = [
     icon: <Minus className="w-4 h-4" />,
     keywords: ['spacer', 'space', 'blank', 'gap'],
     defaultContent: '',
-    defaultMetadata: { height: 0.5 }
+    defaultMetadata: { height: 0.5 },
+    action: 'insert'
   }
 ]
 
-export const CommandPalette = ({ open, onOpenChange, onInsertBlock }: CommandPaletteProps) => {
+const ACTION_COMMANDS: CommandItem[] = [
+  {
+    type: 'import',
+    label: 'Import Content',
+    description: 'Import documents from files',
+    icon: <Upload className="w-4 h-4" />,
+    keywords: ['import', 'upload', 'file', 'docx', 'pdf', 'txt', 'html'],
+    action: 'import'
+  },
+  {
+    type: 'validate',
+    label: 'Validate Document',
+    description: 'Run quality checks and validation',
+    icon: <Play className="w-4 h-4" />,
+    keywords: ['validate', 'check', 'quality', 'issues', 'problems'],
+    action: 'validate'
+  }
+]
+
+export const CommandPalette = ({ 
+  open, 
+  onOpenChange, 
+  onInsertBlock, 
+  onImportContent,
+  onValidateDocument 
+}: CommandPaletteProps) => {
+  const [selectedIndex, setSelectedIndex] = useState(0)
+  
+  const allCommands = [...BLOCK_COMMANDS, ...ACTION_COMMANDS]
+
+  // Filter commands based on query
+  const [query, setQuery] = useState('')
+  const filteredCommands = allCommands.filter(command => {
+    if (!query) return true
+    const searchTerm = query.toLowerCase()
+    return (
+      command.label.toLowerCase().includes(searchTerm) ||
+      command.description.toLowerCase().includes(searchTerm) ||
+      command.keywords.some(keyword => keyword.includes(searchTerm))
+    )
+  })
+
+  // Reset selection when filtered commands change
+  useEffect(() => {
+    setSelectedIndex(0)
+  }, [filteredCommands.length, query])
+
   const handleSelect = useCallback((command: CommandItem) => {
-    onInsertBlock(command.type, command.defaultContent, command.defaultMetadata)
+    switch (command.action) {
+      case 'insert':
+        onInsertBlock(command.type as Block['type'], command.defaultContent, command.defaultMetadata)
+        break
+      case 'import':
+        onImportContent?.()
+        break
+      case 'validate':
+        onValidateDocument?.()
+        break
+    }
     onOpenChange(false)
-  }, [onInsertBlock, onOpenChange])
+  }, [onInsertBlock, onImportContent, onValidateDocument, onOpenChange])
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandInput placeholder="Search blocks..." />
+      <CommandInput 
+        placeholder="Search blocks and actions..." 
+        value={query}
+        onValueChange={setQuery}
+      />
       <CommandList>
-        <CommandEmpty>No blocks found.</CommandEmpty>
+        <CommandEmpty>No commands found.</CommandEmpty>
         <CommandGroup heading="Insert Block">
-          {COMMANDS.map((command) => (
+          {filteredCommands.filter(cmd => cmd.action === 'insert').map((command) => (
             <CommandItem
               key={command.type}
               value={`${command.label} ${command.description} ${command.keywords.join(' ')}`}
@@ -164,6 +238,35 @@ export const CommandPalette = ({ open, onOpenChange, onInsertBlock }: CommandPal
             </CommandItem>
           ))}
         </CommandGroup>
+        {filteredCommands.filter(cmd => cmd.action !== 'insert').length > 0 && (
+          <CommandGroup heading="Actions">
+            {filteredCommands.filter(cmd => cmd.action !== 'insert').map((command) => (
+              <CommandItem
+                key={command.type}
+                value={`${command.label} ${command.description} ${command.keywords.join(' ')}`}
+                onSelect={() => handleSelect(command)}
+                className="flex items-center gap-3 px-3 py-2 cursor-pointer"
+              >
+                <div className="flex-shrink-0 text-muted-foreground">
+                  {command.icon}
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-sm">
+                    {command.label}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {command.description}
+                  </div>
+                </div>
+                
+                <div className="flex-shrink-0 text-muted-foreground">
+                  <ArrowRight className="w-3 h-3" />
+                </div>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
       </CommandList>
     </CommandDialog>
   )
