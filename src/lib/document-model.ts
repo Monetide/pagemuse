@@ -48,6 +48,7 @@ export interface Flow {
 
 export interface PageMaster {
   pageSize: 'Letter' | 'A4' | 'Legal' | 'Tabloid'
+  orientation?: 'portrait' | 'landscape'
   margins: {
     top: number
     right: number
@@ -60,6 +61,7 @@ export interface PageMaster {
   hasFooter: boolean
   baselineGrid: boolean
   gridSpacing: number
+  allowTableRotation?: boolean
 }
 
 export interface Section {
@@ -68,9 +70,17 @@ export interface Section {
   description?: string
   flows: Flow[]
   pageMaster: PageMaster
+  layoutIntent?: LayoutIntent
   metadata?: Record<string, any>
   order: number
 }
+
+export type LayoutIntent = 
+  | 'cover'
+  | 'executive-summary' 
+  | 'body'
+  | 'data-appendix'
+  | 'custom'
 
 export interface SemanticDocument {
   id: string
@@ -187,6 +197,7 @@ export const createFlow = (
 
 export const createPageMaster = (): PageMaster => ({
   pageSize: 'Letter',
+  orientation: 'portrait',
   margins: {
     top: 1,
     right: 1,
@@ -198,7 +209,8 @@ export const createPageMaster = (): PageMaster => ({
   hasHeader: false,
   hasFooter: false,
   baselineGrid: false,
-  gridSpacing: 0.125
+  gridSpacing: 0.125,
+  allowTableRotation: false
 })
 
 export const createSection = (name: string, order: number = 0): Section => ({

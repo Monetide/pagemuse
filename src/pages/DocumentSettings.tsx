@@ -222,7 +222,7 @@ const DocumentSettings = () => {
         <Card className="p-6">
           <div className="flex items-center gap-2 mb-6">
             <Palette className="w-5 h-5 text-primary" />
-            <h2 className="text-lg font-semibold">Theme & Appearance</h2>
+            <h2 className="text-lg font-semibold">Theme & Layout</h2>
           </div>
           
           <div className="space-y-4">

@@ -1,4 +1,5 @@
-import { PageMaster } from '@/lib/document-model'
+import { PageMaster, LayoutIntent } from '@/lib/document-model'
+import { detectLayoutIntent } from '@/lib/layout-presets'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -9,17 +10,34 @@ import { Separator } from '@/components/ui/separator'
 
 interface PageMasterSettingsProps {
   pageMaster: PageMaster
+  layoutIntent?: LayoutIntent
   onUpdate: (pageMaster: PageMaster) => void
 }
 
 const PAGE_SIZES = {
-  Letter: { width: 8.5, height: 11, label: 'Letter (8.5" × 11")' },
-  A4: { width: 8.27, height: 11.69, label: 'A4 (210 × 297 mm)' },
-  Legal: { width: 8.5, height: 14, label: 'Legal (8.5" × 14")' },
-  Tabloid: { width: 11, height: 17, label: 'Tabloid (11" × 17")' }
+  Letter: { 
+    width: { portrait: 8.5, landscape: 11 }, 
+    height: { portrait: 11, landscape: 8.5 }, 
+    label: 'Letter (8.5" × 11")' 
+  },
+  A4: { 
+    width: { portrait: 8.27, landscape: 11.69 }, 
+    height: { portrait: 11.69, landscape: 8.27 }, 
+    label: 'A4 (210 × 297 mm)' 
+  },
+  Legal: { 
+    width: { portrait: 8.5, landscape: 14 }, 
+    height: { portrait: 14, landscape: 8.5 }, 
+    label: 'Legal (8.5" × 14")' 
+  },
+  Tabloid: { 
+    width: { portrait: 11, landscape: 17 }, 
+    height: { portrait: 17, landscape: 11 }, 
+    label: 'Tabloid (11" × 17")' 
+  }
 }
 
-export const PageMasterSettings = ({ pageMaster, onUpdate }: PageMasterSettingsProps) => {
+export const PageMasterSettings = ({ pageMaster, layoutIntent, onUpdate }: PageMasterSettingsProps) => {
   const updatePageMaster = (updates: Partial<PageMaster>) => {
     onUpdate({ ...pageMaster, ...updates })
   }
@@ -33,30 +51,61 @@ export const PageMasterSettings = ({ pageMaster, onUpdate }: PageMasterSettingsP
     })
   }
 
+  const currentIntent = layoutIntent || detectLayoutIntent(pageMaster)
+  const isDataAppendix = currentIntent === 'data-appendix'
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Badge variant="outline">Page Master</Badge>
           Settings
+          {currentIntent !== 'custom' && (
+            <Badge variant="secondary" className="ml-auto text-xs">
+              {currentIntent.charAt(0).toUpperCase() + currentIntent.slice(1).replace('-', ' ')}
+            </Badge>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Page Size */}
-        <div className="space-y-2">
-          <Label>Page Size</Label>
-          <Select value={pageMaster.pageSize} onValueChange={(value: PageMaster['pageSize']) => updatePageMaster({ pageSize: value })}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(PAGE_SIZES).map(([key, { label }]) => (
-                <SelectItem key={key} value={key}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        {/* Page Size & Orientation */}
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Page Size</Label>
+            <Select value={pageMaster.pageSize} onValueChange={(value: PageMaster['pageSize']) => updatePageMaster({ pageSize: value })}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(PAGE_SIZES).map(([key, { label }]) => (
+                  <SelectItem key={key} value={key}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Orientation</Label>
+            <Select 
+              value={pageMaster.orientation || 'portrait'} 
+              onValueChange={(value: 'portrait' | 'landscape') => updatePageMaster({ orientation: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="portrait">Portrait</SelectItem>
+                <SelectItem value="landscape">Landscape</SelectItem>
+              </SelectContent>
+            </Select>
+            {isDataAppendix && (
+              <p className="text-xs text-muted-foreground">
+                Landscape orientation optimizes space for tables and wide content
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Margins */}
@@ -111,6 +160,35 @@ export const PageMasterSettings = ({ pageMaster, onUpdate }: PageMasterSettingsP
         </div>
 
         <Separator />
+
+        {/* Table Rotation (Data Appendix) */}
+        {(isDataAppendix || pageMaster.allowTableRotation) && (
+          <>
+            <div className="space-y-3">
+              <Label>Data Visualization</Label>
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-sm">Allow Table Rotation</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Enable 90° rotation for wide tables that don't fit in columns
+                  </p>
+                </div>
+                <Switch 
+                  checked={pageMaster.allowTableRotation || false}
+                  onCheckedChange={(checked) => updatePageMaster({ allowTableRotation: checked })}
+                />
+              </div>
+              {pageMaster.allowTableRotation && (
+                <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                  <p className="text-xs text-primary font-medium">
+                    ✓ Tables wider than column width will automatically rotate for optimal display
+                  </p>
+                </div>
+              )}
+            </div>
+            <Separator />
+          </>
+        )}
 
         {/* Layout */}
         <div className="space-y-4">

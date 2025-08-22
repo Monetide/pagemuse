@@ -6,12 +6,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
-import { Block, Section, PageMaster } from '@/lib/document-model'
+import { Block, Section, PageMaster, LayoutIntent } from '@/lib/document-model'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { FigureInspector } from './FigureInspector'
 import { TableInspector } from './TableInspector'
 import { ChartInspector } from './ChartInspector'
+import { PageMasterSettings } from './PageMasterSettings'
+import { LayoutPresetSelector } from './LayoutPresetSelector'
+import { useAccessibility } from '../accessibility/AccessibilityProvider'
 
 interface InspectorProps {
   selectedBlock?: Block
@@ -38,6 +41,16 @@ export const Inspector = ({
   onNewBlock
 }: InspectorProps) => {
   const [activeTab, setActiveTab] = useState('block')
+  const [showPresets, setShowPresets] = useState(false)
+  const { focusedSection, setFocusedSection } = useAccessibility()
+
+  const handlePresetSelect = (intent: LayoutIntent, pageMaster: PageMaster) => {
+    onSectionUpdate?.(currentSection.id, { 
+      layoutIntent: intent, 
+      pageMaster 
+    })
+    setShowPresets(false)
+  }
 
   const handleBlockMetadataUpdate = (key: string, value: any) => {
     if (!selectedBlock || !onBlockUpdate) return
@@ -154,9 +167,10 @@ export const Inspector = ({
         role="tablist"
         aria-label="Inspector tabs"
       >
-        <TabsList className="grid w-full grid-cols-2 rounded-none border-b" role="tablist">
+        <TabsList className="grid w-full grid-cols-3 rounded-none border-b" role="tablist">
           <TabsTrigger value="block" role="tab" aria-controls="block-panel">Block</TabsTrigger>
           <TabsTrigger value="section" role="tab" aria-controls="section-panel">Section</TabsTrigger>
+          <TabsTrigger value="layout" role="tab" aria-controls="layout-panel">Layout</TabsTrigger>
         </TabsList>
         
         <TabsContent 
@@ -528,6 +542,38 @@ export const Inspector = ({
               </div>
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent 
+          value="layout" 
+          className="flex-1 mt-0 p-4 space-y-4"
+          role="tabpanel" 
+          id="layout-panel"
+          aria-labelledby="layout-tab"
+        >
+          {showPresets ? (
+            <LayoutPresetSelector
+              currentPageMaster={currentSection.pageMaster}
+              currentIntent={currentSection.layoutIntent}
+              onPresetSelect={handlePresetSelect}
+              onCustomize={() => setShowPresets(false)}
+            />
+          ) : (
+            <PageMasterSettings 
+              pageMaster={currentSection.pageMaster} 
+              layoutIntent={currentSection.layoutIntent}
+              onUpdate={handlePageMasterUpdate}
+            />
+          )}
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowPresets(!showPresets)}
+            className="w-full"
+          >
+            {showPresets ? 'Manual Settings' : 'Layout Presets'}
+          </Button>
         </TabsContent>
       </Tabs>
     </div>

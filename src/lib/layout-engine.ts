@@ -28,6 +28,27 @@ export interface LayoutResult {
 }
 
 // Enhanced content height estimation with text splitting capability
+// Add helper function for table width estimation
+const estimateTableWidth = (tableData: any, baseColumnWidth: number): number => {
+  if (!tableData?.headers) return baseColumnWidth
+  
+  // Rough estimate: each column needs at least 1 inch, plus content
+  const columnCount = Array.isArray(tableData.headers) ? tableData.headers.length : 1
+  const minColumnWidth = 1 // inches
+  const estimatedWidth = columnCount * minColumnWidth
+  
+  return estimatedWidth
+}
+
+// Global context holder (you may want to implement this differently)
+let currentSectionContext: any = null
+const getCurrentSection = () => currentSectionContext
+
+// Set context function (call this from generateLayout)
+const setCurrentSection = (section: any) => {
+  currentSectionContext = section
+}
+
 const estimateBlockHeight = (block: Block, columnWidth: number): number => {
   switch (block.type) {
     case 'heading':
@@ -61,6 +82,17 @@ const estimateBlockHeight = (block: Block, columnWidth: number): number => {
       const headerHeight = 0.3 // inches for header row
       const rowHeight = 0.25 // inches per data row
       const dataRowCount = Array.isArray(tableData.rows) ? tableData.rows.length : 0
+      
+      // Check if table rotation is enabled and table is wide
+      const section = getCurrentSection() // You'll need to pass this context
+      const isRotationEnabled = section?.pageMaster?.allowTableRotation || false
+      const tableWidth = estimateTableWidth(tableData, columnWidth)
+      
+      if (isRotationEnabled && tableWidth > columnWidth * 1.2) {
+        // Wide table, potentially rotated - different height calculation
+        return headerHeight + (dataRowCount * rowHeight) + 0.4 // extra spacing for rotation
+      }
+      
       return headerHeight + (dataRowCount * rowHeight) + 0.2 // plus spacing
     case 'divider':
       return 0.2 // inches
@@ -312,7 +344,10 @@ const splitBlock = (block: Block, maxHeight: number, columnWidth: number): Block
 export const generateLayout = (section: Section): LayoutResult => {
   const { pageMaster } = section
   
-  // Calculate page dimensions (in inches)
+  // Set context for table width calculations
+  setCurrentSection(section)
+  
+  // Calculate page dimensions (in inches) with orientation support
   const PAGE_SIZES = {
     Letter: { width: 8.5, height: 11 },
     A4: { width: 8.27, height: 11.69 },
@@ -320,7 +355,13 @@ export const generateLayout = (section: Section): LayoutResult => {
     Tabloid: { width: 11, height: 17 }
   }
   
-  const pageSize = PAGE_SIZES[pageMaster.pageSize]
+  const basePage = PAGE_SIZES[pageMaster.pageSize]
+  const isLandscape = pageMaster.orientation === 'landscape'
+  
+  const pageSize = {
+    width: isLandscape ? basePage.height : basePage.width,
+    height: isLandscape ? basePage.width : basePage.height
+  }
   
   // Calculate content area
   const contentWidth = pageSize.width - pageMaster.margins.left - pageMaster.margins.right
