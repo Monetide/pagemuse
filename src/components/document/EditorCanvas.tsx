@@ -2,6 +2,8 @@ import { Section, Block, SemanticDocument } from '@/lib/document-model'
 import { generateLayout, PageBox } from '@/lib/layout-engine'
 import { EditableBlockRenderer } from './EditableBlockRenderer'
 import { EmptyCanvasState } from './EmptyCanvasState'
+import { CanvasDropZone } from './CanvasDropZone'
+import { ImportDialog, ImportMode } from '@/components/import/ImportDialog'
 import { Rulers } from './Rulers'
 import { SnapGuides } from './SnapGuides'
 import { Card } from '@/components/ui/card'
@@ -33,6 +35,7 @@ interface EditorCanvasProps {
   onBlockSelect?: (blockId: string) => void
   onFocusChange?: (blockId: string | null) => void
   onTitleChange?: (newTitle: string) => void
+  onImport?: (files: File[], mode: ImportMode) => Promise<void>
   templateSnippets?: import('@/lib/template-model').TemplateSnippet[]
 }
 
@@ -310,7 +313,8 @@ export const EditorCanvas = ({
   selectedBlockId: externalSelectedBlockId,
   onBlockSelect,
   onFocusChange,
-  onTitleChange
+  onTitleChange,
+  onImport
 }: EditorCanvasProps) => {
   const [internalSelectedBlockId, setInternalSelectedBlockId] = useState<string>()
   const selectedBlockId = externalSelectedBlockId || internalSelectedBlockId
@@ -324,6 +328,12 @@ export const EditorCanvas = ({
     showInvisibles: false
   })
   
+  // File drop zone state
+  const [isFileDropZoneVisible, setIsFileDropZoneVisible] = useState(false)
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
+  const [droppedFiles, setDroppedFiles] = useState<File[]>([])
+  const dragCounterRef = useRef(0)
+  
   const { focusedSection, setFocusedSection, announce } = useAccessibility()
   const canvasRef = useRef<HTMLDivElement>(null)
   const { updateFocusableElements, focusNext, focusPrevious } = useFocusManagement()
@@ -335,6 +345,75 @@ export const EditorCanvas = ({
   // Get all blocks for keyboard navigation
   const allBlocks = section.flows.flatMap(flow => flow.blocks).sort((a, b) => a.order - b.order)
   const currentBlockIndex = allBlocks.findIndex(block => block.id === selectedBlockId)
+  
+  // Determine if document is empty or near-empty
+  const hasContent = allBlocks.length > 0
+  const isEmpty = allBlocks.length === 0
+  const isNearEmpty = allBlocks.length <= 2 && allBlocks.every(block => 
+    (!block.content || 
+     (typeof block.content === 'string' && block.content.trim().length < 50) ||
+     (typeof block.content === 'object' && 
+      (!block.content.text || block.content.text.trim().length < 50)))
+  )
+
+  // File drag and drop handlers
+  const handleFileDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    // Check if dragging files (not blocks)
+    const hasFiles = e.dataTransfer.types.includes('Files')
+    if (hasFiles) {
+      dragCounterRef.current++
+      if (dragCounterRef.current === 1) {
+        setIsFileDropZoneVisible(true)
+      }
+    }
+  }, [])
+
+  const handleFileDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    dragCounterRef.current--
+    if (dragCounterRef.current === 0) {
+      setIsFileDropZoneVisible(false)
+    }
+  }, [])
+
+  const handleFileDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+  }, [])
+
+  const handleFileDrop = useCallback((files: File[]) => {
+    setIsFileDropZoneVisible(false)
+    dragCounterRef.current = 0
+    
+    if (files.length > 0) {
+      setDroppedFiles(files)
+      setImportDialogOpen(true)
+    }
+  }, [])
+
+  const handleImportDialogImport = useCallback(async (files: File[], mode: ImportMode) => {
+    try {
+      if (onImport) {
+        await onImport(files, mode)
+        toast({
+          title: 'Import successful',
+          description: `Imported ${files.length} file${files.length !== 1 ? 's' : ''} successfully.`
+        })
+      }
+    } catch (error) {
+      console.error('Import failed:', error)
+      toast({
+        title: 'Import failed',
+        description: 'There was an error importing your files. Please try again.',
+        variant: 'destructive'
+      })
+    }
+  }, [onImport])
 
   useEffect(() => {
     if (canvasRef.current) {
@@ -646,8 +725,6 @@ export const EditorCanvas = ({
     )
   }, [dragState.isDragging, dragState.dropTarget, section, handleBlockDrop])
 
-  const hasContent = section.flows.some(flow => flow.blocks.length > 0)
-
   return (
     <div className="h-full flex flex-col bg-background" role="main" aria-label="Document editor">
       {/* Canvas Toolbar */}
@@ -760,10 +837,10 @@ export const EditorCanvas = ({
           className="space-y-8 p-8 min-h-full cursor-text"
           onClick={handleCanvasClick}
           onFocus={handleFocus}
-          onMouseMove={handleMouseMove}
+          onDragEnter={handleFileDragEnter}
+          onDragLeave={handleFileDragLeave}
+          onDragOver={handleFileDragOver}
           onDrop={handleDrop}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
           tabIndex={0}
           role="document"
           aria-label="Document content area"
@@ -809,6 +886,23 @@ export const EditorCanvas = ({
           <DragGhost />
         </div>
       </ScrollArea>
+
+      {/* Canvas Drop Zone Overlay */}
+      <CanvasDropZone
+        isVisible={isFileDropZoneVisible}
+        onFileDrop={handleFileDrop}
+      />
+
+      {/* Import Dialog */}
+      <ImportDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        onImport={handleImportDialogImport}
+        defaultMode={isEmpty || isNearEmpty ? 'new-document' : 'insert-section'}
+        canAppend={hasContent}
+        canInsert={hasContent}
+        canReplace={hasContent}
+      />
     </div>
   )
 }
