@@ -15,14 +15,19 @@ export function useTemplateApplication() {
   const createFromTemplate = async (template: Template, title?: string) => {
     setLoading(true)
     try {
+      console.log('Creating from template:', template.name, template)
+      
       // Convert Supabase template to our template model
       const templateModel = convertSupabaseTemplate(template)
+      console.log('Converted template model:', templateModel)
       
       // Apply template to create new document
       const document = await TemplateEngine.applyTemplate(templateModel, {
         title: title || `New ${template.name}`,
         replaceContent: true
       })
+      
+      console.log('Generated document:', document)
 
       // Save the document to the database
       const documentId = await saveDocument(document)
