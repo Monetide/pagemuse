@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, KeyboardEvent } from 'react'
 import { SlashCommand } from './SlashCommand'
 import { FormattingToolbar } from './FormattingToolbar'
 import { TextInvisibles, InvisibleMarkers } from './TextInvisibles'
+import { FigureBlock } from './FigureBlock'
 
 interface EditableBlockRendererProps {
   block: Block
@@ -330,21 +331,15 @@ export const EditableBlockRenderer = ({
       case 'figure':
         const figureData = block.content || {}
         return (
-          <figure className={`mb-4 p-2 border border-border rounded bg-muted/10 cursor-pointer hover:bg-muted/20 ${isSelected ? 'ring-2 ring-primary' : ''}`} onClick={handleClick}>
-            <div className="flex items-center justify-center bg-muted/20 border border-dashed border-muted-foreground/30 rounded mb-2" 
-                 style={{ height: `${(block.metadata?.imageHeight || 2) * 24}px` }}>
-              <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                <Image className="w-8 h-8" />
-                <span className="text-xs">{figureData.imageUrl || 'Image placeholder'}</span>
-                <span className="text-xs opacity-60">{block.metadata?.imageHeight || 2}" tall</span>
-              </div>
-            </div>
-            {figureData.caption && (
-              <figcaption className="text-xs text-center text-muted-foreground italic mt-2">
-                <strong>Figure {figureData.number || '1'}:</strong> {figureData.caption}
-              </figcaption>
-            )}
-          </figure>
+          <FigureBlock
+            data={figureData}
+            isSelected={isSelected}
+            isEditing={isEditing}
+            showInvisibles={showInvisibles}
+            onDataChange={(newData) => onContentChange?.(block.id, newData)}
+            onEditToggle={() => setIsEditing(!isEditing)}
+            onClick={handleClick}
+          />
         )
       
       case 'table':
