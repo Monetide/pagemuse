@@ -37,7 +37,7 @@ export class TemplateEngine {
     const { title, replaceContent = true, preserveExisting = false } = options
     
     // Create new document with template metadata
-    const document = createDocument(title || template.name)
+    let document = createDocument(title || template.name)
     
       // Apply template metadata
       document.metadata = {
@@ -55,7 +55,7 @@ export class TemplateEngine {
     
     // Apply starter content if provided
     if (template.starterContent && replaceContent) {
-      await this.applyStarterContent(document, template.starterContent)
+      document = await this.applyStarterContent(document, template.starterContent)
     }
     
     // Apply page masters
@@ -70,26 +70,30 @@ export class TemplateEngine {
   private static async applyStarterContent(
     document: SemanticDocument,
     starterContent: TemplateStarterContent
-  ): Promise<void> {
+  ): Promise<SemanticDocument> {
+    let workingDoc = document
+
     for (const sectionConfig of starterContent.sections) {
-      const section = createSection(sectionConfig.name)
-      
+      let section = createSection(sectionConfig.name)
+
       // Apply layout intent
       if (sectionConfig.layoutIntent) {
+        section.layoutIntent = sectionConfig.layoutIntent as any
         section.pageMaster = applyLayoutPreset(sectionConfig.layoutIntent)
       }
-      
-        // Add flows to section
-        for (const flowConfig of sectionConfig.flows) {
-          const flow = createFlow(flowConfig.name, flowConfig.type || 'linear')
-          
-          // Add blocks to flow
-          for (const blockConfig of flowConfig.blocks) {
-            const block = createBlock(
-              blockConfig.type,
-              blockConfig.content || this.getPlaceholderContent(blockConfig)
-            )
-          
+
+      // Add flows to section
+      for (const flowConfig of sectionConfig.flows) {
+        let flow = createFlow(flowConfig.name, flowConfig.type || 'linear')
+
+        // Add blocks to flow
+        flowConfig.blocks.forEach((blockConfig, index) => {
+          const block = createBlock(
+            blockConfig.type,
+            blockConfig.content || this.getPlaceholderContent(blockConfig),
+            index
+          )
+
           // Mark as required if specified
           if (blockConfig.required) {
             block.metadata = {
@@ -98,15 +102,17 @@ export class TemplateEngine {
               placeholder: blockConfig.placeholder
             }
           }
-          
-          addBlockToFlow(flow, block)
-        }
-        
-        addFlowToSection(section, flow)
+
+          flow = addBlockToFlow(flow, block)
+        })
+
+        section = addFlowToSection(section, flow)
       }
-      
-      addSectionToDocument(document, section)
+
+      workingDoc = addSectionToDocument(workingDoc, section)
     }
+
+    return workingDoc
   }
   
   /**
