@@ -1,6 +1,7 @@
 import { Section, Block, SemanticDocument } from '@/lib/document-model'
 import { generateLayout, PageBox } from '@/lib/layout-engine'
 import { EditableBlockRenderer } from './EditableBlockRenderer'
+import { EmptyCanvasState } from './EmptyCanvasState'
 import { Rulers } from './Rulers'
 import { SnapGuides } from './SnapGuides'
 import { Card } from '@/components/ui/card'
@@ -31,6 +32,7 @@ interface EditorCanvasProps {
   selectedBlockId?: string
   onBlockSelect?: (blockId: string) => void
   onFocusChange?: (blockId: string | null) => void
+  onTitleChange?: (newTitle: string) => void
   templateSnippets?: import('@/lib/template-model').TemplateSnippet[]
 }
 
@@ -61,6 +63,7 @@ const EditorPageBox = ({
   onSelectBlock,
   hasContent,
   onCreateFirstBlock,
+  onTitleChange,
   zoomLevel,
   overlaySettings,
   section
@@ -75,6 +78,7 @@ const EditorPageBox = ({
   onSelectBlock?: (blockId: string) => void
   hasContent?: boolean
   onCreateFirstBlock?: () => void
+  onTitleChange?: (newTitle: string) => void
   zoomLevel: number
   overlaySettings: OverlaySettings
   section: Section
@@ -223,57 +227,59 @@ const EditorPageBox = ({
               >
                 {/* Column content */}
                 <div className="h-full p-4 overflow-y-auto" data-flow-id={section.flows[0]?.id || 'default-flow'} data-section-id={section.id}>
-                  {columnBox.content.map((block, blockIndex) => {
-                    const flowInfo = (() => {
-                      for (const f of section.flows) {
-                        const idx = f.blocks.findIndex(b => b.id === block.id)
-                        if (idx !== -1) return { flowId: f.id, index: idx }
-                      }
-                      return { flowId: section.flows[0]?.id || 'default-flow', index: blockIndex }
-                    })()
-                    return (
-                      <EditableBlockRenderer
-                        key={`${block.id}-${blockIndex}`}
-                        block={block}
-                        document={document}
-                        onContentChange={onContentChange}
-                        onNewBlock={onNewBlock}
-                        onMultipleBlocks={onNewBlock ? (afterBlockId: string, blocks: Block[]) => {
-                          // Insert multiple blocks sequentially
-                          let currentAfterId = afterBlockId
-                          blocks.forEach((newBlock, index) => {
-                            onNewBlock(currentAfterId, newBlock.type, newBlock.content, newBlock.metadata)
-                            // For subsequent blocks, we'll need to find the newly created block ID
-                            // This is a simplified approach - in a real implementation, we'd need proper ID tracking
-                            if (index < blocks.length - 1) {
-                              currentAfterId = `${currentAfterId}-${index}`
-                            }
-                          })
-                        } : undefined}
-                        onDeleteBlock={onDeleteBlock}
-                        onBlockTypeChange={onBlockTypeChange}
-                        isSelected={selectedBlockId === block.id}
-                        onSelect={onSelectBlock}
-                        showInvisibles={overlaySettings.showInvisibles}
-                        sectionId={section.id}
-                        flowId={flowInfo.flowId}
-                        index={flowInfo.index}
-                      />
-                    )
-                  })}
-                  {columnBox.content.length === 0 && (
-                    <div className="text-sm text-muted-foreground text-center italic mt-8">
-                      {!hasContent ? (
-                        <button 
-                          onClick={onCreateFirstBlock}
-                          className="text-primary hover:text-primary/80 underline"
-                        >
-                          Click to start typing...
-                        </button>
-                      ) : (
-                        "Empty column"
+                  {columnBox.content.length === 0 && !hasContent ? (
+                    <EmptyCanvasState 
+                      onNewBlock={onNewBlock}
+                      sectionId={section.id}
+                      documentTitle={document?.title}
+                      onTitleChange={onTitleChange}
+                    />
+                  ) : (
+                    <>
+                      {columnBox.content.map((block, blockIndex) => {
+                        const flowInfo = (() => {
+                          for (const f of section.flows) {
+                            const idx = f.blocks.findIndex(b => b.id === block.id)
+                            if (idx !== -1) return { flowId: f.id, index: idx }
+                          }
+                          return { flowId: section.flows[0]?.id || 'default-flow', index: blockIndex }
+                        })()
+                        return (
+                          <EditableBlockRenderer
+                            key={`${block.id}-${blockIndex}`}
+                            block={block}
+                            document={document}
+                            onContentChange={onContentChange}
+                            onNewBlock={onNewBlock}
+                            onMultipleBlocks={onNewBlock ? (afterBlockId: string, blocks: Block[]) => {
+                              // Insert multiple blocks sequentially
+                              let currentAfterId = afterBlockId
+                              blocks.forEach((newBlock, index) => {
+                                onNewBlock(currentAfterId, newBlock.type, newBlock.content, newBlock.metadata)
+                                // For subsequent blocks, we'll need to find the newly created block ID
+                                // This is a simplified approach - in a real implementation, we'd need proper ID tracking
+                                if (index < blocks.length - 1) {
+                                  currentAfterId = `${currentAfterId}-${index}`
+                                }
+                              })
+                            } : undefined}
+                            onDeleteBlock={onDeleteBlock}
+                            onBlockTypeChange={onBlockTypeChange}
+                            isSelected={selectedBlockId === block.id}
+                            onSelect={onSelectBlock}
+                            showInvisibles={overlaySettings.showInvisibles}
+                            sectionId={section.id}
+                            flowId={flowInfo.flowId}
+                            index={flowInfo.index}
+                          />
+                        )
+                      })}
+                      {columnBox.content.length === 0 && hasContent && (
+                        <div className="text-sm text-muted-foreground text-center italic mt-8">
+                          Empty column
+                        </div>
                       )}
-                    </div>
+                    </>
                   )}
                 </div>
               </div>
@@ -294,7 +300,8 @@ export const EditorCanvas = ({
   onBlockTypeChange,
   selectedBlockId: externalSelectedBlockId,
   onBlockSelect,
-  onFocusChange
+  onFocusChange,
+  onTitleChange
 }: EditorCanvasProps) => {
   const [internalSelectedBlockId, setInternalSelectedBlockId] = useState<string>()
   const selectedBlockId = externalSelectedBlockId || internalSelectedBlockId
@@ -767,6 +774,7 @@ export const EditorCanvas = ({
               onSelectBlock={handleSelectBlock}
               hasContent={hasContent}
               onCreateFirstBlock={handleCreateFirstBlock}
+              onTitleChange={onTitleChange}
               zoomLevel={zoomLevel}
               overlaySettings={overlaySettings}
               section={section}
