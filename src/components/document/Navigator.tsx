@@ -61,18 +61,24 @@ interface NavigatorProps {
   document: SemanticDocument
   selectedSectionId?: string
   selectedSectionIds?: string[]
+  selectedBlockId?: string
+  focusedBlockId?: string
   onSectionSelect: (sectionId: string) => void
   onMultiSectionSelect?: (sectionIds: string[]) => void
   onAddSection: (name: string) => void
   onAddFlow: (sectionId: string, name: string) => void
   onReorderSections: (sections: Section[]) => void
   onJumpToHeading?: (blockId: string) => void
+  onJumpToSection?: (sectionId: string) => void
+  onJumpToFlow?: (flowId: string, sectionId: string) => void
+  onJumpToBlock?: (blockId: string, blockType: string, sectionId?: string) => void
   onDeleteSections?: (sectionIds: string[]) => void
   onRenameSection?: (sectionId: string, newName: string) => void
   onDuplicateSection?: (sectionId: string) => void
   onMoveSectionUp?: (sectionId: string) => void
   onMoveSectionDown?: (sectionId: string) => void
   onBlockDrop?: (sectionId: string, flowId: string, blockType: string, position?: string) => void
+  onCanvasSelectionChange?: (blockId: string, sectionId?: string) => void
 }
 
 interface SortableSectionProps {
@@ -81,9 +87,14 @@ interface SortableSectionProps {
   isMultiSelected: boolean
   sectionIndex: number
   totalSections: number
+  selectedBlockId?: string
+  focusedBlockId?: string
   onSelect: (event: React.MouseEvent) => void
+  onSectionClick: (sectionId: string, event: React.MouseEvent) => void
+  onFlowClick: (flowId: string, sectionId: string, event: React.MouseEvent) => void
   onAddFlow: (name: string) => void
-  onJumpToHeading?: (blockId: string) => void
+  onJumpToHeading?: (blockId: string, event: React.MouseEvent) => void
+  onJumpToBlock?: (blockId: string, blockType: string, sectionId?: string, event?: React.MouseEvent) => void
   onDeleteSection?: () => void
   onRenameSection?: (newName: string) => void
   onDuplicateSection?: () => void
@@ -100,9 +111,14 @@ function SortableSection({
   isMultiSelected,
   sectionIndex,
   totalSections,
+  selectedBlockId,
+  focusedBlockId,
   onSelect, 
+  onSectionClick,
+  onFlowClick,
   onAddFlow, 
   onJumpToHeading,
+  onJumpToBlock,
   onDeleteSection,
   onRenameSection,
   onDuplicateSection,
@@ -195,12 +211,25 @@ function SortableSection({
         onDelete={() => onDeleteSection?.()}
       >
         <div 
+          id={`section-${section.id}`}
           className={`group flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 cursor-pointer ${
             isSelected ? 'bg-muted' : ''
           } ${isMultiSelected ? 'bg-primary/10 border border-primary/30' : ''} ${
             isDragOver && canAcceptDrop ? 'bg-primary/10' : ''
           }`}
-          onClick={onSelect}
+          onClick={(e) => {
+            // Handle different click behaviors
+            if (e.detail === 2) {
+              // Double-click: start rename
+              setIsRenaming(true)
+            } else {
+              // Single click: select and potentially jump
+              onSelect(e)
+              if (!e.metaKey && !e.ctrlKey) {
+                onSectionClick(section.id, e)
+              }
+            }
+          }}
           onMouseEnter={() => setShowMenu(true)}
           onMouseLeave={() => setShowMenu(false)}
         >
@@ -318,7 +347,7 @@ function SortableSection({
                   <div 
                     key={heading.id}
                     className="ml-4 flex items-center gap-2 p-1 text-xs hover:bg-muted/30 rounded cursor-pointer"
-                    onClick={() => onJumpToHeading?.(heading.id)}
+                    onClick={(e) => onJumpToHeading?.(heading.id, e)}
                   >
                     <Hash className="w-3 h-3" />
                     <span className="truncate">
@@ -392,21 +421,27 @@ function SortableSection({
 }
 
 export function Navigator({ 
-  document, 
-  selectedSectionId, 
+  document,
+  selectedSectionId,
   selectedSectionIds = [],
-  onSectionSelect, 
+  selectedBlockId,
+  focusedBlockId,
+  onSectionSelect,
   onMultiSectionSelect,
   onAddSection,
   onAddFlow,
   onReorderSections,
   onJumpToHeading,
+  onJumpToSection,
+  onJumpToFlow,
+  onJumpToBlock,
   onDeleteSections,
   onRenameSection,
   onDuplicateSection,
   onMoveSectionUp,
   onMoveSectionDown,
-  onBlockDrop
+  onBlockDrop,
+  onCanvasSelectionChange
 }: NavigatorProps) {
   const [newSectionName, setNewSectionName] = useState('')
   const [showAddSection, setShowAddSection] = useState(false)
@@ -589,11 +624,16 @@ export function Navigator({
                     section={section}
                     isSelected={selectedSectionId === section.id}
                     isMultiSelected={selectedSectionIds.includes(section.id)}
+                    selectedBlockId={selectedBlockId}
+                    focusedBlockId={focusedBlockId}
                     sectionIndex={index}
                     totalSections={document.sections.length}
                     onSelect={(event) => handleSectionSelect(section.id, index, event)}
+                    onSectionClick={(sectionId, event) => onJumpToSection?.(sectionId)}
+                    onFlowClick={(flowId, sectionId, event) => onJumpToFlow?.(flowId, sectionId)}
                     onAddFlow={(name) => onAddFlow(section.id, name)}
                     onJumpToHeading={onJumpToHeading}
+                    onJumpToBlock={onJumpToBlock}
                     onDeleteSection={() => onDeleteSections?.([section.id])}
                     onRenameSection={(newName) => onRenameSection?.(section.id, newName)}
                     onDuplicateSection={() => onDuplicateSection?.(section.id)}

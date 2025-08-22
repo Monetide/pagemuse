@@ -463,9 +463,97 @@ export default function DocumentModelDemo() {
                       }
                       setDocument(updatedDoc)
                     }}
+                    selectedBlockId={selectedBlockId}
+                    focusedBlockId={focusedBlockId}
                     onJumpToHeading={(blockId) => {
-                      // TODO: Implement jump to heading in canvas
-                      console.log('Jump to heading:', blockId)
+                      const targetElement = globalThis.document.getElementById(`block-${blockId}`)
+                      if (targetElement) {
+                        const headerHeight = 60
+                        const elementRect = targetElement.getBoundingClientRect()
+                        const absoluteElementTop = elementRect.top + window.pageYOffset
+                        const scrollToY = absoluteElementTop - headerHeight
+                        
+                        window.scrollTo({
+                          top: scrollToY,
+                          behavior: 'smooth'
+                        })
+                        
+                        targetElement.classList.add('ring-2', 'ring-primary', 'ring-offset-2')
+                        setTimeout(() => {
+                          targetElement.classList.remove('ring-2', 'ring-primary', 'ring-offset-2')
+                        }, 2000)
+                        
+                        setSelectedBlockId(blockId)
+                        setFocusedBlockId(blockId)
+                        targetElement.focus()
+                      }
+                    }}
+                    onJumpToSection={(sectionId) => {
+                      const sectionElement = globalThis.document.getElementById(`section-${sectionId}`)
+                      if (sectionElement) {
+                        sectionElement.scrollIntoView({
+                          behavior: 'smooth',
+                          block: 'start'
+                        })
+                        
+                        sectionElement.classList.add('ring-2', 'ring-primary', 'ring-offset-2')
+                        setTimeout(() => {
+                          sectionElement.classList.remove('ring-2', 'ring-primary', 'ring-offset-2')
+                        }, 2000)
+                        
+                        setSelectedSectionId(sectionId)
+                      }
+                    }}
+                    onJumpToFlow={(flowId, sectionId) => {
+                      const flowElement = globalThis.document.getElementById(`flow-${flowId}`)
+                      if (flowElement) {
+                        flowElement.scrollIntoView({
+                          behavior: 'smooth',
+                          block: 'center'
+                        })
+                        
+                        flowElement.classList.add('ring-2', 'ring-primary', 'ring-offset-2')
+                        setTimeout(() => {
+                          flowElement.classList.remove('ring-2', 'ring-primary', 'ring-offset-2')
+                        }, 2000)
+                        
+                        setSelectedSectionId(sectionId)
+                      }
+                    }}
+                    onJumpToBlock={(blockId, blockType, sectionId) => {
+                      const targetElement = globalThis.document.getElementById(`block-${blockId}`)
+                      
+                      if (targetElement) {
+                        targetElement.scrollIntoView({
+                          behavior: 'smooth',
+                          block: 'center'
+                        })
+                        
+                        targetElement.classList.add('ring-2', 'ring-primary', 'ring-offset-2')
+                        setTimeout(() => {
+                          targetElement.classList.remove('ring-2', 'ring-primary', 'ring-offset-2')
+                        }, 2000)
+                        
+                        setSelectedBlockId(blockId)
+                        if (sectionId) setSelectedSectionId(sectionId)
+                        setFocusedBlockId(blockId)
+                        
+                        // For text blocks, try to place caret
+                        if (['paragraph', 'list-item', 'caption', 'quote'].includes(blockType)) {
+                          const editableElement = targetElement.querySelector('[contenteditable]') as HTMLElement
+                          if (editableElement) {
+                            editableElement.focus()
+                            const range = globalThis.document.createRange()
+                            const selection = window.getSelection()
+                            range.setStart(editableElement, 0)
+                            range.collapse(true)
+                            selection?.removeAllRanges()
+                            selection?.addRange(range)
+                          }
+                        } else {
+                          targetElement.focus()
+                        }
+                      }
                     }}
                     onDeleteSections={handleDeleteSectionRequest}
                     onRenameSection={handleRenameSection}
