@@ -290,11 +290,11 @@ const createCaseStudyColorways = (): TemplateColorway[] => [
 export const createMarketingEBookTemplate = (): Template => {
   const template = createTemplate(
     'Marketing eBook',
-    'Modern, engaging template for marketing eBooks with bright colorways and snippets for highlights',
+    'Professional eBook template with modern design, colorways, and marketing snippets',
     'marketing'
   )
 
-  // Override with specific configurations
+  // Theme tokens with marketing colorways
   template.themeTokens = {
     colorways: createMarketingColorways(),
     activeColorway: 'azure',
@@ -331,17 +331,60 @@ export const createMarketingEBookTemplate = (): Template => {
     effects: {
       shadows: {
         soft: '0 2px 20px -2px rgba(0,0,0,0.08)',
-        medium: '0 8px 30px -6px rgba(0,0,0,0.12)'
+        medium: '0 8px 30px -6px rgba(0,0,0,0.12)',
+        strong: '0 20px 60px -12px rgba(0,0,0,0.25)'
       },
       borders: {
-        subtle: '1px solid rgba(0,0,0,0.1)'
+        subtle: '1px solid rgba(0,0,0,0.1)',
+        medium: '2px solid rgba(0,0,0,0.2)'
       },
       animations: {
-        smooth: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+        smooth: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        bounce: 'all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)'
       }
     }
   }
 
+  // Object styles for all elements
+  template.objectStyles = {
+    headings: {
+      h1: { id: 'h1', name: 'Heading 1', category: 'typography', properties: { color: 'hsl(var(--primary))', fontSize: '3rem', fontWeight: '700' } },
+      h2: { id: 'h2', name: 'Heading 2', category: 'typography', properties: { color: 'hsl(var(--foreground))', fontSize: '2.25rem', fontWeight: '600' } },
+      h3: { id: 'h3', name: 'Heading 3', category: 'typography', properties: { color: 'hsl(var(--foreground))', fontSize: '1.5rem', fontWeight: '600' } },
+      h4: { id: 'h4', name: 'Heading 4', category: 'typography', properties: { color: 'hsl(var(--foreground))', fontSize: '1.25rem', fontWeight: '500' } },
+      h5: { id: 'h5', name: 'Heading 5', category: 'typography', properties: { color: 'hsl(var(--foreground))', fontSize: '1.125rem', fontWeight: '500' } },
+      h6: { id: 'h6', name: 'Heading 6', category: 'typography', properties: { color: 'hsl(var(--foreground))', fontSize: '1rem', fontWeight: '500' } }
+    },
+    paragraphs: {
+      body: { id: 'body', name: 'Body Text', category: 'typography', properties: { color: 'hsl(var(--foreground))', fontSize: '1rem', lineHeight: '1.6' } },
+      lead: { id: 'lead', name: 'Lead Text', category: 'typography', properties: { color: 'hsl(var(--foreground))', fontSize: '1.125rem', lineHeight: '1.7' } },
+      caption: { id: 'caption', name: 'Caption', category: 'typography', properties: { color: 'hsl(var(--muted-foreground))', fontSize: '0.875rem', fontStyle: 'italic' } },
+      quote: { id: 'quote', name: 'Quote', category: 'typography', properties: { color: 'hsl(var(--foreground))', fontSize: '1.25rem', fontStyle: 'italic' } }
+    },
+    lists: {
+      bulleted: { id: 'bulleted', name: 'Bulleted List', category: 'typography', properties: { color: 'hsl(var(--foreground))', lineHeight: '1.6' } },
+      numbered: { id: 'numbered', name: 'Numbered List', category: 'typography', properties: { color: 'hsl(var(--foreground))', lineHeight: '1.6' } },
+      definition: { id: 'definition', name: 'Definition List', category: 'typography', properties: { color: 'hsl(var(--foreground))', lineHeight: '1.6' } }
+    },
+    tables: {
+      default: { id: 'table-default', name: 'Default Table', category: 'layout', properties: { borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--background))' } },
+      striped: { id: 'table-striped', name: 'Striped Table', category: 'layout', properties: { borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--muted))' } },
+      bordered: { id: 'table-bordered', name: 'Bordered Table', category: 'layout', properties: { borderColor: 'hsl(var(--border))', backgroundColor: 'hsl(var(--background))' } }
+    },
+    figures: {
+      image: { id: 'figure-image', name: 'Image Figure', category: 'layout', properties: { borderRadius: '0.5rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' } },
+      chart: { id: 'figure-chart', name: 'Chart Figure', category: 'layout', properties: { borderRadius: '0.5rem', backgroundColor: 'hsl(var(--background))' } },
+      diagram: { id: 'figure-diagram', name: 'Diagram Figure', category: 'layout', properties: { borderRadius: '0.5rem', backgroundColor: 'hsl(var(--background))' } }
+    },
+    callouts: {
+      info: { id: 'callout-info', name: 'Info Callout', category: 'layout', properties: { backgroundColor: 'hsl(var(--accent) / 0.1)', borderColor: 'hsl(var(--accent))' } },
+      warning: { id: 'callout-warning', name: 'Warning Callout', category: 'layout', properties: { backgroundColor: 'hsl(var(--warning) / 0.1)', borderColor: 'hsl(var(--warning))' } },
+      error: { id: 'callout-error', name: 'Error Callout', category: 'layout', properties: { backgroundColor: 'hsl(var(--destructive) / 0.1)', borderColor: 'hsl(var(--destructive))' } },
+      success: { id: 'callout-success', name: 'Success Callout', category: 'layout', properties: { backgroundColor: 'hsl(var(--success) / 0.1)', borderColor: 'hsl(var(--success))' } }
+    }
+  }
+
+  // Behaviors and defaults
   template.behaviors = {
     autoNumbering: {
       headings: false,
@@ -366,9 +409,10 @@ export const createMarketingEBookTemplate = (): Template => {
     }
   }
 
+  // Validation preset
   template.validationPreset = createProfessionalValidationPreset()
 
-  // Page Masters
+  // Comprehensive page masters
   template.pageMasters = {
     'cover': {
       pageSize: 'Letter',
@@ -381,7 +425,18 @@ export const createMarketingEBookTemplate = (): Template => {
       baselineGrid: false,
       gridSpacing: 12
     },
-    '1-col-intro': {
+    'toc': {
+      pageSize: 'Letter',
+      orientation: 'portrait',
+      margins: { top: 72, right: 72, bottom: 72, left: 72 },
+      columns: 1,
+      columnGap: 0,
+      hasHeader: false,
+      hasFooter: false,
+      baselineGrid: true,
+      gridSpacing: 12
+    },
+    'intro': {
       pageSize: 'Letter',
       orientation: 'portrait',
       margins: { top: 72, right: 72, bottom: 72, left: 72 },
@@ -392,13 +447,13 @@ export const createMarketingEBookTemplate = (): Template => {
       baselineGrid: true,
       gridSpacing: 12
     },
-    '2-col-body': {
+    'body': {
       pageSize: 'Letter',
       orientation: 'portrait',
       margins: { top: 72, right: 72, bottom: 72, left: 72 },
       columns: 2,
       columnGap: 36,
-      hasHeader: false,
+      hasHeader: true,
       hasFooter: true,
       baselineGrid: true,
       gridSpacing: 12
@@ -413,51 +468,123 @@ export const createMarketingEBookTemplate = (): Template => {
       hasFooter: true,
       baselineGrid: false,
       gridSpacing: 12
+    },
+    'highlights': {
+      pageSize: 'Letter',
+      orientation: 'portrait',
+      margins: { top: 72, right: 72, bottom: 72, left: 72 },
+      columns: 1,
+      columnGap: 0,
+      hasHeader: false,
+      hasFooter: true,
+      baselineGrid: false,
+      gridSpacing: 12
+    },
+    'about-cta': {
+      pageSize: 'Letter',
+      orientation: 'portrait',
+      margins: { top: 72, right: 72, bottom: 72, left: 72 },
+      columns: 1,
+      columnGap: 0,
+      hasHeader: false,
+      hasFooter: true,
+      baselineGrid: true,
+      gridSpacing: 12
     }
   }
 
-  // Snippets
+  // Marketing-specific snippets
   template.snippets = [
     {
-      id: 'stat-callout',
-      name: 'Stat Callout',
-      description: 'Highlight key statistics with visual impact',
+      id: 'kpi-strip',
+      name: 'KPI Strip',
+      description: '3-column metrics display with large numbers and labels',
       category: 'marketing',
-      keywords: ['stat', 'number', 'highlight', 'metric'],
+      keywords: ['kpi', 'metrics', 'stats', 'numbers', 'performance'],
       content: [
-        createBlock('callout', {
-          type: 'stat',
-          content: {
-            title: '85%',
-            subtitle: 'Customer Satisfaction',
-            description: 'of customers report improved outcomes after implementation'
-          }
-        })
+        createBlock('figure', {
+          type: 'kpi-strip',
+          metrics: [
+            { value: '85%', label: 'Customer Satisfaction', source: 'Q4 2024 Survey' },
+            { value: '$2.4M', label: 'Revenue Growth', source: 'YoY Comparison' },
+            { value: '12', label: 'New Markets', source: 'Global Expansion' }
+          ]
+        }, 0)
       ],
       insertionPoint: 'cursor'
     },
     {
-      id: 'cta-card',
-      name: 'Call to Action Card',
-      description: 'Encourage reader action with prominent CTA',
+      id: 'pull-quote',
+      name: 'Pull Quote',
+      description: 'Highlighted quote with attribution for emphasis',
       category: 'marketing',
-      keywords: ['cta', 'action', 'button', 'conversion'],
+      keywords: ['quote', 'testimonial', 'emphasis', 'customer'],
       content: [
-        createBlock('callout', {
-          type: 'cta',
-          content: {
-            title: 'Ready to Get Started?',
-            description: 'Join thousands of satisfied customers who have transformed their business.',
-            buttonText: 'Start Free Trial',
-            buttonUrl: '#'
-          }
-        })
+        createBlock('figure', {
+          type: 'pull-quote',
+          quote: 'This solution transformed our entire workflow and increased productivity by 300%.',
+          attribution: 'Sarah Johnson',
+          title: 'CEO, TechCorp Solutions'
+        }, 0)
+      ],
+      insertionPoint: 'cursor'
+    },
+    {
+      id: 'checklist',
+      name: 'Checklist',
+      description: 'Styled list with checkmark icons',
+      category: 'marketing',
+      keywords: ['checklist', 'list', 'tasks', 'benefits', 'features'],
+      content: [
+        createBlock('unordered-list', {
+          items: [
+            'Increase conversion rates by up to 40%',
+            'Reduce customer acquisition costs',
+            'Automate routine marketing tasks',
+            'Gain deeper customer insights'
+          ]
+        }, 0)
+      ],
+      insertionPoint: 'cursor'
+    },
+    {
+      id: 'cta-block',
+      name: 'CTA Block',
+      description: 'Call-to-action with headline, copy, and button',
+      category: 'marketing',
+      keywords: ['cta', 'call-to-action', 'button', 'conversion'],
+      content: [
+        createBlock('figure', {
+          type: 'cta-block',
+          headline: 'Ready to Get Started?',
+          copy: 'Join thousands of professionals who trust our platform to streamline their marketing efforts.',
+          buttonText: 'Start Free Trial',
+          buttonUrl: '#'
+        }, 0)
+      ],
+      insertionPoint: 'cursor'
+    },
+    {
+      id: 'author-bio',
+      name: 'Author Bio',
+      description: 'Professional author biography with avatar placeholder',
+      category: 'marketing',
+      keywords: ['author', 'bio', 'profile', 'about', 'credentials'],
+      content: [
+        createBlock('figure', {
+          type: 'author-bio',
+          name: 'John Smith',
+          title: 'Marketing Director',
+          company: 'Your Company',
+          bio: 'John has over 10 years of experience in digital marketing and has helped hundreds of companies grow their online presence.',
+          avatarUrl: 'placeholder'
+        }, 0)
       ],
       insertionPoint: 'cursor'
     }
   ]
 
-  // Starter Content
+  // Comprehensive starter content
   template.starterContent = {
     sections: [
       {
@@ -465,19 +592,36 @@ export const createMarketingEBookTemplate = (): Template => {
         layoutIntent: 'cover' as LayoutIntent,
         flows: [
           {
-            name: 'main',
+            name: 'Primary',
             type: 'linear' as const,
             blocks: [
               {
                 type: 'heading',
-                content: { level: 1, text: '' },
+                content: { level: 1, text: 'The Complete Guide to Modern Marketing' },
                 placeholder: 'Your eBook Title Here',
                 required: true
               },
               {
                 type: 'paragraph',
-                content: { text: '' },
+                content: { text: 'Strategies and tactics that drive real results in today\'s digital landscape' },
                 placeholder: 'Compelling subtitle that describes the value proposition',
+                required: false
+              },
+              {
+                type: 'paragraph',
+                content: { text: 'By [Author Name]' },
+                placeholder: 'Author information',
+                required: false
+              },
+              {
+                type: 'figure',
+                content: { 
+                  type: 'image',
+                  src: 'placeholder',
+                  caption: 'Hero image placeholder',
+                  alt: 'Marketing concept illustration'
+                },
+                placeholder: 'Hero image for cover',
                 required: false
               }
             ]
@@ -485,23 +629,52 @@ export const createMarketingEBookTemplate = (): Template => {
         ]
       },
       {
-        name: 'Introduction',
-        layoutIntent: 'body' as LayoutIntent,
+        name: 'TOC',
+        layoutIntent: 'toc' as LayoutIntent,
         flows: [
           {
-            name: 'main',
+            name: 'Primary',
             type: 'linear' as const,
             blocks: [
               {
                 type: 'heading',
-                content: { level: 2, text: '' },
-                placeholder: 'Introduction',
+                content: { level: 2, text: 'Table of Contents' },
+                required: true
+              },
+              {
+                type: 'table-of-contents',
+                content: { 
+                  depth: 3,
+                  style: 'dotted',
+                  showPageNumbers: true
+                },
+                required: true
+              }
+            ]
+          }
+        ]
+      },
+      {
+        name: 'Introduction',
+        layoutIntent: 'intro' as LayoutIntent,
+        flows: [
+          {
+            name: 'Primary',
+            type: 'linear' as const,
+            blocks: [
+              {
+                type: 'heading',
+                content: { level: 2, text: 'Why This Matters' },
                 required: true
               },
               {
                 type: 'paragraph',
-                content: { text: '' },
-                placeholder: 'Welcome your readers and explain what they\'ll learn from this eBook...',
+                content: { text: 'In today\'s rapidly evolving digital landscape, marketing professionals face unprecedented challenges. Consumer behavior has shifted dramatically, new channels emerge constantly, and the competition for attention has never been fiercer.' },
+                required: false
+              },
+              {
+                type: 'paragraph',
+                content: { text: 'This comprehensive guide brings together the most effective strategies and proven tactics that successful companies use to cut through the noise and achieve measurable results. Whether you\'re a seasoned marketer or just starting your journey, you\'ll find actionable insights that you can implement immediately.' },
                 required: false
               }
             ]
@@ -513,25 +686,111 @@ export const createMarketingEBookTemplate = (): Template => {
         layoutIntent: 'body' as LayoutIntent,
         flows: [
           {
-            name: 'main',
+            name: 'Primary',
             type: 'linear' as const,
             blocks: [
               {
                 type: 'heading',
-                content: { level: 2, text: '' },
-                placeholder: 'Chapter 1: Getting Started',
+                content: { level: 2, text: 'Understanding Your Audience' },
                 required: true
               },
               {
                 type: 'heading',
-                content: { level: 3, text: '' },
-                placeholder: 'Key Concepts',
+                content: { level: 3, text: 'The Foundation of Effective Marketing' },
                 required: false
               },
               {
                 type: 'paragraph',
-                content: { text: '' },
-                placeholder: 'Explain the foundational concepts your readers need to understand...',
+                content: { text: 'Before diving into tactics and channels, successful marketers invest time in truly understanding their target audience. This isn\'t just about demographics—it\'s about psychographics, pain points, motivations, and the customer journey.' },
+                required: false
+              },
+              {
+                type: 'figure',
+                content: {
+                  type: 'image',
+                  src: 'placeholder',
+                  caption: 'Customer journey mapping example',
+                  alt: 'Diagram showing customer touchpoints and decision stages'
+                },
+                placeholder: 'Customer journey diagram',
+                required: false
+              }
+            ]
+          },
+          {
+            name: 'Sidebar',
+            type: 'linear' as const,
+            blocks: [
+              {
+                type: 'callout',
+                content: {
+                  type: 'insight',
+                  title: 'Key Insight',
+                  text: 'Companies that use customer personas see 73% higher conversion rates compared to those that don\'t.'
+                },
+                required: false
+              }
+            ]
+          }
+        ]
+      },
+      {
+        name: 'Highlights',
+        layoutIntent: 'highlights' as LayoutIntent,
+        flows: [
+          {
+            name: 'Primary',
+            type: 'linear' as const,
+            blocks: [
+              {
+                type: 'heading',
+                content: { level: 2, text: 'Key Takeaways' },
+                required: true
+              }
+            ]
+          }
+        ]
+      },
+      {
+        name: 'About / CTA',
+        layoutIntent: 'about-cta' as LayoutIntent,
+        flows: [
+          {
+            name: 'Primary',
+            type: 'linear' as const,
+            blocks: [
+              {
+                type: 'heading',
+                content: { level: 2, text: 'About the Author' },
+                required: true
+              }
+            ]
+          }
+        ]
+      },
+      {
+        name: 'Appendix / Resources',
+        layoutIntent: 'body' as LayoutIntent,
+        flows: [
+          {
+            name: 'Primary',
+            type: 'linear' as const,
+            blocks: [
+              {
+                type: 'heading',
+                content: { level: 2, text: 'Additional Resources' },
+                required: true
+              },
+              {
+                type: 'unordered-list',
+                content: {
+                  items: [
+                    'Marketing automation platforms comparison',
+                    'Social media calendar template',
+                    'ROI calculation worksheet',
+                    'Customer persona template'
+                  ]
+                },
                 required: false
               }
             ]
@@ -541,7 +800,84 @@ export const createMarketingEBookTemplate = (): Template => {
     ]
   }
 
-  template.tags = ['marketing', 'ebook', 'modern', 'colorful']
+  // TOC defaults
+  template.tocDefaults = {
+    enabled: true,
+    title: 'Table of Contents',
+    includePageNumbers: true,
+    levels: {
+      min: 2,
+      max: 3
+    },
+    styles: {
+      title: { id: 'toc-title', name: 'TOC Title', category: 'typography', properties: { fontFamily: 'Inter', fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' } },
+      level1: { id: 'toc-level1', name: 'TOC Level 1', category: 'typography', properties: { fontFamily: 'Inter', fontSize: '1rem', fontWeight: 'medium', marginBottom: '0.5rem' } },
+      level2: { id: 'toc-level2', name: 'TOC Level 2', category: 'typography', properties: { fontFamily: 'Inter', fontSize: '0.875rem', fontWeight: 'normal', marginBottom: '0.25rem', paddingLeft: '1rem' } },
+      level3: { id: 'toc-level3', name: 'TOC Level 3', category: 'typography', properties: { fontFamily: 'Inter', fontSize: '0.875rem', fontWeight: 'normal', marginBottom: '0.25rem', paddingLeft: '2rem' } }
+    },
+    formatting: {
+      indentPerLevel: '1rem',
+      tabStops: ['50%', '90%'],
+      dotLeader: true
+    }
+  }
+
+  // Export defaults
+  template.exportDefaults = {
+    pdf: {
+      pageSize: 'Letter',
+      margins: { top: 72, right: 72, bottom: 72, left: 72 },
+      includeMetadata: true,
+      embedFonts: true,
+      quality: 'high'
+    },
+    docx: {
+      compatibility: 'modern',
+      includeComments: true,
+      trackChanges: false
+    },
+    html: {
+      includeCSS: true,
+      embedImages: false,
+      responsiveDesign: true
+    }
+  }
+
+  // Numbering configuration
+  template.numbering = {
+    headings: {
+      enabled: false,
+      format: '',
+      startLevel: 1,
+      separator: '.'
+    },
+    figures: {
+      enabled: true,
+      prefix: 'Figure ',
+      format: '{n}'
+    },
+    tables: {
+      enabled: true,
+      prefix: 'Table ',
+      format: '{n}'
+    },
+    equations: {
+      enabled: false,
+      prefix: 'Equation ',
+      format: '{n}'
+    },
+    footnotes: {
+      enabled: true,
+      format: 'numeric',
+      restart: 'never'
+    }
+  }
+
+  // Gallery metadata - update existing metadata
+  template.metadata.usageCount = 0
+  template.metadata.isPublic = true
+
+  template.tags = ['ebook', 'marketing', 'long-form']
   template.layoutIntents = ['cover', 'body']
 
   return template
