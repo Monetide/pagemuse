@@ -131,6 +131,10 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    direction: ltr;
+  }
+
   body {
     @apply bg-background text-foreground;
   }

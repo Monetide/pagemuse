@@ -283,7 +283,8 @@ export const EditableBlockRenderer = ({
             ref={textRef}
             contentEditable
             suppressContentEditableWarning
-            className={`${headingClass} text-foreground mb-2 outline-none focus:ring-2 focus:ring-primary rounded px-1`}
+            dir="ltr"
+            className={`${headingClass} text-foreground mb-2 outline-none focus:ring-2 focus:ring-primary rounded px-1 text-left`}
             data-placeholder="Type / for commands"
             onInput={(e) => handleContentEdit(e.currentTarget.textContent || '')}
             onKeyDown={handleKeyDown}
@@ -316,7 +317,8 @@ export const EditableBlockRenderer = ({
             ref={textRef}
             contentEditable
             suppressContentEditableWarning
-            className="text-sm text-foreground leading-relaxed mb-3 outline-none focus:ring-2 focus:ring-primary rounded px-1 min-h-[1.2em]"
+            dir="ltr"
+            className="text-sm text-foreground leading-relaxed mb-3 outline-none focus:ring-2 focus:ring-primary rounded px-1 min-h-[1.2em] text-left"
             data-placeholder="Type / for commands"
             onInput={(e) => handleContentEdit(e.currentTarget.textContent || '')}
               onKeyDown={handleKeyDown}
@@ -354,7 +356,8 @@ export const EditableBlockRenderer = ({
               ref={textRef}
               contentEditable
               suppressContentEditableWarning
-              className="text-muted-foreground outline-none focus:ring-2 focus:ring-primary rounded px-1 min-h-[1.2em]"
+              dir="ltr"
+              className="text-muted-foreground outline-none focus:ring-2 focus:ring-primary rounded px-1 min-h-[1.2em] text-left"
               data-placeholder="Type / for commands"
               onInput={(e) => handleContentEdit(e.currentTarget.textContent || '')}
             onKeyDown={handleKeyDown}
@@ -393,7 +396,8 @@ export const EditableBlockRenderer = ({
                     ref={textRef}
                     contentEditable
                     suppressContentEditableWarning
-                    className="inline outline-none focus:ring-2 focus:ring-primary rounded px-1"
+                    dir="ltr"
+                    className="inline outline-none focus:ring-2 focus:ring-primary rounded px-1 text-left"
                     data-placeholder="Type / for commands"
                     onInput={(e) => {
                       const newItems = [...orderedItems]
@@ -425,7 +429,8 @@ export const EditableBlockRenderer = ({
                     ref={textRef}
                     contentEditable
                     suppressContentEditableWarning
-                    className="inline outline-none focus:ring-2 focus:ring-primary rounded px-1"
+                    dir="ltr"
+                    className="inline outline-none focus:ring-2 focus:ring-primary rounded px-1 text-left"
                     data-placeholder="Type / for commands"
                     onInput={(e) => {
                       const newItems = [...unorderedItems]
