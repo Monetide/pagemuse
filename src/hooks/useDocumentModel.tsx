@@ -180,16 +180,23 @@ export const useDocumentModel = () => {
     const cleanMetadata = metadata ? { ...metadata } : {}
     delete cleanMetadata?.insertBefore
 
+    console.log('addBlockAfter called with:', { afterBlockId, type, content, metadata })
+
     // Special case: creating first block in empty document
     if (afterBlockId === 'create-first') {
+      console.log('Creating first block. Document sections:', document.sections.length)
       const firstSection = document.sections[0]
       const firstFlow = firstSection?.flows[0]
+      
+      console.log('First section:', firstSection ? 'exists' : 'missing')
+      console.log('First flow:', firstFlow ? 'exists' : 'missing')
       
       if (firstSection && firstFlow) {
         const newBlock = createBlock(type, content, 0)
         if (cleanMetadata && Object.keys(cleanMetadata).length > 0) {
           newBlock.metadata = { ...newBlock.metadata, ...cleanMetadata }
         }
+        console.log('Created new block:', newBlock)
         const updatedDocument = {
           ...document,
           sections: document.sections.map(section => 
@@ -207,9 +214,12 @@ export const useDocumentModel = () => {
           updated_at: new Date().toISOString()
         }
         
+        console.log('Updated document with new block')
         setDocument(updatedDocument)
         triggerAutoSave(updatedDocument)
         return newBlock
+      } else {
+        console.log('Missing first section or flow, cannot create first block')
       }
       return
     }
