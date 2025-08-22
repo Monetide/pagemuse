@@ -13,7 +13,7 @@ import { VersionHistoryPanel } from '@/components/document/VersionHistoryPanel'
 import { SectionDeleteDialog } from '@/components/document/SectionDeleteDialog'
 import { CanvasSectionHeader } from '@/components/document/CanvasSectionHeader'
 import { TrashPanel } from '@/components/document/TrashPanel'
-import { DragGhost } from '@/components/document/DragGhost'
+
 import { AccessibilityProvider } from '@/components/accessibility/AccessibilityProvider'
 import { DragDropProvider } from '@/contexts/DragDropContext'
 import { AltTextValidator } from '@/components/accessibility/AltTextValidator'
@@ -778,8 +778,6 @@ export default function DocumentModelDemo() {
           }}
         />
         
-        {/* Drag Ghost */}
-        <DragGhost />
       </DragDropProvider>
     </AccessibilityProvider>
   )
