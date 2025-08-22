@@ -50,6 +50,15 @@ export const Inspector = ({
   const [showPresets, setShowPresets] = useState(false)
   const { focusedSection, setFocusedSection } = useAccessibility()
 
+  // Defensive guard: currentSection can be undefined during initial document creation
+  if (!currentSection) {
+    return (
+      <div className="w-80 border-l border-border bg-muted/30 p-4">
+        <div className="text-sm text-muted-foreground">No section available yet.</div>
+      </div>
+    )
+  }
+
   const handlePresetSelect = (intent: LayoutIntent, pageMaster: PageMaster) => {
     onSectionUpdate?.(currentSection.id, { 
       layoutIntent: intent, 
