@@ -82,15 +82,46 @@ export const useTemplates = () => {
   useEffect(() => {
     const fetchTemplates = async () => {
       try {
-        const { data, error } = await supabase
+        // Import starter templates
+        const { getAllStarterTemplates } = await import('@/lib/starter-templates')
+        const starterTemplates = getAllStarterTemplates()
+        
+        // Convert to Supabase format for compatibility
+        const convertedTemplates = starterTemplates.map(template => ({
+          id: template.id,
+          name: template.name,
+          description: template.description,
+          category: template.category,
+          preview_image_url: template.metadata.previewImage,
+          figma_file_id: null,
+          figma_node_id: null,
+          is_premium: false,
+          is_global: true,
+          user_id: null,
+          global_styling: {
+            themeTokens: template.themeTokens,
+            objectStyles: template.objectStyles
+          },
+          metadata: {
+            ...template.metadata,
+            template: template // Store full template for later use
+          },
+          usage_count: template.metadata.usageCount,
+          created_at: template.createdAt.toISOString(),
+          updated_at: template.updatedAt.toISOString()
+        }))
+
+        // Try to fetch from Supabase as well (for user templates)
+        const { data: supabaseData } = await supabase
           .from('templates')
           .select('*')
           .eq('is_global', true)
           .order('usage_count', { ascending: false })
           .limit(10)
 
-        if (error) throw error
-        setTemplates(data || [])
+        // Combine starter templates with Supabase templates
+        const allTemplates = [...convertedTemplates, ...(supabaseData || [])]
+        setTemplates(allTemplates)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to fetch templates')
       } finally {

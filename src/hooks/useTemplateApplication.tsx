@@ -82,6 +82,11 @@ export function useTemplateApplication() {
 
 // Helper function to convert Supabase template to our template model
 function convertSupabaseTemplate(supabaseTemplate: Template) {
+  // Check if this is already a full template (from starter templates)
+  if (supabaseTemplate.metadata?.template) {
+    return supabaseTemplate.metadata.template
+  }
+
   const template = createTemplate(
     supabaseTemplate.name,
     supabaseTemplate.description || '',
@@ -102,7 +107,11 @@ function convertSupabaseTemplate(supabaseTemplate: Template) {
   if (supabaseTemplate.global_styling) {
     template.themeTokens = {
       ...template.themeTokens,
-      ...supabaseTemplate.global_styling
+      ...supabaseTemplate.global_styling.themeTokens
+    }
+    template.objectStyles = {
+      ...template.objectStyles,
+      ...supabaseTemplate.global_styling.objectStyles
     }
   }
 
