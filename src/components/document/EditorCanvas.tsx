@@ -20,6 +20,7 @@ interface EditorCanvasProps {
   onBlockTypeChange?: (blockId: string, type: Block['type'], metadata?: any) => void
   selectedBlockId?: string
   onBlockSelect?: (blockId: string) => void
+  onFocusChange?: (blockId: string | null) => void
 }
 
 interface OverlaySettings {
@@ -251,7 +252,8 @@ export const EditorCanvas = ({
   onDeleteBlock,
   onBlockTypeChange,
   selectedBlockId: externalSelectedBlockId,
-  onBlockSelect
+  onBlockSelect,
+  onFocusChange
 }: EditorCanvasProps) => {
   const [internalSelectedBlockId, setInternalSelectedBlockId] = useState<string>()
   const selectedBlockId = externalSelectedBlockId || internalSelectedBlockId
@@ -295,15 +297,17 @@ export const EditorCanvas = ({
   const handleSelectBlock = useCallback((blockId: string) => {
     setInternalSelectedBlockId(blockId)
     onBlockSelect?.(blockId)
-  }, [onBlockSelect])
+    onFocusChange?.(blockId)
+  }, [onBlockSelect, onFocusChange])
 
   const handleCanvasClick = useCallback((e: React.MouseEvent) => {
     // If clicking on the canvas background (not on a block), clear selection
     if (e.target === e.currentTarget) {
       setInternalSelectedBlockId(undefined)
       onBlockSelect?.('')
+      onFocusChange?.(null)
     }
-  }, [onBlockSelect])
+  }, [onBlockSelect, onFocusChange])
 
   const handleCreateFirstBlock = useCallback(() => {
     // Find the first flow to add a block to

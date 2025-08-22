@@ -8,10 +8,11 @@ import { EditorCanvas } from '@/components/document/EditorCanvas'
 import Inspector from '@/components/document/Inspector'
 import { LayoutPreview } from '@/components/document/LayoutPreview'
 import { StructureTree } from '@/components/document/StructureTree'
+import { CommandPalette } from '@/components/document/CommandPalette'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { PageMaster, Section } from '@/lib/document-model'
+import { PageMaster, Section, Block } from '@/lib/document-model'
 
 export default function DocumentModelDemo() {
   const { id } = useParams()
@@ -37,6 +38,8 @@ export default function DocumentModelDemo() {
   const [selectedSectionId, setSelectedSectionId] = useState<string>('')
   const [selectedBlockId, setSelectedBlockId] = useState<string>('')
   const [debugMode, setDebugMode] = useState<boolean>(false)
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+  const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null)
 
   const handleCreateDocument = () => {
     if (docTitle.trim()) {
@@ -212,6 +215,44 @@ export default function DocumentModelDemo() {
       loadDocument(documentId)
     }
   }, [documentId, document, loadDocument])
+
+  // Command palette keyboard shortcut
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setCommandPaletteOpen(true)
+      }
+    }
+
+    window.document.addEventListener('keydown', handleKeyDown)
+    return () => window.document.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  // Handle command palette block insertion
+  const handleCommandPaletteInsert = (blockType: Block['type'], content?: any, metadata?: any) => {
+    if (!document) return
+    
+    // Determine insertion target based on focus
+    let targetBlockId = focusedBlockId || 'create-first'
+    
+    // If we have a focused block, insert after it
+    // If no focused block, insert at the end of the primary flow
+    if (!focusedBlockId) {
+      const currentSection = document.sections.find(s => 
+        s.id === (selectedSectionId || document.sections[0]?.id)
+      )
+      if (currentSection && currentSection.flows.length > 0) {
+        const primaryFlow = currentSection.flows[0]
+        if (primaryFlow.blocks.length > 0) {
+          // Insert after the last block
+          targetBlockId = primaryFlow.blocks[primaryFlow.blocks.length - 1].id
+        }
+      }
+    }
+    
+    addBlockAfter(targetBlockId, blockType, content, metadata)
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -482,8 +523,8 @@ export default function DocumentModelDemo() {
                            }
                            setDocument(updatedDoc)
                          }}
-                         selectedBlockId={selectedBlockId}
-                         onBlockSelect={setSelectedBlockId}
+                        onBlockSelect={setSelectedBlockId}
+                        onFocusChange={setFocusedBlockId}
                       />
                     )
                   })}
@@ -570,6 +611,13 @@ export default function DocumentModelDemo() {
           </div>
         </div>
       )}
+      
+      {/* Command Palette */}
+      <CommandPalette
+        open={commandPaletteOpen}
+        onOpenChange={setCommandPaletteOpen}
+        onInsertBlock={handleCommandPaletteInsert}
+      />
     </div>
   )
 }
