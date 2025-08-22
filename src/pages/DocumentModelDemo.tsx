@@ -5,6 +5,7 @@ import { DocumentHeader } from '@/components/document/DocumentHeader'
 import { Navigator } from '@/components/document/Navigator'
 import { BlockPalette } from '@/components/document/BlockPalette'
 import { EditorCanvas } from '@/components/document/EditorCanvas'
+import { Inspector } from '@/components/document/Inspector'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -32,6 +33,7 @@ export default function DocumentModelDemo() {
   const [flowName, setFlowName] = useState('')
   const [blockContent, setBlockContent] = useState('')
   const [selectedSectionId, setSelectedSectionId] = useState<string>('')
+  const [selectedBlockId, setSelectedBlockId] = useState<string>('')
 
   const handleCreateDocument = () => {
     if (docTitle.trim()) {
@@ -191,6 +193,9 @@ export default function DocumentModelDemo() {
   }
 
   const selectedSection = document?.sections.find(s => s.id === selectedSectionId)
+  const selectedBlock = selectedSection?.flows
+    .flatMap(flow => flow.blocks)
+    .find(block => block.id === selectedBlockId)
 
   const handleSaveAs = async (newTitle: string) => {
     if (document) {
@@ -425,6 +430,8 @@ export default function DocumentModelDemo() {
                           }
                         }}
                         onDeleteBlock={deleteBlock}
+                        selectedBlockId={selectedBlockId}
+                        onBlockSelect={setSelectedBlockId}
                       />
                     )
                   })}
@@ -460,33 +467,44 @@ export default function DocumentModelDemo() {
           </div>
           
           {/* Right Inspector */}
-          <div className="w-80 border-l border-border bg-muted/30">
-            <div className="p-4 border-b border-border">
-              <h3 className="font-semibold text-sm">Inspector</h3>
-            </div>
-            <div className="p-4 space-y-4">
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">Page Layout</h4>
-                <p className="text-xs text-muted-foreground">
-                  Layout controls will be available here
-                </p>
-              </div>
+          <Inspector
+            selectedBlock={selectedBlock}
+            currentSection={document.sections.find(s => s.id === (selectedSectionId || document.sections[0]?.id))!}
+            onBlockUpdate={(blockId, updates) => {
+              if (!document) return
               
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">Typography</h4>
-                <p className="text-xs text-muted-foreground">
-                  Text formatting options will be available here
-                </p>
-              </div>
+              const updatedDoc = {
+                ...document,
+                sections: document.sections.map(section => ({
+                  ...section,
+                  flows: section.flows.map(flow => ({
+                    ...flow,
+                    blocks: flow.blocks.map(block => 
+                      block.id === blockId 
+                        ? { ...block, ...updates }
+                        : block
+                    )
+                  }))
+                })),
+                updated_at: new Date().toISOString()
+              }
+              setDocument(updatedDoc)
+            }}
+            onSectionUpdate={(sectionId, updates) => {
+              if (!document) return
               
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">Block Properties</h4>
-                <p className="text-xs text-muted-foreground">
-                  Selected block properties will be shown here
-                </p>
-              </div>
-            </div>
-          </div>
+              const updatedDoc = {
+                ...document,
+                sections: document.sections.map(section =>
+                  section.id === sectionId
+                    ? { ...section, ...updates }
+                    : section
+                ),
+                updated_at: new Date().toISOString()
+              }
+              setDocument(updatedDoc)
+            }}
+          />
         </div>
       )}
     </div>

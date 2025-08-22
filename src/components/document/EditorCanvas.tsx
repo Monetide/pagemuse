@@ -15,6 +15,8 @@ interface EditorCanvasProps {
   onContentChange?: (blockId: string, newContent: any) => void
   onNewBlock?: (afterBlockId: string, type: Block['type']) => void
   onDeleteBlock?: (blockId: string) => void
+  selectedBlockId?: string
+  onBlockSelect?: (blockId: string) => void
 }
 
 interface OverlaySettings {
@@ -219,9 +221,12 @@ export const EditorCanvas = ({
   section, 
   onContentChange, 
   onNewBlock, 
-  onDeleteBlock 
+  onDeleteBlock,
+  selectedBlockId: externalSelectedBlockId,
+  onBlockSelect
 }: EditorCanvasProps) => {
-  const [selectedBlockId, setSelectedBlockId] = useState<string>()
+  const [internalSelectedBlockId, setInternalSelectedBlockId] = useState<string>()
+  const selectedBlockId = externalSelectedBlockId || internalSelectedBlockId
   const [zoomLevel, setZoomLevel] = useState<number>(1)
   const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>({
     showMargins: false,
@@ -257,15 +262,17 @@ export const EditorCanvas = ({
   }, [])
 
   const handleSelectBlock = useCallback((blockId: string) => {
-    setSelectedBlockId(blockId)
-  }, [])
+    setInternalSelectedBlockId(blockId)
+    onBlockSelect?.(blockId)
+  }, [onBlockSelect])
 
   const handleCanvasClick = useCallback((e: React.MouseEvent) => {
     // If clicking on the canvas background (not on a block), clear selection
     if (e.target === e.currentTarget) {
-      setSelectedBlockId(undefined)
+      setInternalSelectedBlockId(undefined)
+      onBlockSelect?.('')
     }
-  }, [])
+  }, [onBlockSelect])
 
   const handleCreateFirstBlock = useCallback(() => {
     // Find the first flow to add a block to
