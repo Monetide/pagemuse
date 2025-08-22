@@ -8,6 +8,11 @@ import { useImport } from '@/hooks/useImport'
 import { ImportDialog, ImportMode } from '@/components/import/ImportDialog'
 import { ImportDropZone } from '@/components/import/ImportDropZone'
 import { TemplateGalleryDialog } from '@/components/template/TemplateGalleryDialog'
+import { DocumentActions } from '@/components/document/DocumentActions'
+import { useImportHistory } from '@/hooks/useImportHistory'
+import { ImportCommit } from '@/lib/import-history'
+import { useDocumentPersistence } from '@/hooks/useDocumentPersistence'
+import { SemanticDocument } from '@/lib/document-model'
 import { 
   Plus, 
   FileText, 
@@ -27,6 +32,8 @@ export default function Dashboard() {
   const { templates, loading: templatesLoading } = useTemplates()
   const { stats: userStats, loading: statsLoading } = useUserStats()
   const { importFiles, isImporting } = useImport()
+  const { saveDocument, currentDocumentId } = useDocumentPersistence()
+  const { commitImport } = useImportHistory()
   
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false)
@@ -61,12 +68,44 @@ export default function Dashboard() {
   }
 
   const handleImport = async (files: File[], mode: ImportMode) => {
-    await importFiles(files, mode, undefined, (title, document) => {
-      // For new document creation, we could navigate to a new document editor
+    // This will be handled by the updated import workflow
+    // For now, keep the existing logic but add comment for future enhancement
+    await importFiles(files, mode, undefined, async (title, document) => {
       console.log('Creating new document:', title, document)
+      
+      // Save document and create import commit
+      const documentId = await saveDocument(document)
+      if (documentId && files[0]) {
+        await commitImport(
+          documentId,
+          files[0],
+          null, // beforeDocument (new document)
+          document,
+          { mode, sectionization: 'h1', tocDepth: 3, calloutMapping: 'callout', linkVsCopy: 'copy' },
+          1000, // placeholder processing time
+          [] // warnings
+        )
+      }
+      
       navigate('/document-model')
     })
     setImportDialogOpen(false)
+  }
+
+  // Handle undo from document actions  
+  const handleUndoImport = (restoredDocument: SemanticDocument | null) => {
+    if (restoredDocument) {
+      saveDocument(restoredDocument)
+    } else {
+      navigate('/dashboard')
+    }
+  }
+
+  // Handle re-running import with different settings
+  const handleRerunImport = (commit: ImportCommit) => {
+    // For now, just open the import dialog
+    // In a full implementation, this would pre-populate the settings
+    setImportDialogOpen(true)
   }
 
   const handleQuickImport = (files: File[]) => {
@@ -119,9 +158,17 @@ export default function Dashboard() {
         {/* Recent Documents */}
         <Card className="border-0 shadow-soft">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-primary" />
-              Recent Documents
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-primary" />
+                Recent Documents
+              </div>
+              <DocumentActions
+                documentId={currentDocumentId || undefined}
+                onImport={() => setImportDialogOpen(true)}
+                onUndo={handleUndoImport}
+                onRerunImport={handleRerunImport}
+              />
             </CardTitle>
             <CardDescription>
               Your latest work and drafts

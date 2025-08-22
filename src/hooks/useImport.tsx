@@ -7,6 +7,7 @@ import { IRMapper } from '@/lib/ir-mapper'
 import { PostImportCleaner, getDefaultCleanupOptions, CleanupOptions, CleanupResult } from '@/lib/post-import-cleaner'
 import { IRDocument } from '@/lib/ir-types'
 import { Template } from '@/hooks/useSupabaseData'
+import { ImportHistoryManager, ImportWarning, importHistoryManager } from '@/lib/import-history'
 
 export type SectionizationMode = 'h1' | 'h1-h2' | 'none'
 export type CalloutMapping = 'quote' | 'callout'
@@ -43,6 +44,7 @@ export interface ImportState {
   config: MappingConfig
   error: string | null
   isProcessing: boolean
+  importStartTime: number
 }
 
 export const useImport = () => {
@@ -61,18 +63,21 @@ export const useImport = () => {
       linkVsCopy: 'copy'
     },
     error: null,
-    isProcessing: false
+    isProcessing: false,
+    importStartTime: 0
   })
 
   const { toast } = useToast()
 
   const startImport = useCallback(async (file: File) => {
+    const startTime = Date.now()
     setState(prev => ({ 
       ...prev, 
       stage: 'ingesting', 
       file, 
       error: null,
-      isProcessing: true 
+      isProcessing: true,
+      importStartTime: startTime
     }))
 
     try {
@@ -135,7 +140,11 @@ export const useImport = () => {
     }
   }, [state.config.linkVsCopy])
 
-  const finalizeMapping = useCallback(async (config: MappingConfig): Promise<SemanticDocument> => {
+  const finalizeMapping = useCallback(async (
+    config: MappingConfig,
+    beforeDocument?: SemanticDocument | null,
+    documentId?: string
+  ): Promise<SemanticDocument> => {
     if (!state.irDocument) {
       throw new Error('No IR document available')
     }
@@ -152,10 +161,49 @@ export const useImport = () => {
 
       // Apply post-import cleanups
       let cleanupResult: CleanupResult | null = null
+      const warnings: ImportWarning[] = []
+      
       if (config.cleanupOptions) {
         const cleaner = new PostImportCleaner(config.cleanupOptions)
         cleanupResult = cleaner.cleanDocument(semanticDoc)
         semanticDoc = cleanupResult.document
+        
+        // Convert cleanup changes to warnings if needed
+        const textCleanupChanges = cleanupResult.changes.filter(c => c.type === 'text-cleanup')
+        if (textCleanupChanges.length > 0) {
+          warnings.push({
+            type: 'formatting-loss',
+            message: `Applied ${textCleanupChanges.length} text cleanup operations`,
+            severity: 'low'
+          })
+        }
+      }
+
+      // Create import commit if documentId is provided
+      if (documentId && state.file) {
+        const processingTimeMs = Date.now() - state.importStartTime
+        
+        const importSummary = ImportHistoryManager.generateSummary(
+          documentId,
+          state.file,
+          beforeDocument,
+          semanticDoc,
+          config,
+          processingTimeMs,
+          warnings
+        )
+
+        importHistoryManager.createCommit(
+          documentId,
+          beforeDocument,
+          semanticDoc,
+          importSummary
+        )
+
+        toast({
+          title: 'Import completed successfully',
+          description: `${importSummary.sectionsCreated} sections, ${importSummary.blocksCreated} blocks created${warnings.length > 0 ? ` (${warnings.length} warnings)` : ''}`
+        })
       }
 
       setState(prev => ({ 
@@ -175,7 +223,7 @@ export const useImport = () => {
       }))
       throw error
     }
-  }, [state.irDocument])
+  }, [state.irDocument, state.file, state.importStartTime, toast])
 
   const updateConfig = useCallback((updates: Partial<MappingConfig>) => {
     setState(prev => ({
@@ -200,7 +248,8 @@ export const useImport = () => {
         linkVsCopy: 'copy'
       },
       error: null,
-      isProcessing: false
+      isProcessing: false,
+      importStartTime: 0
     })
   }, [])
 
