@@ -4,12 +4,87 @@ import { SemanticDocument } from '@/lib/document-model'
 import { ImportMode } from '@/components/import/ImportDialog'
 import { ingestFile } from '@/lib/ingest-pipeline'
 import { mapIRToPageMuse } from '@/lib/ir-mapper'
+import { PDFProcessingOptions, processPDFFile } from '@/lib/pdf-processor'
+import { PDFProcessingDialog } from '@/components/import/PDFProcessingDialog'
+import { IRDocument } from '@/lib/ir-types'
 
 export const useImport = () => {
   const [isImporting, setIsImporting] = useState(false)
+  const [showPDFDialog, setShowPDFDialog] = useState(false)
+  const [pendingPDFFile, setPendingPDFFile] = useState<File | null>(null)
+  const [pendingHandlers, setPendingHandlers] = useState<{
+    mode: ImportMode,
+    currentDocument?: SemanticDocument,
+    onCreateDocument?: (title: string, document: SemanticDocument) => void,
+    onUpdateDocument?: (updatedDocument: SemanticDocument) => void
+  } | null>(null)
   const { toast } = useToast()
 
   const importFiles = useCallback(async (
+    files: File[], 
+    mode: ImportMode,
+    currentDocument?: SemanticDocument,
+    onCreateDocument?: (title: string, document: SemanticDocument) => void,
+    onUpdateDocument?: (updatedDocument: SemanticDocument) => void
+  ) => {
+    // Check for PDF files
+    const pdfFiles = files.filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'))
+    
+    if (pdfFiles.length === 1 && files.length === 1) {
+      setPendingPDFFile(pdfFiles[0])
+      setPendingHandlers({ mode, currentDocument, onCreateDocument, onUpdateDocument })
+      setShowPDFDialog(true)
+      return
+    }
+
+    await processFiles(files, mode, currentDocument, onCreateDocument, onUpdateDocument)
+  }, [])
+
+  const processPDFWithOptions = useCallback(async (options: PDFProcessingOptions) => {
+    if (!pendingPDFFile || !pendingHandlers) return
+    
+    setIsImporting(true)
+    try {
+      const irDoc = await processPDFFile(pendingPDFFile, options)
+      const pageMuseDoc = mapIRToPageMuse(irDoc)
+      
+      // Apply import mode
+      const { mode, currentDocument, onCreateDocument, onUpdateDocument } = pendingHandlers
+      
+      switch (mode) {
+        case 'new-document':
+          onCreateDocument?.(pageMuseDoc.title, pageMuseDoc)
+          break
+        case 'append-section':
+          if (currentDocument && onUpdateDocument) {
+            onUpdateDocument({
+              ...currentDocument,
+              sections: [...currentDocument.sections, ...pageMuseDoc.sections]
+            })
+          }
+          break
+      }
+      
+      toast({
+        title: "PDF Import Successful",
+        description: `Successfully imported ${pendingPDFFile.name}`
+      })
+      
+    } catch (error) {
+      toast({
+        title: "PDF Import Failed",
+        description: error instanceof Error ? error.message : "Failed to process PDF",
+        variant: "destructive"
+      })
+    } finally {
+      setIsImporting(false)
+      setPendingPDFFile(null)
+      setPendingHandlers(null)
+      setShowPDFDialog(false)
+    }
+  }, [pendingPDFFile, pendingHandlers, toast])
+
+  const processFiles = useCallback(async (
     files: File[], 
     mode: ImportMode,
     currentDocument?: SemanticDocument,
@@ -21,88 +96,47 @@ export const useImport = () => {
     try {
       let combinedDocument: SemanticDocument | null = null
       
-      // Process all files through the ingest pipeline
       for (const file of files) {
-        const irDoc = await ingestFile(file, {
-          preserveFormatting: true,
-          extractAssets: false,
-          generateAnchors: true,
-          mergeShortParagraphs: true
-        })
-        
+        const irDoc = await ingestFile(file)
         const pageMuseDoc = mapIRToPageMuse(irDoc)
         
         if (!combinedDocument) {
           combinedDocument = pageMuseDoc
         } else {
-          // Merge multiple documents
           combinedDocument = {
             ...combinedDocument,
-            title: `Combined Import (${files.length} files)`,
-            sections: [
-              ...combinedDocument.sections,
-              ...pageMuseDoc.sections.map(section => ({
-                ...section,
-                id: `${section.id}-${Date.now()}`,
-                order: combinedDocument!.sections.length + section.order
-              }))
-            ]
+            sections: [...combinedDocument.sections, ...pageMuseDoc.sections]
           }
         }
       }
 
-      if (!combinedDocument) {
-        throw new Error('No documents were successfully processed')
-      }
+      if (!combinedDocument) throw new Error('No documents processed')
 
-      // Apply import mode
       switch (mode) {
         case 'new-document':
           onCreateDocument?.(combinedDocument.title, combinedDocument)
           break
-
         case 'append-section':
-        case 'insert-section':
-          if (!currentDocument || !onUpdateDocument) {
-            throw new Error('Current document is required for this import mode')
+          if (currentDocument && onUpdateDocument) {
+            onUpdateDocument({
+              ...currentDocument,
+              sections: [...currentDocument.sections, ...combinedDocument.sections]
+            })
           }
-
-          const updatedDocument = {
-            ...currentDocument,
-            sections: [...currentDocument.sections, ...combinedDocument.sections]
-          }
-          
-          onUpdateDocument(updatedDocument)
-          break
-
-        case 'replace-document':
-          if (!currentDocument || !onUpdateDocument) {
-            throw new Error('Current document is required for this import mode')
-          }
-
-          const replacedDocument = {
-            ...currentDocument,
-            title: combinedDocument.title,
-            sections: combinedDocument.sections
-          }
-          
-          onUpdateDocument(replacedDocument)
           break
       }
 
       toast({
         title: "Import Successful",
-        description: `Successfully imported ${files.length} file${files.length !== 1 ? 's' : ''} using IR pipeline`
+        description: `Successfully imported ${files.length} file${files.length !== 1 ? 's' : ''}`
       })
 
     } catch (error) {
-      console.error('Import failed:', error)
       toast({
         title: "Import Failed",
-        description: error instanceof Error ? error.message : "An unknown error occurred",
+        description: error instanceof Error ? error.message : "Import failed",
         variant: "destructive"
       })
-      throw error
     } finally {
       setIsImporting(false)
     }
@@ -110,6 +144,14 @@ export const useImport = () => {
 
   return {
     importFiles,
-    isImporting
+    isImporting,
+    PDFDialog: () => (
+      <PDFProcessingDialog
+        open={showPDFDialog}
+        onOpenChange={setShowPDFDialog}
+        fileName={pendingPDFFile?.name}
+        onConfirm={processPDFWithOptions}
+      />
+    )
   }
 }

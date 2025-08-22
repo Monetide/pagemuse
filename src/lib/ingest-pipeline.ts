@@ -1227,19 +1227,32 @@ export class IngestPipeline {
   }
 
   /**
-   * Placeholder for PDF processing
+   * Processes PDF files using comprehensive PDF processor
    */
   private async processPdfFile(file: File): Promise<IRDocument> {
-    const title = file.name.replace(/\.pdf$/, '')
-    const irDoc = createIRDocument(title)
-    const section = createIRSection('Imported Content', 1)
-    
-    // Placeholder - in real implementation, use pdf.js or similar
-    section.blocks.push(createIRBlock('paragraph', 
-      `PDF content from ${file.name}. Full PDF parsing requires additional libraries.`, 1))
-    
-    irDoc.sections.push(section)
-    return irDoc
+    try {
+      const { processPDFFile } = await import('./pdf-processor')
+      return await processPDFFile(file, {
+        ocrLanguage: 'eng',
+        confidenceThreshold: 75,
+        enableOCR: true,
+        detectColumns: true,
+        mergeHyphenatedWords: true
+      })
+    } catch (error) {
+      console.error('Error processing PDF:', error)
+      
+      // Fallback to basic processing
+      const title = file.name.replace(/\.pdf$/, '')
+      const irDoc = createIRDocument(title)
+      const section = createIRSection('PDF Content', 1)
+      
+      section.blocks.push(createIRBlock('paragraph', 
+        `Error processing PDF: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again or use a different file format.`, 1))
+      
+      irDoc.sections.push(section)
+      return irDoc
+    }
   }
 
   /**
