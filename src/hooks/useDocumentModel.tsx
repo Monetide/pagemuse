@@ -185,42 +185,46 @@ export const useDocumentModel = () => {
     // Special case: creating first block in empty document
     if (afterBlockId === 'create-first') {
       console.log('Creating first block. Document sections:', document.sections.length)
-      const firstSection = document.sections[0]
-      const firstFlow = firstSection?.flows[0]
-      
-      console.log('First section:', firstSection ? 'exists' : 'missing')
-      console.log('First flow:', firstFlow ? 'exists' : 'missing')
-      
-      if (firstSection && firstFlow) {
+
+      // Prefer the section provided via metadata; otherwise fall back to first section
+      const targetSection = (cleanMetadata && cleanMetadata.sectionId)
+        ? document.sections.find(s => s.id === cleanMetadata.sectionId)
+        : document.sections[0]
+
+      if (targetSection) {
+        const existingFlow = targetSection.flows[0]
         const newBlock = createBlock(type, content, 0)
         if (cleanMetadata && Object.keys(cleanMetadata).length > 0) {
           newBlock.metadata = { ...newBlock.metadata, ...cleanMetadata }
         }
-        console.log('Created new block:', newBlock)
+
+        let updatedSection
+        if (existingFlow) {
+          const updatedFlow = addBlockToFlow(existingFlow, newBlock)
+          updatedSection = {
+            ...targetSection,
+            flows: targetSection.flows.map(f => f.id === existingFlow.id ? updatedFlow : f)
+          }
+        } else {
+          const defaultFlow = createFlow('Main Content', 'linear', 0)
+          const flowWithBlock = addBlockToFlow(defaultFlow, newBlock)
+          updatedSection = {
+            ...targetSection,
+            flows: [flowWithBlock]
+          }
+        }
+
         const updatedDocument = {
           ...document,
-          sections: document.sections.map(section => 
-            section.id === firstSection.id
-              ? {
-                  ...section,
-                  flows: section.flows.map(flow =>
-                    flow.id === firstFlow.id
-                      ? addBlockToFlow(flow, newBlock)
-                      : flow
-                  )
-                }
-              : section
-          ),
+          sections: document.sections.map(s => s.id === targetSection.id ? updatedSection : s),
           updated_at: new Date().toISOString()
         }
-        
-        console.log('Updated document with new block')
+
         setDocument(updatedDocument)
         triggerAutoSave(updatedDocument)
         return newBlock
       } else {
-        console.log('Missing first section or flow, creating them...')
-        // Create a default section and flow, then insert the block
+        console.log('No sections found, creating default section and flow...')
         const defaultSection = createSection('Main Section', 0)
         const defaultFlow = createFlow('Main Content', 'linear', 0)
         const sectionWithFlow = addFlowToSection(defaultSection, defaultFlow)

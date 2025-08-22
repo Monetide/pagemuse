@@ -413,12 +413,12 @@ export const EditorCanvas = ({
   }, [onBlockSelect, onFocusChange])
 
   const handleCreateFirstBlock = useCallback(() => {
-    // Always delegate creation to parent; it will create section/flow if missing
+    // Delegate creation to parent and pass current section context
     if (onNewBlock) {
       const dummyBlockId = 'create-first'
-      onNewBlock(dummyBlockId, 'paragraph')
+      onNewBlock(dummyBlockId, 'paragraph', undefined, { sectionId: section.id })
     }
-  }, [onNewBlock])
+  }, [onNewBlock, section.id])
 
   // Handle mouse move for drag operations
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
