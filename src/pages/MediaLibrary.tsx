@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { 
@@ -11,20 +11,13 @@ import {
   Filter,
   Grid3X3,
   List,
-  Download,
-  Eye,
-  Trash2,
-  MoreHorizontal,
   FileImage,
-  FileVideo,
-  File
+  SortAsc,
+  SortDesc,
+  Calendar,
+  Type,
+  Hash
 } from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   Select,
   SelectContent,
@@ -32,61 +25,90 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-
-// Mock data - replace with real Supabase data
-const mockMediaFiles = [
-  {
-    id: '1',
-    name: 'hero-image.jpg',
-    type: 'image',
-    size: 2547123,
-    url: '/placeholder.svg',
-    created_at: '2024-01-15T10:30:00Z',
-    file_type: 'image/jpeg'
-  },
-  {
-    id: '2', 
-    name: 'company-logo.png',
-    type: 'image',
-    size: 156432,
-    url: '/placeholder.svg',
-    created_at: '2024-01-14T15:20:00Z',
-    file_type: 'image/png'
-  },
-  {
-    id: '3',
-    name: 'presentation.pdf',
-    type: 'document',
-    size: 5234567,
-    url: '/placeholder.svg',
-    created_at: '2024-01-13T09:45:00Z',
-    file_type: 'application/pdf'
-  },
-  {
-    id: '4',
-    name: 'demo-video.mp4',
-    type: 'video',
-    size: 15678901,
-    url: '/placeholder.svg',
-    created_at: '2024-01-12T14:15:00Z',
-    file_type: 'video/mp4'
-  }
-]
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { useMediaLibrary } from '@/hooks/useMediaLibrary'
+import { MediaUploadZone } from '@/components/media/MediaUploadZone'
+import { MediaCard } from '@/components/media/MediaCard'
+import { MediaCollectionsSidebar } from '@/components/media/MediaCollectionsSidebar'
 
 export default function MediaLibrary() {
-  const [mediaFiles] = useState(mockMediaFiles)
+  const {
+    mediaFiles,
+    collections,
+    loading,
+    uploadProgress,
+    fetchMediaFiles,
+    uploadFiles,
+    updateMediaMetadata,
+    deleteMediaFile,
+    createCollection,
+    addToCollection,
+    getMediaUrl
+  } = useMediaLibrary()
+
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedType, setSelectedType] = useState('all')
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [sortBy, setSortBy] = useState<'recent' | 'name' | 'size'>('recent')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string>()
 
-  const fileTypes = ['all', 'image', 'video', 'document']
+  // Get all unique tags from media files
+  const allTags = Array.from(new Set(mediaFiles.flatMap(file => file.tags)))
 
-  const filteredFiles = mediaFiles.filter(file => {
-    const matchesSearch = file.name.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesType = selectedType === 'all' || file.type === selectedType
-    return matchesSearch && matchesType
-  })
+  // Filter and sort media files
+  const filteredAndSortedFiles = mediaFiles
+    .filter(file => {
+      const matchesSearch = file.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           file.file_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           (file.description && file.description.toLowerCase().includes(searchQuery.toLowerCase()))
+      
+      const matchesType = selectedType === 'all' || file.file_type.startsWith(selectedType + '/')
+      
+      const matchesTags = selectedTags.length === 0 || 
+                         selectedTags.some(tag => file.tags.includes(tag))
+      
+      return matchesSearch && matchesType && matchesTags
+    })
+    .sort((a, b) => {
+      let comparison = 0
+      
+      switch (sortBy) {
+        case 'name':
+          comparison = a.display_name.localeCompare(b.display_name)
+          break
+        case 'size':
+          comparison = a.file_size - b.file_size
+          break
+        case 'recent':
+        default:
+          comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          break
+      }
+      
+      return sortOrder === 'desc' ? -comparison : comparison
+    })
+
+  const handleCollectionSelect = (collectionId?: string) => {
+    setSelectedCollectionId(collectionId)
+    fetchMediaFiles(collectionId)
+  }
+
+  const handleTagToggle = (tag: string) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    )
+  }
 
   const formatFileSize = (bytes: number) => {
     const sizes = ['Bytes', 'KB', 'MB', 'GB']
@@ -95,181 +117,78 @@ export default function MediaLibrary() {
     return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i]
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
-  }
-
-  const getFileIcon = (type: string) => {
-    switch (type) {
-      case 'image': return FileImage
-      case 'video': return FileVideo
-      default: return File
+  // Load media when component mounts or collection changes
+  useEffect(() => {
+    if (selectedCollectionId !== undefined) {
+      fetchMediaFiles(selectedCollectionId)
     }
-  }
+  }, [selectedCollectionId, fetchMediaFiles])
 
-  const getFileTypeColor = (type: string) => {
-    switch (type) {
-      case 'image': return 'bg-blue-100 text-blue-800'
-      case 'video': return 'bg-purple-100 text-purple-800'
-      case 'document': return 'bg-green-100 text-green-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const handleUpload = () => {
-    fileInputRef.current?.click()
-  }
-
-  const MediaCard = ({ file }: { file: any }) => {
-    const IconComponent = getFileIcon(file.type)
-    
+  if (loading) {
     return (
-      <Card className="border-0 shadow-soft hover:shadow-medium transition-all duration-200 group">
-        <CardContent className="p-0">
-          <div className="aspect-square bg-gradient-to-br from-primary/20 to-purple-500/20 rounded-t-lg relative overflow-hidden">
-            {file.type === 'image' ? (
-              <img 
-                src={file.url} 
-                alt={file.name}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <IconComponent className="w-12 h-12 text-primary/50" />
-              </div>
-            )}
-            <div className="absolute top-3 right-3">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="secondary" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <MoreHorizontal className="w-4 h-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem>
-                    <Eye className="w-4 h-4 mr-2" />
-                    Preview
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Download className="w-4 h-4 mr-2" />
-                    Download
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="text-destructive">
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-          <div className="p-4">
-            <h3 className="font-semibold text-foreground mb-2 truncate">{file.name}</h3>
-            <div className="flex items-center justify-between">
-              <div className="flex flex-col gap-1">
-                <Badge variant="secondary" className={getFileTypeColor(file.type)}>
-                  {file.type}
-                </Badge>
-                <span className="text-xs text-muted-foreground">
-                  {formatFileSize(file.size)}
-                </span>
-              </div>
-              <span className="text-xs text-muted-foreground">
-                {formatDate(file.created_at)}
-              </span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  const MediaListItem = ({ file }: { file: any }) => {
-    const IconComponent = getFileIcon(file.type)
-    
-    return (
-      <Card className="border-0 shadow-soft hover:shadow-medium transition-shadow duration-200">
-        <CardContent className="p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-purple-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-              {file.type === 'image' ? (
-                <img src={file.url} alt={file.name} className="w-full h-full object-cover rounded-lg" />
-              ) : (
-                <IconComponent className="w-6 h-6 text-primary" />
-              )}
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold text-foreground mb-1">{file.name}</h3>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <Badge variant="secondary" className={getFileTypeColor(file.type)}>
-                      {file.type}
-                    </Badge>
-                    <span>{formatFileSize(file.size)}</span>
-                    <span>{formatDate(file.created_at)}</span>
-                  </div>
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem>
-                      <Eye className="w-4 h-4 mr-2" />
-                      Preview
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Download className="w-4 h-4 mr-2" />
-                      Download
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive">
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center space-y-4">
+          <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto" />
+          <p className="text-muted-foreground">Loading media library...</p>
+        </div>
+      </div>
     )
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Media Library</h1>
-          <p className="text-muted-foreground mt-2">
-            Upload and manage your images, videos, and documents
-          </p>
-        </div>
-        <Button onClick={handleUpload} className="bg-gradient-primary hover:shadow-glow transition-all duration-200">
-          <Upload className="w-4 h-4 mr-2" />
-          Upload Media
-        </Button>
+    <div className="flex h-screen">
+      {/* Collections Sidebar */}
+      <div className="w-80 border-r bg-muted/30">
+        <MediaCollectionsSidebar
+          collections={collections}
+          selectedCollectionId={selectedCollectionId}
+          onCollectionSelect={handleCollectionSelect}
+          onCreateCollection={createCollection}
+        />
       </div>
 
-      {/* Hidden file input */}
-      <input
-        type="file"
-        ref={fileInputRef}
-        className="hidden"
-        multiple
-        accept="image/*,video/*,.pdf,.doc,.docx"
-      />
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="p-6 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground">Media Library</h1>
+              <p className="text-muted-foreground mt-2">
+                {selectedCollectionId 
+                  ? `Collection: ${collections.find(c => c.id === selectedCollectionId)?.name || 'Unknown'}`
+                  : `${filteredAndSortedFiles.length} media file${filteredAndSortedFiles.length !== 1 ? 's' : ''} total`
+                }
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+              >
+                {sortOrder === 'asc' ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />}
+              </Button>
+              <div className="flex items-center border rounded-lg p-1">
+                <Button
+                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('grid')}
+                >
+                  <Grid3X3 className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('list')}
+                >
+                  <List className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
 
-      {/* Search and Filters */}
-      <Card className="border-0 shadow-soft">
-        <CardContent className="p-6">
+          {/* Search and Filters */}
           <div className="flex gap-4 items-center flex-wrap">
             <div className="relative flex-1 min-w-64">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -280,88 +199,122 @@ export default function MediaLibrary() {
                 className="pl-10"
               />
             </div>
+            
             <Select value={selectedType} onValueChange={setSelectedType}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="File Type" />
               </SelectTrigger>
               <SelectContent>
-                {fileTypes.map(type => (
-                  <SelectItem key={type} value={type}>
-                    {type === 'all' ? 'All Types' : type.charAt(0).toUpperCase() + type.slice(1)}
-                  </SelectItem>
-                ))}
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="image">Images</SelectItem>
+                <SelectItem value="video">Videos</SelectItem>
+                <SelectItem value="application">Documents</SelectItem>
               </SelectContent>
             </Select>
-            <div className="flex items-center border rounded-lg p-1">
-              <Button
-                variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('grid')}
-              >
-                <Grid3X3 className="w-4 h-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'list' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('list')}
-              >
-                <List className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Upload Zone */}
-      <Card className="border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-colors duration-200">
-        <CardContent className="p-12 text-center">
-          <Upload className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold text-foreground mb-2">
-            Drop files here or click to upload
-          </h3>
-          <p className="text-muted-foreground mb-6">
-            Support for images, videos, and documents up to 10MB
-          </p>
-          <Button onClick={handleUpload} variant="outline">
-            <Plus className="w-4 h-4 mr-2" />
-            Choose Files
-          </Button>
-        </CardContent>
-      </Card>
+            <Select value={sortBy} onValueChange={(value: 'recent' | 'name' | 'size') => setSortBy(value)}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recent">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Recent
+                  </div>
+                </SelectItem>
+                <SelectItem value="name">
+                  <div className="flex items-center gap-2">
+                    <Type className="w-4 h-4" />
+                    Name
+                  </div>
+                </SelectItem>
+                <SelectItem value="size">
+                  <div className="flex items-center gap-2">
+                    <FileImage className="w-4 h-4" />
+                    Size
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
 
-      {/* Media Files */}
-      <div>
-        {filteredFiles.length === 0 ? (
-          <Card className="border-0 shadow-soft">
-            <CardContent className="p-12 text-center">
-              <Image className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">
-                {searchQuery || selectedType !== 'all' ? 'No files found' : 'No media files yet'}
-              </h3>
-              <p className="text-muted-foreground mb-6">
-                {searchQuery || selectedType !== 'all'
-                  ? 'Try adjusting your search or filters'
-                  : 'Upload your first media file to get started'
-                }
-              </p>
-              <Button onClick={handleUpload} className="bg-gradient-primary hover:shadow-glow transition-all duration-200">
-                <Upload className="w-4 h-4 mr-2" />
-                Upload First File
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className={viewMode === 'grid' 
-            ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
-            : 'space-y-4'
-          }>
-            {filteredFiles.map((file) => 
-              viewMode === 'grid' 
-                ? <MediaCard key={file.id} file={file} />
-                : <MediaListItem key={file.id} file={file} />
+            {allTags.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    <Hash className="w-4 h-4 mr-2" />
+                    Tags {selectedTags.length > 0 && `(${selectedTags.length})`}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end">
+                  <DropdownMenuLabel>Filter by Tags</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {allTags.map(tag => (
+                    <DropdownMenuCheckboxItem
+                      key={tag}
+                      checked={selectedTags.includes(tag)}
+                      onCheckedChange={() => handleTagToggle(tag)}
+                    >
+                      {tag}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
           </div>
-        )}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-auto p-6 space-y-6">
+          {/* Upload Zone */}
+          <MediaUploadZone 
+            onUpload={uploadFiles}
+            uploadProgress={uploadProgress}
+          />
+
+          {/* Media Files */}
+          {filteredAndSortedFiles.length === 0 ? (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <Image className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">
+                  {mediaFiles.length === 0 ? 'No media files yet' : 'No files match your filters'}
+                </h3>
+                <p className="text-muted-foreground mb-6">
+                  {mediaFiles.length === 0
+                    ? 'Upload your first media file to get started'
+                    : 'Try adjusting your search or filters'
+                  }
+                </p>
+                {mediaFiles.length === 0 && (
+                  <Button onClick={() => document.getElementById('file-upload')?.click()}>
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload First File
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <div className={viewMode === 'grid' 
+              ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6'
+              : 'space-y-4'
+            }>
+              {filteredAndSortedFiles.map((file) => (
+                <MediaCard
+                  key={file.id}
+                  file={file}
+                  getMediaUrl={getMediaUrl}
+                  onUpdate={updateMediaMetadata}
+                  onDelete={deleteMediaFile}
+                  onAddToCollection={(mediaId) => {
+                    // Add to collection logic - could open a dialog to select collection
+                    console.log('Add to collection:', mediaId)
+                  }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

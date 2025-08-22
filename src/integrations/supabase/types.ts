@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      asset_references: {
+        Row: {
+          block_id: string | null
+          created_at: string
+          document_id: string | null
+          id: string
+          media_id: string
+          metadata: Json | null
+          reference_type: string
+          updated_at: string
+        }
+        Insert: {
+          block_id?: string | null
+          created_at?: string
+          document_id?: string | null
+          id?: string
+          media_id: string
+          metadata?: Json | null
+          reference_type?: string
+          updated_at?: string
+        }
+        Update: {
+          block_id?: string | null
+          created_at?: string
+          document_id?: string | null
+          id?: string
+          media_id?: string
+          metadata?: Json | null
+          reference_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_references_media_id_fkey"
+            columns: ["media_id"]
+            isOneToOne: false
+            referencedRelation: "media"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           created_at: string
@@ -294,39 +335,190 @@ export type Database = {
       }
       media: {
         Row: {
+          alt_text: string | null
           created_at: string
+          credit: string | null
+          description: string | null
           display_name: string
           file_name: string
           file_path: string
           file_size: number
           file_type: string
+          height: number | null
           id: string
+          license: string | null
+          tags: string[] | null
           updated_at: string
+          usage_count: number | null
           user_id: string
+          width: number | null
         }
         Insert: {
+          alt_text?: string | null
           created_at?: string
+          credit?: string | null
+          description?: string | null
           display_name: string
           file_name: string
           file_path: string
           file_size: number
           file_type: string
+          height?: number | null
           id?: string
+          license?: string | null
+          tags?: string[] | null
           updated_at?: string
+          usage_count?: number | null
           user_id: string
+          width?: number | null
         }
         Update: {
+          alt_text?: string | null
           created_at?: string
+          credit?: string | null
+          description?: string | null
           display_name?: string
           file_name?: string
           file_path?: string
           file_size?: number
           file_type?: string
+          height?: number | null
           id?: string
+          license?: string | null
+          tags?: string[] | null
+          updated_at?: string
+          usage_count?: number | null
+          user_id?: string
+          width?: number | null
+        }
+        Relationships: []
+      }
+      media_collection_items: {
+        Row: {
+          added_at: string
+          collection_id: string
+          id: string
+          media_id: string
+        }
+        Insert: {
+          added_at?: string
+          collection_id: string
+          id?: string
+          media_id: string
+        }
+        Update: {
+          added_at?: string
+          collection_id?: string
+          id?: string
+          media_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_collection_items_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "media_collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_collection_items_media_id_fkey"
+            columns: ["media_id"]
+            isOneToOne: false
+            referencedRelation: "media"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_collections: {
+        Row: {
+          color: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_brand_assets: boolean | null
+          name: string
+          parent_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_brand_assets?: boolean | null
+          name: string
+          parent_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_brand_assets?: boolean | null
+          name?: string
+          parent_id?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "media_collections_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "media_collections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_versions: {
+        Row: {
+          created_at: string
+          created_by: string
+          file_name: string
+          file_path: string
+          file_size: number
+          height: number | null
+          id: string
+          media_id: string
+          version_number: number
+          width: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          file_name: string
+          file_path: string
+          file_size: number
+          height?: number | null
+          id?: string
+          media_id: string
+          version_number: number
+          width?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          height?: number | null
+          id?: string
+          media_id?: string
+          version_number?: number
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_versions_media_id_fkey"
+            columns: ["media_id"]
+            isOneToOne: false
+            referencedRelation: "media"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -498,6 +690,10 @@ export type Database = {
           path: string
         }[]
       }
+      get_next_media_version: {
+        Args: { media_uuid: string }
+        Returns: number
+      }
       get_next_version_number: {
         Args: { doc_id: string }
         Returns: number
@@ -514,6 +710,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      update_media_usage_count: {
+        Args: { media_uuid: string }
+        Returns: number
       }
     }
     Enums: {
