@@ -165,3 +165,86 @@ All colors MUST be HSL.
     background-color: var(--upload-hover-color);
   }
 }
+
+/* Table Editor Styles */
+.table-editor {
+  --table-border: hsl(var(--border));
+  --table-header-bg: hsl(var(--muted) / 0.5);
+  --table-row-hover: hsl(var(--muted) / 0.2);
+  --table-cell-padding: 0.5rem;
+}
+
+.table-editor table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table-editor th,
+.table-editor td {
+  border-right: 1px solid var(--table-border);
+  border-bottom: 1px solid var(--table-border);
+}
+
+.table-editor th:first-child,
+.table-editor td:first-child {
+  border-left: 1px solid var(--table-border);
+}
+
+.table-editor thead th {
+  border-top: 1px solid var(--table-border);
+  background-color: var(--table-header-bg);
+}
+
+.table-editor tbody tr:hover {
+  background-color: var(--table-row-hover);
+}
+
+/* Column Resizer */
+.table-editor .column-resizer {
+  position: relative;
+}
+
+.table-editor .column-resizer:hover {
+  background-color: hsl(var(--primary) / 0.1);
+}
+
+.table-editor .column-resizer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 2px;
+  height: 100%;
+  background-color: transparent;
+  transition: background-color 0.2s;
+}
+
+.table-editor .column-resizer:hover::after {
+  background-color: hsl(var(--primary));
+}
+
+/* Table Controls */
+.table-editor .table-controls {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.table-editor:hover .table-controls {
+  opacity: 1;
+}
+
+/* Cell editing */
+.table-editor .table-cell {
+  min-height: 2rem;
+  padding: var(--table-cell-padding);
+  transition: background-color 0.2s;
+}
+
+.table-editor .table-cell:hover {
+  background-color: hsl(var(--accent) / 0.1);
+}
+
+.table-editor .table-cell:focus-within {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: -2px;
+}

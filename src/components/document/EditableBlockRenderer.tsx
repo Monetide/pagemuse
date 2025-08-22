@@ -5,6 +5,7 @@ import { SlashCommand } from './SlashCommand'
 import { FormattingToolbar } from './FormattingToolbar'
 import { TextInvisibles, InvisibleMarkers } from './TextInvisibles'
 import { FigureBlock } from './FigureBlock'
+import { TableEditor } from './TableEditor'
 import { BoundarySlashCommand } from './BoundarySlashCommand'
 
 interface EditableBlockRendererProps {
@@ -467,69 +468,19 @@ export const EditableBlockRenderer = ({
         )
       
       case 'table':
-        const tableData = block.content || { headers: [], rows: [] }
         return (
-          <div className="mb-4">
-            {isTableChunk && chunkIndex! > 0 && (
-              <div className="text-xs text-accent font-medium mb-2 flex items-center gap-1">
-                <Table className="w-3 h-3" />
-                Table continued from previous page/column
-              </div>
-            )}
-            <div 
-              id={`block-${block.id}`}
-              tabIndex={0}
-              onKeyDown={handleBoundaryKeyDown}
-              className={`border border-border rounded overflow-hidden bg-background cursor-pointer hover:bg-muted/10 outline-none ${isSelected ? 'ring-2 ring-primary' : ''}`} 
-              onClick={handleClick}
-            >
-              <table className="w-full text-xs">
-                <thead className="bg-muted/50">
-                  <tr>
-                    {(tableData.headers || []).map((header: string, index: number) => (
-                      <th key={index} className="px-2 py-1 text-left font-semibold border-r border-border last:border-r-0">
-                        {header}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {(tableData.rows || []).map((row: string[], rowIndex: number) => (
-                    <tr key={rowIndex} className="border-t border-border hover:bg-muted/20">
-                      {row.map((cell, cellIndex) => (
-                        <td 
-                          key={cellIndex} 
-                          className="px-2 py-1 border-r border-border last:border-r-0 cursor-text hover:bg-accent/10 relative"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            // Enable cell editing with slash commands
-                          }}
-                        >
-                          <div 
-                            className={`min-h-[1em]`}
-                            data-placeholder="Type / for commands"
-                          >
-                            <TextInvisibles text={cell} showInvisibles={showInvisibles} />
-                          </div>
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {tableData.caption && (
-              <div 
-                className={`text-xs text-center text-muted-foreground italic mt-2 cursor-text hover:bg-accent/10 rounded px-1`}
-                data-placeholder="Type / for commands"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  // Enable caption editing
-                }}
-              >
-                <TextInvisibles text={`Table ${tableData.number || '1'}: ${tableData.caption}`} showInvisibles={showInvisibles} />
-              </div>
-            )}
+          <div
+            id={`block-${block.id}`}
+            tabIndex={0}
+            onKeyDown={handleBoundaryKeyDown}
+            className="outline-none"
+          >
+            <TableEditor
+              block={block}
+              onContentChange={onContentChange}
+              onSelect={onSelect}
+              isSelected={isSelected}
+            />
           </div>
         )
       

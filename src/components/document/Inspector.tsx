@@ -10,6 +10,7 @@ import { Block, Section, PageMaster } from '@/lib/document-model'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { FigureInspector } from './FigureInspector'
+import { TableInspector } from './TableInspector'
 
 interface InspectorProps {
   selectedBlock?: Block
@@ -103,6 +104,19 @@ export const Inspector = ({
               onNewBlock(selectedBlock.id, selectedBlock.type, selectedBlock.content, selectedBlock.metadata)
             }
           }}
+        />
+      </div>
+    )
+  }
+
+  // Handle table blocks with dedicated inspector
+  if (selectedBlock?.type === 'table') {
+    return (
+      <div className="w-80 border-l border-border bg-background p-4 overflow-y-auto">
+        <TableInspector
+          block={selectedBlock}
+          onContentChange={(blockId, content) => onBlockUpdate?.(blockId, { content })}
+          onMetadataChange={(blockId, metadata) => onBlockUpdate?.(blockId, { metadata })}
         />
       </div>
     )
@@ -244,39 +258,7 @@ export const Inspector = ({
                 </div>
               )}
 
-              {/* Remove the old figure block handling since it's now handled above */}
-
-              {selectedBlock.type === 'table' && typeof selectedBlock.content === 'object' && selectedBlock.content && (
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium">Table Properties</h4>
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs">Striped Rows</Label>
-                    <Switch
-                      checked={selectedBlock.metadata?.stripedRows || false}
-                      onCheckedChange={(checked) => handleBlockMetadataUpdate('stripedRows', checked)}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs">Compact Layout</Label>
-                    <Switch
-                      checked={selectedBlock.metadata?.compact || false}
-                      onCheckedChange={(checked) => handleBlockMetadataUpdate('compact', checked)}
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Caption</Label>
-                    <Textarea
-                      value={selectedBlock.content.caption || ''}
-                      onChange={(e) => handleBlockContentUpdate({
-                        ...selectedBlock.content,
-                        caption: e.target.value
-                      })}
-                      className="text-xs min-h-[60px]"
-                      placeholder="Add a table caption..."
-                    />
-                  </div>
-                </div>
-              )}
+              {/* Remove the old figure and table block handling since they're now handled above */}
 
               {selectedBlock.type === 'quote' && (
                 <div className="space-y-3">
