@@ -47,6 +47,10 @@ All colors MUST be HSL.
     --destructive: 0 85% 60%;
     --destructive-foreground: 0 0% 100%;
 
+    /* Info state */
+    --info: 210 90% 55%;
+    --info-foreground: 0 0% 100%;
+
     /* Border and input styling */
     --border: 215 25% 90%;
     --input: 215 25% 94%;
@@ -72,14 +76,119 @@ All colors MUST be HSL.
     --shadow-glow: 0 0 40px hsl(255 85% 65% / 0.15);
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
+    /* TYPOGRAPHY TOKENS */
+    --font-size-xs: 0.75rem;        /* 12px */
+    --font-size-sm: 0.875rem;       /* 14px */
+    --font-size-base: 1rem;         /* 16px */
+    --font-size-lg: 1.125rem;       /* 18px */
+    --font-size-xl: 1.25rem;        /* 20px */
+    --font-size-2xl: 1.5rem;        /* 24px */
+    --font-size-3xl: 1.875rem;      /* 30px */
+    --font-size-4xl: 2.25rem;       /* 36px */
+    --font-size-5xl: 3rem;          /* 48px */
+    
+    --line-height-tight: 1.25;
+    --line-height-snug: 1.375;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.625;
+    --line-height-loose: 2;
+
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    /* DOCUMENT LAYOUT TOKENS */
+    --document-max-width: 45rem;      /* Optimal reading width ~720px */
+    --document-wide-max-width: 65rem; /* Wide content ~1040px */
+    --document-full-max-width: 85rem; /* Full width ~1360px */
+    
+    --line-length-optimal: 45ch;      /* Optimal 45-75 characters */
+    --line-length-comfortable: 65ch;  /* Comfortable reading */
+    --line-length-maximum: 75ch;      /* Maximum before readability drops */
+
+    /* SPACING TOKENS */
+    --space-xs: 0.25rem;    /* 4px */
+    --space-sm: 0.5rem;     /* 8px */
+    --space-md: 1rem;       /* 16px */
+    --space-lg: 1.5rem;     /* 24px */
+    --space-xl: 2rem;       /* 32px */
+    --space-2xl: 2.5rem;    /* 40px */
+    --space-3xl: 3rem;      /* 48px */
+    --space-4xl: 4rem;      /* 64px */
+    --space-5xl: 6rem;      /* 96px */
+
+    /* DOCUMENT OBJECT STYLES */
+    
     /* Figure Block Styles */
-    --figure-margin-top: 1rem;
-    --figure-margin-bottom: 1.5rem;
-    --figure-caption-font-size: 0.875rem;
-    --figure-caption-line-height: 1.25rem;
+    --figure-margin-top: var(--space-lg);
+    --figure-margin-bottom: var(--space-2xl);
+    --figure-caption-font-size: var(--font-size-sm);
+    --figure-caption-line-height: var(--line-height-normal);
     --figure-caption-color: hsl(var(--muted-foreground));
-    --figure-border-radius: 0.375rem;
-    --figure-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --figure-border-radius: var(--radius);
+    --figure-shadow: var(--shadow-soft);
+    --figure-max-width: var(--document-max-width);
+
+    /* Table Styles */
+    --table-border-color: hsl(var(--border));
+    --table-header-bg: hsl(var(--muted) / 0.5);
+    --table-row-hover: hsl(var(--muted) / 0.3);
+    --table-cell-padding: var(--space-sm) var(--space-md);
+    --table-font-size: var(--font-size-sm);
+    --table-line-height: var(--line-height-normal);
+    --table-margin: var(--space-lg) 0 var(--space-2xl) 0;
+    --table-border-radius: var(--radius);
+    --table-shadow: var(--shadow-soft);
+
+    /* Callout/Admonition Styles */
+    --callout-padding: var(--space-md);
+    --callout-margin: var(--space-lg) 0;
+    --callout-border-radius: var(--radius);
+    --callout-border-width: 2px;
+    --callout-font-size: var(--font-size-base);
+    --callout-line-height: var(--line-height-relaxed);
+    
+    /* Callout variants */
+    --callout-note-bg: hsl(var(--info) / 0.05);
+    --callout-note-border: hsl(var(--info));
+    --callout-note-icon: hsl(var(--info));
+    
+    --callout-tip-bg: hsl(var(--success) / 0.05);
+    --callout-tip-border: hsl(var(--success));
+    --callout-tip-icon: hsl(var(--success));
+    
+    --callout-warning-bg: hsl(var(--warning) / 0.05);
+    --callout-warning-border: hsl(var(--warning));
+    --callout-warning-icon: hsl(var(--warning));
+    
+    --callout-danger-bg: hsl(var(--destructive) / 0.05);
+    --callout-danger-border: hsl(var(--destructive));
+    --callout-danger-icon: hsl(var(--destructive));
+
+    /* Heading Styles */
+    --heading-margin-top: var(--space-2xl);
+    --heading-margin-bottom: var(--space-lg);
+    --heading-font-weight: var(--font-weight-bold);
+    --heading-line-height: var(--line-height-tight);
+    
+    --h1-font-size: var(--font-size-4xl);
+    --h2-font-size: var(--font-size-3xl);
+    --h3-font-size: var(--font-size-2xl);
+    --h4-font-size: var(--font-size-xl);
+    --h5-font-size: var(--font-size-lg);
+    --h6-font-size: var(--font-size-base);
+
+    /* Paragraph Styles */
+    --paragraph-margin-bottom: var(--space-lg);
+    --paragraph-font-size: var(--font-size-base);
+    --paragraph-line-height: var(--line-height-relaxed);
+    --paragraph-max-width: var(--line-length-optimal);
+
+    /* List Styles */
+    --list-margin: var(--space-lg) 0;
+    --list-item-margin-bottom: var(--space-sm);
+    --list-padding-left: var(--space-xl);
 
     /* Media Upload Styles */
     --upload-border-color: hsl(var(--border));
@@ -88,41 +197,61 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 222 84% 5%;
     --foreground: 210 40% 98%;
 
-    --card: 222.2 84% 4.9%;
+    --card: 222 84% 5%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    --popover: 222 84% 5%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 255 85% 65%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 255 100% 80%;
 
-    --secondary: 217.2 32.6% 17.5%;
+    --secondary: 217 33% 17%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 217.2 32.6% 17.5%;
+    --accent: 217 33% 17%;
     --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --success: 142 85% 45%;
+    --success-foreground: 0 0% 100%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --warning: 38 95% 55%;
+    --warning-foreground: 0 0% 100%;
+
+    --destructive: 0 85% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --info: 210 90% 55%;
+    --info-foreground: 0 0% 100%;
+
+    --border: 217 33% 17%;
+    --input: 217 33% 17%;
+    --ring: 255 85% 65%;
+
+    --sidebar-background: 240 6% 10%;
+    --sidebar-foreground: 240 5% 96%;
+    --sidebar-primary: 255 85% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 240 4% 16%;
+    --sidebar-accent-foreground: 240 5% 96%;
+    --sidebar-border: 240 4% 16%;
+    --sidebar-ring: 255 85% 65%;
+
+    /* Dark theme adjustments for document objects */
+    --callout-note-bg: hsl(var(--info) / 0.1);
+    --callout-tip-bg: hsl(var(--success) / 0.1);
+    --callout-warning-bg: hsl(var(--warning) / 0.1);
+    --callout-danger-bg: hsl(var(--destructive) / 0.1);
+    
+    --figure-shadow: 0 4px 20px -4px hsl(0 0% 0% / 0.25);
+    --table-shadow: 0 4px 20px -4px hsl(0 0% 0% / 0.25);
   }
 }
 
@@ -170,12 +299,247 @@ All colors MUST be HSL.
   }
 }
 
+/* DOCUMENT OBJECT STYLES */
+
+/* Document Layout Classes */
+.document-container {
+  max-width: var(--document-max-width);
+  margin: 0 auto;
+  padding: var(--space-lg);
+  line-height: var(--line-height-relaxed);
+}
+
+.document-wide {
+  max-width: var(--document-wide-max-width);
+}
+
+.document-full {
+  max-width: var(--document-full-max-width);
+}
+
+/* Typography Styles */
+.document-content h1 {
+  font-size: var(--h1-font-size);
+  font-weight: var(--heading-font-weight);
+  line-height: var(--heading-line-height);
+  margin-top: var(--heading-margin-top);
+  margin-bottom: var(--heading-margin-bottom);
+}
+
+.document-content h2 {
+  font-size: var(--h2-font-size);
+  font-weight: var(--heading-font-weight);
+  line-height: var(--heading-line-height);
+  margin-top: var(--heading-margin-top);
+  margin-bottom: var(--heading-margin-bottom);
+}
+
+.document-content h3 {
+  font-size: var(--h3-font-size);
+  font-weight: var(--heading-font-weight);
+  line-height: var(--heading-line-height);
+  margin-top: var(--heading-margin-top);
+  margin-bottom: var(--heading-margin-bottom);
+}
+
+.document-content h4 {
+  font-size: var(--h4-font-size);
+  font-weight: var(--heading-font-weight);
+  line-height: var(--heading-line-height);
+  margin-top: var(--heading-margin-top);
+  margin-bottom: var(--heading-margin-bottom);
+}
+
+.document-content h5 {
+  font-size: var(--h5-font-size);
+  font-weight: var(--heading-font-weight);
+  line-height: var(--heading-line-height);
+  margin-top: var(--heading-margin-top);
+  margin-bottom: var(--heading-margin-bottom);
+}
+
+.document-content h6 {
+  font-size: var(--h6-font-size);
+  font-weight: var(--heading-font-weight);
+  line-height: var(--heading-line-height);
+  margin-top: var(--heading-margin-top);
+  margin-bottom: var(--heading-margin-bottom);
+}
+
+.document-content p {
+  margin-bottom: var(--paragraph-margin-bottom);
+  font-size: var(--paragraph-font-size);
+  line-height: var(--paragraph-line-height);
+  max-width: var(--paragraph-max-width);
+}
+
+.document-content ul,
+.document-content ol {
+  margin: var(--list-margin);
+  padding-left: var(--list-padding-left);
+}
+
+.document-content li {
+  margin-bottom: var(--list-item-margin-bottom);
+}
+
+/* Figure Block Styles */
+.document-figure {
+  margin: var(--figure-margin-top) 0 var(--figure-margin-bottom) 0;
+  border-radius: var(--figure-border-radius);
+  box-shadow: var(--figure-shadow);
+  max-width: var(--figure-max-width);
+}
+
+.document-figure img {
+  border-radius: var(--figure-border-radius);
+  max-width: 100%;
+  height: auto;
+}
+
+.document-figure figcaption {
+  font-size: var(--figure-caption-font-size);
+  line-height: var(--figure-caption-line-height);
+  color: var(--figure-caption-color);
+  text-align: center;
+  padding: var(--space-sm) var(--space-md);
+}
+
 /* Table Editor Styles */
+.document-table {
+  margin: var(--table-margin);
+  border-radius: var(--table-border-radius);
+  box-shadow: var(--table-shadow);
+  overflow: hidden;
+  max-width: 100%;
+  border: 1px solid var(--table-border-color);
+}
+
+.document-table table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--table-font-size);
+  line-height: var(--table-line-height);
+}
+
+.document-table th {
+  background-color: var(--table-header-bg);
+  padding: var(--table-cell-padding);
+  border-bottom: 1px solid var(--table-border-color);
+  border-right: 1px solid var(--table-border-color);
+  font-weight: var(--font-weight-semibold);
+  text-align: left;
+}
+
+.document-table th:last-child {
+  border-right: none;
+}
+
+.document-table td {
+  padding: var(--table-cell-padding);
+  border-bottom: 1px solid var(--table-border-color);
+  border-right: 1px solid var(--table-border-color);
+}
+
+.document-table td:last-child {
+  border-right: none;
+}
+
+.document-table tr:hover {
+  background-color: var(--table-row-hover);
+}
+
+.document-table tr:last-child td {
+  border-bottom: none;
+}
+
+.document-table caption {
+  padding: var(--space-sm);
+  font-size: var(--font-size-sm);
+  color: var(--figure-caption-color);
+  text-align: center;
+  background-color: var(--table-header-bg);
+  border-bottom: 1px solid var(--table-border-color);
+}
+
+/* Callout/Admonition Styles */
+.callout {
+  margin: var(--callout-margin);
+  padding: var(--callout-padding);
+  border-radius: var(--callout-border-radius);
+  border-left: var(--callout-border-width) solid;
+  font-size: var(--callout-font-size);
+  line-height: var(--callout-line-height);
+  position: relative;
+}
+
+.callout-note {
+  background-color: var(--callout-note-bg);
+  border-color: var(--callout-note-border);
+}
+
+.callout-tip {
+  background-color: var(--callout-tip-bg);
+  border-color: var(--callout-tip-border);
+}
+
+.callout-warning {
+  background-color: var(--callout-warning-bg);
+  border-color: var(--callout-warning-border);
+}
+
+.callout-danger {
+  background-color: var(--callout-danger-bg);
+  border-color: var(--callout-danger-border);
+}
+
+.callout-title {
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--space-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.callout-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.callout-note .callout-icon {
+  color: var(--callout-note-icon);
+}
+
+.callout-tip .callout-icon {
+  color: var(--callout-tip-icon);
+}
+
+.callout-warning .callout-icon {
+  color: var(--callout-warning-icon);
+}
+
+.callout-danger .callout-icon {
+  color: var(--callout-danger-icon);
+}
+
+/* Line Length Optimization */
+.optimal-reading {
+  max-width: var(--line-length-optimal);
+}
+
+.comfortable-reading {
+  max-width: var(--line-length-comfortable);
+}
+
+.maximum-reading {
+  max-width: var(--line-length-maximum);
+}
+
+/* Table Editor Interactive Styles */
 .table-editor {
-  --table-border: hsl(var(--border));
-  --table-header-bg: hsl(var(--muted) / 0.5);
-  --table-row-hover: hsl(var(--muted) / 0.2);
-  --table-cell-padding: 0.5rem;
+  border: 1px solid var(--table-border-color);
+  border-radius: var(--table-border-radius);
 }
 
 .table-editor table {
@@ -185,22 +549,31 @@ All colors MUST be HSL.
 
 .table-editor th,
 .table-editor td {
-  border-right: 1px solid var(--table-border);
-  border-bottom: 1px solid var(--table-border);
+  border-right: 1px solid var(--table-border-color);
+  border-bottom: 1px solid var(--table-border-color);
 }
 
 .table-editor th:first-child,
 .table-editor td:first-child {
-  border-left: 1px solid var(--table-border);
+  border-left: none;
+}
+
+.table-editor th:last-child,
+.table-editor td:last-child {
+  border-right: none;
 }
 
 .table-editor thead th {
-  border-top: 1px solid var(--table-border);
+  border-top: none;
   background-color: var(--table-header-bg);
 }
 
 .table-editor tbody tr:hover {
   background-color: var(--table-row-hover);
+}
+
+.table-editor tbody tr:last-child td {
+  border-bottom: none;
 }
 
 /* Column Resizer */

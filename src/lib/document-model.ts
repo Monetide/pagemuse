@@ -18,7 +18,7 @@ export interface Theme {
 
 export interface Block {
   id: string
-  type: 'heading' | 'paragraph' | 'ordered-list' | 'unordered-list' | 'quote' | 'divider' | 'spacer' | 'figure' | 'table' | 'chart' | 'cross-reference'
+  type: 'heading' | 'paragraph' | 'ordered-list' | 'unordered-list' | 'quote' | 'divider' | 'spacer' | 'figure' | 'table' | 'chart' | 'cross-reference' | 'callout'
   content: any
   styles?: Style[]
   metadata?: Record<string, any>
@@ -160,6 +160,13 @@ export const getDefaultPaginationRules = (type: Block['type']): PaginationRules 
       return {
         breakAvoid: true, // Cross-references should not be broken
         keepWithNext: false
+      }
+    case 'callout':
+      return {
+        breakAvoid: true, // Callouts prefer to stay together
+        keepTogether: true,
+        minOrphans: 2,
+        minWidows: 2
       }
     default:
       return {}

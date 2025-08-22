@@ -7,6 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { useAuth } from '@/hooks/useAuth'
 import { User, LogOut, Settings, Shield } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
@@ -62,7 +63,9 @@ export function AppHeader() {
         </div>
 
         {/* User Menu */}
-        <DropdownMenu>
+        <div className="flex items-center space-x-4">
+          <ThemeToggle />
+          <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
               <Avatar className="h-8 w-8">
@@ -109,6 +112,7 @@ export function AppHeader() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       </div>
     </header>
   )
