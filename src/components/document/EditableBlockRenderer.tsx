@@ -45,7 +45,8 @@ export const EditableBlockRenderer = ({
   index
 }: EditableBlockRendererProps) => {
   const [isEditing, setIsEditing] = useState(false)
-  const [editContent, setEditContent] = useState(block.content)
+const initialText = typeof block.content === 'string' ? block.content : (block.content as any)?.text || ''
+const [editContent, setEditContent] = useState(initialText)
   const [slashCommand, setSlashCommand] = useState<{
     visible: boolean
     query: string
@@ -319,7 +320,7 @@ export const EditableBlockRenderer = ({
   const renderEditableContent = () => {
     switch (block.type) {
       case 'heading':
-        const level = block.metadata?.level || 1
+        const level = (block.metadata?.level ?? ((typeof block.content === 'object' && (block.content as any)?.level) || 1))
         const HeadingTag = `h${level}` as keyof JSX.IntrinsicElements
         const headingClass = level === 1 ? 'text-xl font-bold' : level === 2 ? 'text-lg font-semibold' : 'text-base font-medium'
         
@@ -365,7 +366,7 @@ export const EditableBlockRenderer = ({
               tabIndex={0}
             >
               <TextInvisibles
-                text={block.content || ''}
+                text={typeof block.content === 'string' ? block.content : (block.content as any)?.text || ''}
                 showInvisibles={showInvisibles}
               />
             <InvisibleMarkers
@@ -405,7 +406,7 @@ export const EditableBlockRenderer = ({
             aria-label="Paragraph"
           >
             <TextInvisibles
-              text={block.content || ''}
+              text={typeof block.content === 'string' ? block.content : (block.content as any)?.text || ''}
               showInvisibles={showInvisibles}
             />
             <InvisibleMarkers
@@ -445,7 +446,7 @@ export const EditableBlockRenderer = ({
             onClick={handleClick}
           >
             "<TextInvisibles
-              text={block.content || ''}
+              text={typeof block.content === 'string' ? block.content : (block.content as any)?.text || ''}
               showInvisibles={showInvisibles}
             />"
             <InvisibleMarkers
@@ -456,7 +457,11 @@ export const EditableBlockRenderer = ({
         )
       
       case 'ordered-list':
-        const orderedItems = Array.isArray(block.content) ? block.content : [block.content]
+        const orderedItems = Array.isArray(block.content)
+          ? block.content
+          : (Array.isArray((block.content as any)?.items)
+            ? (block.content as any).items
+            : [typeof block.content === 'string' ? block.content : ''])
         return (
           <ol 
             className={`list-decimal list-inside text-sm text-foreground space-y-1 mb-3 ml-2 cursor-pointer hover:bg-accent/10 rounded px-1 ${isSelected ? 'ring-2 ring-primary' : ''}`} 
@@ -497,7 +502,11 @@ export const EditableBlockRenderer = ({
         )
       
       case 'unordered-list':
-        const unorderedItems = Array.isArray(block.content) ? block.content : [block.content]
+        const unorderedItems = Array.isArray(block.content)
+          ? block.content
+          : (Array.isArray((block.content as any)?.items)
+            ? (block.content as any).items
+            : [typeof block.content === 'string' ? block.content : ''])
         return (
           <ul 
             className={`list-disc list-inside text-sm text-foreground space-y-1 mb-3 ml-2 cursor-pointer hover:bg-accent/10 rounded px-1 ${isSelected ? 'ring-2 ring-primary' : ''}`} 
