@@ -23,6 +23,10 @@ const READING_WIDTH_CLASSES = {
   full: 'w-full'
 } as const
 
+/**
+ * DocumentRenderer - Renders blocks from flows only
+ * Enforces Flow Ownership - only renders blocks that come from flows, never directly from sections
+ */
 export const DocumentRenderer = ({
   blocks,
   isEditing = false,

@@ -1,4 +1,4 @@
-import { SemanticDocument, Block, Section } from './document-model'
+import { SemanticDocument, Block, Section, createFlow, addBlockToFlow } from './document-model'
 
 export type ValidationSeverity = 'error' | 'warning' | 'info'
 
@@ -49,7 +49,8 @@ export const defaultValidationConfig: ValidationConfig = {
     'missing-alt-text': { enabled: true, severity: 'error' },
     'broken-cross-reference': { enabled: true, severity: 'error' },
     'overflowing-text': { enabled: true, severity: 'error' },
-    'long-heading': { enabled: true, severity: 'info' }
+    'long-heading': { enabled: true, severity: 'info' },
+    'block-outside-flow': { enabled: true, severity: 'error' }
   },
   thresholds: {
     longHeadingLength: 85,
@@ -491,6 +492,75 @@ const longHeadingRule: ValidationRule = {
   }
 }
 
+const blockOutsideFlowRule: ValidationRule = {
+  id: 'block-outside-flow',
+  name: 'Block Outside Flow',
+  severity: 'error',
+  enabled: true,
+  validate: (document) => {
+    const issues: ValidationIssue[] = []
+    
+    document.sections.forEach(section => {
+      // Check if any section has blocks property (which shouldn't exist)
+      if ((section as any).blocks && Array.isArray((section as any).blocks) && (section as any).blocks.length > 0) {
+        (section as any).blocks.forEach((block: Block) => {
+          issues.push({
+            id: `orphaned-block-${block.id}`,
+            ruleId: 'block-outside-flow',
+            severity: 'error',
+            blockId: block.id,
+            sectionId: section.id,
+            message: 'Block exists outside of a flow',
+            description: 'All content blocks must be contained within a flow. This block will be moved to the section\'s main flow.',
+            canFix: true,
+            fixLabel: 'Move to Main flow',
+            ignored: false,
+            snippet: typeof block.content === 'string' ? block.content.substring(0, 50) : block.type
+          })
+        })
+      }
+    })
+    
+    return issues
+  },
+  fix: (document, issue) => {
+    // Move orphaned blocks to the main flow of their section
+    const updatedDocument = { ...document }
+    updatedDocument.sections = document.sections.map(section => {
+      if (section.id === issue.sectionId && (section as any).blocks) {
+        const orphanedBlocks = (section as any).blocks as Block[]
+        
+        // Find or create main flow
+        let mainFlow = section.flows.find(f => f.name === 'Main' || f.name === 'Main Content')
+        if (!mainFlow) {
+          mainFlow = createFlow('Main', 'linear', 0)
+        }
+        
+        // Add orphaned blocks to main flow
+        let updatedFlow = mainFlow
+        orphanedBlocks.forEach(block => {
+          updatedFlow = addBlockToFlow(updatedFlow, block)
+        })
+        
+        // Update section to include the main flow and remove orphaned blocks
+        const updatedFlows = section.flows.some(f => f.id === updatedFlow.id)
+          ? section.flows.map(f => f.id === updatedFlow.id ? updatedFlow : f)
+          : [...section.flows, updatedFlow]
+        
+        const cleanSection = { ...section }
+        delete (cleanSection as any).blocks
+        
+        return {
+          ...cleanSection,
+          flows: updatedFlows
+        }
+      }
+      return section
+    })
+    return updatedDocument
+  }
+}
+
 export const validationRules: ValidationRule[] = [
   strandedHeadingRule,
   figureWithoutCaptionRule,
@@ -498,6 +568,7 @@ export const validationRules: ValidationRule[] = [
   missingAltTextRule,
   orphanedCalloutRule,
   brokenCrossReferenceRule,
+  blockOutsideFlowRule,
   longHeadingRule
 ]
 

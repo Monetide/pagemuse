@@ -14,6 +14,7 @@ import {
 } from '@/lib/document-model'
 import { useDocumentPersistence } from '@/hooks/useDocumentPersistence'
 import { DocumentVersion } from '@/hooks/useDocumentVersions'
+import { autoMigrateDocument, ensurePrimaryFlow, getPrimaryFlow } from '@/lib/document-migration'
 
 export const useDocumentModel = () => {
   const [document, setDocument] = useState<SemanticDocument | null>(null)
@@ -43,7 +44,13 @@ export const useDocumentModel = () => {
   const loadDocument = useCallback(async (documentId: string) => {
     const doc = await persistence.loadDocument(documentId)
     if (doc) {
-      setDocument(doc)
+      // Auto-migrate document to ensure flow ownership compliance
+      const migrationResult = autoMigrateDocument(doc)
+      if (migrationResult.changesMade) {
+        console.log('Document migrated:', migrationResult.migrationLog)
+      }
+      setDocument(migrationResult.document)
+      return migrationResult.document
     }
     return doc
   }, [persistence])
@@ -52,10 +59,14 @@ export const useDocumentModel = () => {
     if (!document) return null
     
     const section = createSection(name, order ?? document.sections.length)
-    const updatedDoc = addSectionToDocument(document, section)
+    
+    // Ensure section has a primary flow
+    const { section: sectionWithFlow } = ensurePrimaryFlow(section)
+    
+    const updatedDoc = addSectionToDocument(document, sectionWithFlow)
     setDocument(updatedDoc)
     triggerAutoSave(updatedDoc)
-    return section
+    return sectionWithFlow
   }, [document, triggerAutoSave])
 
   const addFlow = useCallback((sectionId: string, name: string, type: Flow['type'] = 'linear') => {
@@ -110,8 +121,13 @@ export const useDocumentModel = () => {
   }, [document, triggerAutoSave])
 
   const updateDocument = useCallback((updatedDoc: SemanticDocument) => {
-    setDocument(updatedDoc)
-    triggerAutoSave(updatedDoc)
+    // Auto-migrate on any document update to ensure compliance
+    const migrationResult = autoMigrateDocument(updatedDoc)
+    if (migrationResult.changesMade) {
+      console.log('Document auto-migrated on update:', migrationResult.migrationLog)
+    }
+    setDocument(migrationResult.document)
+    triggerAutoSave(migrationResult.document)
   }, [triggerAutoSave])
 
   const updateTitle = useCallback(async (newTitle: string) => {
@@ -206,7 +222,7 @@ export const useDocumentModel = () => {
             flows: targetSection.flows.map(f => f.id === existingFlow.id ? updatedFlow : f)
           }
         } else {
-          const defaultFlow = createFlow('Main Content', 'linear', 0)
+          const defaultFlow = createFlow('Main', 'linear', 0)
           const flowWithBlock = addBlockToFlow(defaultFlow, newBlock)
           updatedSection = {
             ...targetSection,
@@ -226,7 +242,7 @@ export const useDocumentModel = () => {
       } else {
         console.log('No sections found, creating default section and flow...')
         const defaultSection = createSection('Main Section', 0)
-        const defaultFlow = createFlow('Main Content', 'linear', 0)
+        const defaultFlow = createFlow('Main', 'linear', 0)
         const sectionWithFlow = addFlowToSection(defaultSection, defaultFlow)
         const newBlock = createBlock(type, content, 0)
         if (cleanMetadata && Object.keys(cleanMetadata).length > 0) {
@@ -325,6 +341,10 @@ export const useDocumentModel = () => {
     deleteBlock,
     addBlockAfter,
     revertToVersion,
-    persistence
+    persistence,
+    // Helper function to add blocks to the appropriate flow
+    getPrimaryFlow,
+    // Migration utilities
+    ensurePrimaryFlow
   }
 }
