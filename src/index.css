@@ -131,6 +131,37 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  /* Placeholder text styling */
+  .empty\\:before\\:content-\\[attr\\(data-placeholder\\)\\]:empty:before {
+    content: attr(data-placeholder);
+  }
+  
+  .empty\\:before\\:text-muted-foreground\\/50:empty:before {
+    color: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  /* Figure block styling */
+  figure {
+    margin-top: var(--figure-margin-top);
+    margin-bottom: var(--figure-margin-bottom);
+  }
+  
+  figcaption {
+    font-size: var(--figure-caption-font-size);
+    line-height: var(--figure-caption-line-height);
+    color: var(--figure-caption-color);
+  }
+  
+  /* Upload zone styling */
+  .upload-zone {
+    border-color: var(--upload-border-color);
+    background-color: var(--upload-drop-zone-bg);
+  }
+  
+  .upload-zone:hover {
+    background-color: var(--upload-hover-color);
+  }
+
   body {
     @apply bg-background text-foreground;
   }

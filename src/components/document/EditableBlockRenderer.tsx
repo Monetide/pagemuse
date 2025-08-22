@@ -215,7 +215,8 @@ export const EditableBlockRenderer = ({
             ref={textRef}
             contentEditable
             suppressContentEditableWarning
-            className={`${headingClass} text-foreground mb-2 outline-none focus:ring-2 focus:ring-primary rounded px-1`}
+            className={`${headingClass} text-foreground mb-2 outline-none focus:ring-2 focus:ring-primary rounded px-1 empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/50`}
+            data-placeholder="Type / for commands"
             onInput={(e) => handleContentEdit(e.currentTarget.textContent || '')}
             onKeyDown={handleKeyDown}
             onBlur={handleBlur}
@@ -226,11 +227,14 @@ export const EditableBlockRenderer = ({
           </div>
         ) : (
           <HeadingTag 
-            className={`${headingClass} text-foreground mb-2 cursor-text hover:bg-accent/10 rounded px-1 ${isSelected ? 'ring-2 ring-primary' : ''}`}
+            className={`${headingClass} text-foreground mb-2 cursor-text hover:bg-accent/10 rounded px-1 ${isSelected ? 'ring-2 ring-primary' : ''} ${
+              !block.content ? 'empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/50' : ''
+            }`}
+            data-placeholder="Type / for commands"
             onClick={handleClick}
           >
             <TextInvisibles
-              text={block.content || 'Click to edit heading...'}
+              text={block.content || ''}
               showInvisibles={showInvisibles}
             />
             <InvisibleMarkers
@@ -246,7 +250,8 @@ export const EditableBlockRenderer = ({
             ref={textRef}
             contentEditable
             suppressContentEditableWarning
-            className="text-sm text-foreground leading-relaxed mb-3 outline-none focus:ring-2 focus:ring-primary rounded px-1 min-h-[1.2em]"
+            className="text-sm text-foreground leading-relaxed mb-3 outline-none focus:ring-2 focus:ring-primary rounded px-1 min-h-[1.2em] empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/50"
+            data-placeholder="Type / for commands"
             onInput={(e) => handleContentEdit(e.currentTarget.textContent || '')}
               onKeyDown={handleKeyDown}
               onBlur={handleBlur}
@@ -257,11 +262,14 @@ export const EditableBlockRenderer = ({
           </div>
         ) : (
           <p 
-            className={`text-sm text-foreground leading-relaxed mb-3 cursor-text hover:bg-accent/10 rounded px-1 min-h-[1.2em] ${isSelected ? 'ring-2 ring-primary' : ''}`}
+            className={`text-sm text-foreground leading-relaxed mb-3 cursor-text hover:bg-accent/10 rounded px-1 min-h-[1.2em] ${isSelected ? 'ring-2 ring-primary' : ''} ${
+              !block.content ? 'empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/50' : ''
+            }`}
+            data-placeholder="Type / for commands"
             onClick={handleClick}
           >
             <TextInvisibles
-              text={block.content || 'Click to edit paragraph...'}
+              text={block.content || ''}
               showInvisibles={showInvisibles}
             />
             <InvisibleMarkers
@@ -282,7 +290,8 @@ export const EditableBlockRenderer = ({
               ref={textRef}
               contentEditable
               suppressContentEditableWarning
-              className="text-muted-foreground outline-none focus:ring-2 focus:ring-primary rounded px-1 min-h-[1.2em]"
+              className="text-muted-foreground outline-none focus:ring-2 focus:ring-primary rounded px-1 min-h-[1.2em] empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/50"
+              data-placeholder="Type / for commands"
               onInput={(e) => handleContentEdit(e.currentTarget.textContent || '')}
             onKeyDown={handleKeyDown}
             onBlur={handleBlur}
@@ -294,11 +303,14 @@ export const EditableBlockRenderer = ({
           </blockquote>
         ) : (
           <blockquote 
-            className={`border-l-4 border-accent pl-4 py-2 text-sm text-muted-foreground italic mb-3 bg-muted/20 cursor-text hover:bg-muted/30 rounded-r ${isSelected ? 'ring-2 ring-primary' : ''}`}
+            className={`border-l-4 border-accent pl-4 py-2 text-sm text-muted-foreground italic mb-3 bg-muted/20 cursor-text hover:bg-muted/30 rounded-r ${isSelected ? 'ring-2 ring-primary' : ''} ${
+              !block.content ? 'empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/50' : ''
+            }`}
+            data-placeholder="Type / for commands"
             onClick={handleClick}
           >
             "<TextInvisibles
-              text={block.content || 'Click to edit quote...'}
+              text={block.content || ''}
               showInvisibles={showInvisibles}
             />"
             <InvisibleMarkers
@@ -313,7 +325,29 @@ export const EditableBlockRenderer = ({
         return (
           <ol className={`list-decimal list-inside text-sm text-foreground space-y-1 mb-3 ml-2 cursor-pointer hover:bg-accent/10 rounded px-1 ${isSelected ? 'ring-2 ring-primary' : ''}`} onClick={handleClick}>
             {orderedItems.map((item, index) => (
-              <li key={index}>{item}</li>
+              <li key={index} className="relative">
+                {isEditing && index === 0 ? (
+                  <div
+                    ref={textRef}
+                    contentEditable
+                    suppressContentEditableWarning
+                    className="inline outline-none focus:ring-2 focus:ring-primary rounded px-1 empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/50"
+                    data-placeholder="Type / for commands"
+                    onInput={(e) => {
+                      const newItems = [...orderedItems]
+                      newItems[0] = e.currentTarget.textContent || ''
+                      onContentChange?.(block.id, newItems)
+                    }}
+                    onKeyDown={handleKeyDown}
+                    onBlur={handleBlur}
+                    autoFocus
+                  >
+                    {item || ''}
+                  </div>
+                ) : (
+                  <TextInvisibles text={item || ''} showInvisibles={showInvisibles} />
+                )}
+              </li>
             ))}
           </ol>
         )
@@ -323,7 +357,29 @@ export const EditableBlockRenderer = ({
         return (
           <ul className={`list-disc list-inside text-sm text-foreground space-y-1 mb-3 ml-2 cursor-pointer hover:bg-accent/10 rounded px-1 ${isSelected ? 'ring-2 ring-primary' : ''}`} onClick={handleClick}>
             {unorderedItems.map((item, index) => (
-              <li key={index}>{item}</li>
+              <li key={index} className="relative">
+                {isEditing && index === 0 ? (
+                  <div
+                    ref={textRef}
+                    contentEditable
+                    suppressContentEditableWarning
+                    className="inline outline-none focus:ring-2 focus:ring-primary rounded px-1 empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/50"
+                    data-placeholder="Type / for commands"
+                    onInput={(e) => {
+                      const newItems = [...unorderedItems]
+                      newItems[0] = e.currentTarget.textContent || ''
+                      onContentChange?.(block.id, newItems)
+                    }}
+                    onKeyDown={handleKeyDown}
+                    onBlur={handleBlur}
+                    autoFocus
+                  >
+                    {item || ''}
+                  </div>
+                ) : (
+                  <TextInvisibles text={item || ''} showInvisibles={showInvisibles} />
+                )}
+              </li>
             ))}
           </ul>
         )
@@ -367,8 +423,22 @@ export const EditableBlockRenderer = ({
                   {(tableData.rows || []).map((row: string[], rowIndex: number) => (
                     <tr key={rowIndex} className="border-t border-border hover:bg-muted/20">
                       {row.map((cell, cellIndex) => (
-                        <td key={cellIndex} className="px-2 py-1 border-r border-border last:border-r-0">
-                          {cell}
+                        <td 
+                          key={cellIndex} 
+                          className="px-2 py-1 border-r border-border last:border-r-0 cursor-text hover:bg-accent/10 relative"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            // Enable cell editing with slash commands
+                          }}
+                        >
+                          <div 
+                            className={`min-h-[1em] ${
+                              !cell ? 'empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/50' : ''
+                            }`}
+                            data-placeholder="Type / for commands"
+                          >
+                            <TextInvisibles text={cell} showInvisibles={showInvisibles} />
+                          </div>
                         </td>
                       ))}
                     </tr>
@@ -377,8 +447,17 @@ export const EditableBlockRenderer = ({
               </table>
             </div>
             {tableData.caption && (
-              <div className="text-xs text-center text-muted-foreground italic mt-2">
-                <strong>Table {tableData.number || '1'}:</strong> {tableData.caption}
+              <div 
+                className={`text-xs text-center text-muted-foreground italic mt-2 cursor-text hover:bg-accent/10 rounded px-1 ${
+                  !tableData.caption ? 'empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/50' : ''
+                }`}
+                data-placeholder="Type / for commands"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  // Enable caption editing
+                }}
+              >
+                <TextInvisibles text={`Table ${tableData.number || '1'}: ${tableData.caption}`} showInvisibles={showInvisibles} />
               </div>
             )}
           </div>
