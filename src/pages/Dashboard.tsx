@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom'
 import { useImport } from '@/hooks/useImport'
 import { ImportDialog, ImportMode } from '@/components/import/ImportDialog'
 import { ImportDropZone } from '@/components/import/ImportDropZone'
+import { TemplateGalleryDialog } from '@/components/template/TemplateGalleryDialog'
 import { 
   Plus, 
   FileText, 
@@ -28,6 +29,7 @@ export default function Dashboard() {
   const { importFiles, PDFDialog } = useImport()
   
   const [importDialogOpen, setImportDialogOpen] = useState(false)
+  const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false)
   
   const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'User'
 
@@ -223,9 +225,13 @@ export default function Dashboard() {
                       )}
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm">
-                    Use Template
-                  </Button>
+                   <Button 
+                     variant="ghost" 
+                     size="sm"
+                     onClick={() => setTemplateGalleryOpen(true)}
+                   >
+                     Use Template
+                   </Button>
                 </div>
               ))
             )}
@@ -269,10 +275,10 @@ export default function Dashboard() {
             <Button 
               variant="outline" 
               className="h-24 flex-col gap-2 hover:shadow-soft transition-all"
-              onClick={() => navigate('/templates')}
+              onClick={() => setTemplateGalleryOpen(true)}
             >
               <Palette className="w-6 h-6 text-primary" />
-              <span>Browse Templates</span>
+              <span>New from Template</span>
             </Button>
             <Button 
               variant="outline" 
@@ -312,6 +318,14 @@ export default function Dashboard() {
       
       {/* PDF Processing Dialog */}
       <PDFDialog />
+      
+      {/* Template Gallery Dialog */}
+      <TemplateGalleryDialog
+        open={templateGalleryOpen}
+        onOpenChange={setTemplateGalleryOpen}
+        mode="new"
+        title="New Document"
+      />
     </div>
   )
 }
