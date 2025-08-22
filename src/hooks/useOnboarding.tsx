@@ -76,7 +76,7 @@ export const useOnboarding = () => {
 
   return {
     ...state,
-    showCoachMarks: triggerCoachMarks,
+    triggerCoachMarks,
     hideCoachMarks,
     completeOnboarding,
     dismissOnboarding,

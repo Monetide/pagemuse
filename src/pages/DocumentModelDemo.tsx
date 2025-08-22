@@ -73,7 +73,7 @@ export default function DocumentModelDemo() {
   // Onboarding
   const {
     showCoachMarks: isCoachMarksVisible,
-    showCoachMarks: triggerCoachMarks,
+    triggerCoachMarks,
     completeOnboarding,
     dismissOnboarding,
     isEligibleForOnboarding
