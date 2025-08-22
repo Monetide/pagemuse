@@ -171,7 +171,7 @@ const EditorPageBox = ({
 
         {/* Page margins */}
         <div 
-          className="absolute bg-background"
+          className="absolute bg-transparent"
           style={{
             top: margins.top,
             left: margins.left,
@@ -213,11 +213,11 @@ const EditorPageBox = ({
             {pageBox.columnBoxes.map((columnBox, i) => (
               <div
                 key={columnBox.id}
-                className="relative bg-background overflow-hidden"
+                className="relative bg-transparent overflow-hidden"
                 style={{ 
                   width: columnBox.width * scale,
                   height: '100%',
-                  border: overlaySettings.showColumns ? '1px dashed rgb(34 197 94 / 0.5)' : '1px solid rgb(229 231 235 / 0.2)',
+                  border: overlaySettings.showColumns ? '1px dashed rgb(34 197 94 / 0.5)' : 'none',
                   backgroundColor: overlaySettings.showColumns ? 'rgb(34 197 94 / 0.05)' : 'transparent'
                 }}
               >
