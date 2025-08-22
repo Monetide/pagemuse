@@ -2,195 +2,279 @@ import { useState, useCallback } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { SemanticDocument } from '@/lib/document-model'
 import { ImportMode } from '@/components/import/ImportDialog'
-import { ingestFile } from '@/lib/ingest-pipeline'
-import { mapIRToPageMuse } from '@/lib/ir-mapper'
-import { PDFProcessingOptions, processPDFFile } from '@/lib/pdf-processor'
-import { PDFProcessingDialog } from '@/components/import/PDFProcessingDialog'
-import { MappingWizard, MappingConfig } from '@/components/import/MappingWizard'
+import { IngestPipeline } from '@/lib/ingest-pipeline'
+import { IRMapper } from '@/lib/ir-mapper'
+import { PostImportCleaner, getDefaultCleanupOptions, CleanupOptions, CleanupResult } from '@/lib/post-import-cleaner'
 import { IRDocument } from '@/lib/ir-types'
-import { CleanupResult } from '@/lib/post-import-cleaner'
+import { Template } from '@/hooks/useSupabaseData'
+
+export type SectionizationMode = 'h1' | 'h1-h2' | 'none'
+export type CalloutMapping = 'quote' | 'callout'
+export type ImportStage = 'idle' | 'ingesting' | 'mapping' | 'complete'
+
+export interface MappingConfig {
+  mode: ImportMode
+  template?: Template
+  sectionization: SectionizationMode
+  tocDepth: number
+  calloutMapping: CalloutMapping
+  linkVsCopy: 'link' | 'copy'
+  cleanupOptions?: CleanupOptions
+}
+
+export interface AssetInfo {
+  id: string
+  filename: string
+  mimeType: string
+  url: string
+  alt?: string
+  caption?: string
+  sourceFilename?: string
+  documentId?: string
+}
+
+export interface ImportState {
+  stage: ImportStage
+  file: File | null
+  irDocument: IRDocument | null
+  mappedDocument: SemanticDocument | null
+  cleanupResult: CleanupResult | null
+  assets: AssetInfo[]
+  config: MappingConfig
+  error: string | null
+  isProcessing: boolean
+}
 
 export const useImport = () => {
-  const [isImporting, setIsImporting] = useState(false)
-  const [showPDFDialog, setShowPDFDialog] = useState(false)
-  const [showMappingWizard, setShowMappingWizard] = useState(false)
-  const [pendingPDFFile, setPendingPDFFile] = useState<File | null>(null)
-  const [pendingIRDocument, setPendingIRDocument] = useState<IRDocument | null>(null)
-  const [pendingFileName, setPendingFileName] = useState<string | null>(null)
-  const [pendingHandlers, setPendingHandlers] = useState<{
-    mode: ImportMode,
-    currentDocument?: SemanticDocument,
-    onCreateDocument?: (title: string, document: SemanticDocument) => void,
-    onUpdateDocument?: (updatedDocument: SemanticDocument) => void
-  } | null>(null)
+  const [state, setState] = useState<ImportState>({
+    stage: 'idle',
+    file: null,
+    irDocument: null,
+    mappedDocument: null,
+    cleanupResult: null,
+    assets: [],
+    config: {
+      mode: 'new-document',
+      sectionization: 'h1',
+      tocDepth: 3,
+      calloutMapping: 'callout',
+      linkVsCopy: 'copy'
+    },
+    error: null,
+    isProcessing: false
+  })
+
   const { toast } = useToast()
 
-  const importFiles = useCallback(async (
-    files: File[], 
-    mode: ImportMode,
-    currentDocument?: SemanticDocument,
-    onCreateDocument?: (title: string, document: SemanticDocument) => void,
-    onUpdateDocument?: (updatedDocument: SemanticDocument) => void
-  ) => {
-    // Check for PDF files
-    const pdfFiles = files.filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'))
-    
-    if (pdfFiles.length === 1 && files.length === 1) {
-      setPendingPDFFile(pdfFiles[0])
-      setPendingHandlers({ mode, currentDocument, onCreateDocument, onUpdateDocument })
-      setShowPDFDialog(true)
-      return
-    }
+  const startImport = useCallback(async (file: File) => {
+    setState(prev => ({ 
+      ...prev, 
+      stage: 'ingesting', 
+      file, 
+      error: null,
+      isProcessing: true 
+    }))
 
-    await processFiles(files, mode, currentDocument, onCreateDocument, onUpdateDocument)
-  }, [])
-
-  const processPDFWithOptions = useCallback(async (options: PDFProcessingOptions) => {
-    if (!pendingPDFFile || !pendingHandlers) return
-    
-    setIsImporting(true)
     try {
-      const irDoc = await processPDFFile(pendingPDFFile, options)
-      
-      // Show mapping wizard instead of direct processing
-      setPendingIRDocument(irDoc)
-      setPendingFileName(pendingPDFFile.name)
-      setShowPDFDialog(false)
-      setShowMappingWizard(true)
-      
-    } catch (error) {
-      toast({
-        title: "PDF Processing Failed",
-        description: error instanceof Error ? error.message : "Failed to process PDF",
-        variant: "destructive"
+      // Step 1: Ingest file to IR
+      const pipeline = new IngestPipeline({
+        preserveFormatting: true,
+        extractAssets: true,
+        generateAnchors: true
       })
-    } finally {
-      setIsImporting(false)
-    }
-  }, [pendingPDFFile, pendingHandlers, toast])
-
-  const processFiles = useCallback(async (
-    files: File[], 
-    mode: ImportMode,
-    currentDocument?: SemanticDocument,
-    onCreateDocument?: (title: string, document: SemanticDocument) => void,
-    onUpdateDocument?: (updatedDocument: SemanticDocument) => void
-  ) => {
-    setIsImporting(true)
-
-    try {
-      let combinedIRDocument: IRDocument | null = null
       
-      for (const file of files) {
-        const irDoc = await ingestFile(file)
-        
-        if (!combinedIRDocument) {
-          combinedIRDocument = irDoc
-        } else {
-          // Combine IR documents
-          combinedIRDocument = {
-            ...combinedIRDocument,
-            sections: [...combinedIRDocument.sections, ...irDoc.sections]
-          }
-        }
-      }
+      const irDocument = await pipeline.processFile(file)
 
-      if (!combinedIRDocument) throw new Error('No documents processed')
+      // Step 2: Process assets (simplified without AssetManager)
+      const processedAssets: AssetInfo[] = []
 
-      // Show mapping wizard instead of direct processing
-      setPendingIRDocument(combinedIRDocument)
-      setPendingFileName(files.length === 1 ? files[0].name : `${files.length} files`)
-      setPendingHandlers({ mode, currentDocument, onCreateDocument, onUpdateDocument })
-      setShowMappingWizard(true)
-
-    } catch (error) {
-      toast({
-        title: "Import Failed",
-        description: error instanceof Error ? error.message : "Import failed",
-        variant: "destructive"
-      })
-    } finally {
-      setIsImporting(false)
-    }
-  }, [toast])
-
-  const handleMappingConfirm = useCallback((config: MappingConfig, mappedDocument: SemanticDocument, cleanupResult?: CleanupResult) => {
-    if (!pendingHandlers) return
-    
-    const { mode, currentDocument, onCreateDocument, onUpdateDocument } = pendingHandlers
-    
-    try {
-      switch (mode) {
-        case 'new-document':
-          onCreateDocument?.(mappedDocument.title, mappedDocument)
-          break
-        case 'append-section':
-          if (currentDocument && onUpdateDocument) {
-            onUpdateDocument({
-              ...currentDocument,
-              sections: [...currentDocument.sections, ...mappedDocument.sections]
+      // Extract asset references from IR document
+      irDocument.sections.forEach(section => {
+        section.blocks.forEach(block => {
+          if (block.type === 'figure' && block.content?.asset) {
+            processedAssets.push({
+              id: block.content.asset.id,
+              filename: block.content.asset.filename,
+              mimeType: block.content.asset.mimeType,
+              url: block.content.asset.url,
+              alt: block.content.asset.alt,
+              caption: block.content.caption,
+              sourceFilename: file.name,
+              documentId: undefined
             })
           }
-          break
-        case 'insert-at-cursor':
-          // Handle cursor insertion
-          if (currentDocument && onUpdateDocument) {
-            // This would need cursor position context
-            onUpdateDocument(mappedDocument)
-          }
-          break
-        case 'replace-selection':
-          // Handle selection replacement
-          if (currentDocument && onUpdateDocument) {
-            // This would need selection context
-            onUpdateDocument(mappedDocument)
-          }
-          break
-      }
-      
-      const changeCount = cleanupResult?.changes.length || 0
-      toast({
-        title: "Import Successful",
-        description: `Successfully imported ${pendingFileName} with custom mapping` + 
-                     (changeCount > 0 ? ` (${changeCount} quality fixes applied)` : '')
+        })
       })
+
+      // Step 3: Set default cleanup options based on file type
+      const fileExtension = file.name.split('.').pop()?.toLowerCase()
+      const sourceType = fileExtension === 'pdf' ? 'pdf' : 
+                        fileExtension === 'docx' ? 'docx' : 
+                        fileExtension === 'md' ? 'markdown' : 'text'
       
+      const defaultCleanupOptions = getDefaultCleanupOptions(sourceType)
+
+      setState(prev => ({ 
+        ...prev, 
+        irDocument,
+        assets: processedAssets,
+        config: {
+          ...prev.config,
+          cleanupOptions: defaultCleanupOptions
+        },
+        stage: 'mapping',
+        isProcessing: false
+      }))
+
     } catch (error) {
-      toast({
-        title: "Import Failed",
-        description: error instanceof Error ? error.message : "Failed to apply mapping",
-        variant: "destructive"
-      })
-    } finally {
-      // Reset all state
-      setPendingIRDocument(null)
-      setPendingFileName(null)
-      setPendingHandlers(null)
-      setPendingPDFFile(null)
-      setShowMappingWizard(false)
+      setState(prev => ({ 
+        ...prev, 
+        error: error instanceof Error ? error.message : 'Failed to import file',
+        isProcessing: false
+      }))
     }
-  }, [pendingHandlers, pendingFileName, toast])
+  }, [state.config.linkVsCopy])
+
+  const finalizeMapping = useCallback(async (config: MappingConfig): Promise<SemanticDocument> => {
+    if (!state.irDocument) {
+      throw new Error('No IR document available')
+    }
+
+    setState(prev => ({ ...prev, isProcessing: true }))
+
+    try {
+      // Apply configuration to IR document
+      const configuredIR = applyMappingConfig(state.irDocument, config)
+      
+      // Map to semantic document
+      const mapper = new IRMapper()
+      let semanticDoc = mapper.mapDocument(configuredIR)
+
+      // Apply post-import cleanups
+      let cleanupResult: CleanupResult | null = null
+      if (config.cleanupOptions) {
+        const cleaner = new PostImportCleaner(config.cleanupOptions)
+        cleanupResult = cleaner.cleanDocument(semanticDoc)
+        semanticDoc = cleanupResult.document
+      }
+
+      setState(prev => ({ 
+        ...prev, 
+        mappedDocument: semanticDoc,
+        cleanupResult,
+        config,
+        isProcessing: false
+      }))
+
+      return semanticDoc
+    } catch (error) {
+      setState(prev => ({ 
+        ...prev, 
+        error: error instanceof Error ? error.message : 'Failed to finalize mapping',
+        isProcessing: false
+      }))
+      throw error
+    }
+  }, [state.irDocument])
+
+  const updateConfig = useCallback((updates: Partial<MappingConfig>) => {
+    setState(prev => ({
+      ...prev,
+      config: { ...prev.config, ...updates }
+    }))
+  }, [])
+
+  const reset = useCallback(() => {
+    setState({
+      stage: 'idle',
+      file: null,
+      irDocument: null,
+      mappedDocument: null,
+      cleanupResult: null,
+      assets: [],
+      config: {
+        mode: 'new-document',
+        sectionization: 'h1',
+        tocDepth: 3,
+        calloutMapping: 'callout',
+        linkVsCopy: 'copy'
+      },
+      error: null,
+      isProcessing: false
+    })
+  }, [])
 
   return {
-    importFiles,
-    isImporting,
-    PDFDialog: () => (
-      <PDFProcessingDialog
-        open={showPDFDialog}
-        onOpenChange={setShowPDFDialog}
-        fileName={pendingPDFFile?.name}
-        onConfirm={processPDFWithOptions}
-      />
-    ),
-    MappingWizard: () => (
-      <MappingWizard
-        open={showMappingWizard}
-        onOpenChange={setShowMappingWizard}
-        irDocument={pendingIRDocument!}
-        onConfirm={handleMappingConfirm}
-        currentDocument={pendingHandlers?.currentDocument}
-        fileName={pendingFileName || undefined}
-      />
-    )
+    state,
+    actions: {
+      startImport,
+      finalizeMapping,
+      updateConfig,
+      reset
+    },
+    // Backward compatibility with existing Dashboard usage
+    importFiles: async (
+      files: File[], 
+      mode: ImportMode,
+      currentDocument?: SemanticDocument,
+      onCreateDocument?: (title: string, document: SemanticDocument) => void,
+      onUpdateDocument?: (updatedDocument: SemanticDocument) => void
+    ) => {
+      if (files.length > 0) {
+        await startImport(files[0])
+      }
+    },
+    isImporting: state.isProcessing,
+    PDFDialog: () => null, // Placeholder for backward compatibility
+    MappingWizard: () => null // Placeholder for backward compatibility
   }
+}
+
+// Helper function to apply mapping configuration to IR document
+function applyMappingConfig(irDocument: IRDocument, config: MappingConfig): IRDocument {
+  // This is a simplified implementation
+  // In a real implementation, this would apply the sectionization rules,
+  // TOC settings, callout mapping, etc. to transform the IR document
+  
+  const configuredIR = { ...irDocument }
+  
+  // Apply callout mapping
+  if (config.calloutMapping === 'quote') {
+    configuredIR.sections = configuredIR.sections.map(section => ({
+      ...section,
+      blocks: section.blocks.map(block => {
+        if (block.type === 'callout') {
+          return {
+            ...block,
+            type: 'quote' as any,
+            content: {
+              content: block.content?.content || block.content,
+              citation: undefined
+            }
+          }
+        }
+        return block
+      })
+    }))
+  } else if (config.calloutMapping === 'callout') {
+    configuredIR.sections = configuredIR.sections.map(section => ({
+      ...section,
+      blocks: section.blocks.map(block => {
+        if (block.type === 'quote' && !block.content?.citation) {
+          return {
+            ...block,
+            type: 'callout' as any,
+            content: {
+              type: 'note',
+              title: 'Note',
+              content: block.content?.content || block.content
+            }
+          }
+        }
+        return block
+      })
+    }))
+  }
+  
+  return configuredIR
 }

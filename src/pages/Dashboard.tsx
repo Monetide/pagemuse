@@ -26,7 +26,7 @@ export default function Dashboard() {
   const { documents, loading: documentsLoading } = useDocuments()
   const { templates, loading: templatesLoading } = useTemplates()
   const { stats: userStats, loading: statsLoading } = useUserStats()
-  const { importFiles, PDFDialog, MappingWizard } = useImport()
+  const { importFiles, isImporting } = useImport()
   
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false)
@@ -61,9 +61,9 @@ export default function Dashboard() {
   }
 
   const handleImport = async (files: File[], mode: ImportMode) => {
-    await importFiles(files, mode, undefined, (title, sections) => {
+    await importFiles(files, mode, undefined, (title, document) => {
       // For new document creation, we could navigate to a new document editor
-      console.log('Creating new document:', title, sections)
+      console.log('Creating new document:', title, document)
       navigate('/document-model')
     })
     setImportDialogOpen(false)
@@ -315,10 +315,6 @@ export default function Dashboard() {
         onImport={handleImport}
         defaultMode="new-document"
       />
-      
-      {/* PDF Processing Dialog */}
-        <PDFDialog />
-        <MappingWizard />
       
       {/* Template Gallery Dialog */}
       <TemplateGalleryDialog
