@@ -472,6 +472,14 @@ export default function DocumentModelDemo() {
                     onDuplicateSection={handleDuplicateSection}
                     onMoveSectionUp={handleMoveSectionUp}
                     onMoveSectionDown={handleMoveSectionDown}
+                    onBlockDrop={(sectionId, flowId, blockType, position) => {
+                      // Handle block drops from Navigator - insert block into specified flow
+                      addBlockAfter('create-first', blockType as any, '', { 
+                        sectionId, 
+                        flowId,
+                        position 
+                      })
+                    }}
                   />
                 </TabsContent>
                 

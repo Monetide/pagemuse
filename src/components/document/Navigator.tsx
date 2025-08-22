@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -21,6 +21,8 @@ import { CSS } from '@dnd-kit/utilities'
 import { SemanticDocument, Section, Flow, Block } from '@/lib/document-model'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import {
   Collapsible,
   CollapsibleContent,
@@ -43,6 +45,8 @@ import {
   Layers,
   MoreHorizontal,
   Trash2,
+  ArrowDown,
+  Info,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -51,6 +55,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { SectionContextMenu } from './SectionContextMenu'
+import { useDragDropContext } from '@/contexts/DragDropContext'
 
 interface NavigatorProps {
   document: SemanticDocument
@@ -67,6 +72,7 @@ interface NavigatorProps {
   onDuplicateSection?: (sectionId: string) => void
   onMoveSectionUp?: (sectionId: string) => void
   onMoveSectionDown?: (sectionId: string) => void
+  onBlockDrop?: (sectionId: string, flowId: string, blockType: string, position?: string) => void
 }
 
 interface SortableSectionProps {
@@ -83,6 +89,9 @@ interface SortableSectionProps {
   onDuplicateSection?: () => void
   onMoveSectionUp?: () => void
   onMoveSectionDown?: () => void
+  onBlockDrop?: (flowId: string, blockType: string, position?: string) => void
+  isDragOver?: boolean
+  canAcceptDrop?: boolean
 }
 
 function SortableSection({ 
@@ -98,7 +107,10 @@ function SortableSection({
   onRenameSection,
   onDuplicateSection,
   onMoveSectionUp,
-  onMoveSectionDown
+  onMoveSectionDown,
+  onBlockDrop,
+  isDragOver = false,
+  canAcceptDrop = false
 }: SortableSectionProps) {
   const [isOpen, setIsOpen] = useState(true)
   const [newFlowName, setNewFlowName] = useState('')
@@ -146,9 +158,31 @@ function SortableSection({
   const canMoveUp = sectionIndex > 0
   const canMoveDown = sectionIndex < totalSections - 1
   const canDelete = totalSections > 1
+  
+  // Get the main flow (first flow) for drop hints
+  const mainFlow = section.flows.find(flow => flow.name === 'Main') || section.flows[0]
+
+  const handleSectionDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    // For section drops, always redirect to main flow
+    if (mainFlow && onBlockDrop) {
+      onBlockDrop(mainFlow.id, 'paragraph', 'append')
+    }
+  }, [mainFlow, onBlockDrop])
 
   return (
-    <div ref={setNodeRef} style={style} className="mb-2">
+    <div 
+      ref={setNodeRef} 
+      style={style} 
+      className={`mb-2 ${isDragOver && canAcceptDrop ? 'bg-primary/5 border-2 border-primary/30 border-dashed rounded-md' : ''}`}
+      onDrop={handleSectionDrop}
+      onDragOver={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+      }}
+    >
       <SectionContextMenu
         section={section}
         canMoveUp={canMoveUp}
@@ -163,7 +197,9 @@ function SortableSection({
         <div 
           className={`group flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 cursor-pointer ${
             isSelected ? 'bg-muted' : ''
-          } ${isMultiSelected ? 'bg-primary/10 border border-primary/30' : ''}`}
+          } ${isMultiSelected ? 'bg-primary/10 border border-primary/30' : ''} ${
+            isDragOver && canAcceptDrop ? 'bg-primary/10' : ''
+          }`}
           onClick={onSelect}
           onMouseEnter={() => setShowMenu(true)}
           onMouseLeave={() => setShowMenu(false)}
@@ -206,7 +242,15 @@ function SortableSection({
               onClick={(e) => e.stopPropagation()}
             />
           ) : (
-            <span className="font-medium text-sm flex-1">{section.name}</span>
+          <span className="font-medium text-sm flex-1">{section.name}</span>
+          )}
+          
+          {/* Drop hint for section-level drops */}
+          {isDragOver && canAcceptDrop && mainFlow && (
+            <Badge variant="secondary" className="text-xs bg-primary/20 text-primary">
+              <ArrowDown className="w-3 h-3 mr-1" />
+              Insert into {mainFlow.name} flow
+            </Badge>
           )}
           
           <span className="text-xs text-muted-foreground">{section.flows.length}</span>
@@ -292,18 +336,27 @@ function SortableSection({
           {/* Add Flow Button */}
           <div className="mt-2">
             {!showAddFlow ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setShowAddFlow(true)
-                }}
-              >
-                <Plus className="w-3 h-3 mr-1" />
-                Add Flow
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs text-muted-foreground hover:text-foreground"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setShowAddFlow(true)
+                      }}
+                    >
+                      <Plus className="w-3 h-3 mr-1" />
+                      Add Flow
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    <p className="text-xs">Add a new flow for different content types</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             ) : (
               <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                 <Input
@@ -352,11 +405,21 @@ export function Navigator({
   onRenameSection,
   onDuplicateSection,
   onMoveSectionUp,
-  onMoveSectionDown
+  onMoveSectionDown,
+  onBlockDrop
 }: NavigatorProps) {
   const [newSectionName, setNewSectionName] = useState('')
   const [showAddSection, setShowAddSection] = useState(false)
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number>(-1)
+  
+  // Drag and drop state
+  const { dragState } = useDragDropContext()
+  
+  // Check if document is brand new (empty or very minimal content)
+  const isNewDocument = document.sections.length === 0 || 
+    (document.sections.length === 1 && 
+     document.sections[0].flows.length <= 1 && 
+     document.sections[0].flows[0]?.blocks.length === 0)
   
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -424,41 +487,67 @@ export function Navigator({
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="p-4 border-b border-border">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-2">
           <h3 className="font-semibold text-sm">Navigator</h3>
           <Dialog open={showAddSection} onOpenChange={setShowAddSection}>
             <DialogTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-6 px-2">
-                <Plus className="w-3 h-3 mr-1" />
-                Section
-              </Button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-6 px-2">
+                      <Plus className="w-3 h-3 mr-1" />
+                      Section
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p className="text-xs max-w-48">Add another section for a new chapter or major topic</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Add New Section</DialogTitle>
               </DialogHeader>
-              <div className="flex items-center gap-2">
-                <Input
-                  value={newSectionName}
-                  onChange={(e) => setNewSectionName(e.target.value)}
-                  placeholder="Section name"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleAddSection()
-                    }
-                  }}
-                  autoFocus
-                />
-                <Button
-                  onClick={handleAddSection}
-                  disabled={!newSectionName.trim()}
-                >
-                  Add
-                </Button>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={newSectionName}
+                    onChange={(e) => setNewSectionName(e.target.value)}
+                    placeholder="Section name (e.g., Introduction, Chapter 1)"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        handleAddSection()
+                      }
+                    }}
+                    autoFocus
+                  />
+                  <Button
+                    onClick={handleAddSection}
+                    disabled={!newSectionName.trim()}
+                  >
+                    Add
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Sections help organize your document into chapters or major topics. Each section contains flows for different content types.
+                </p>
               </div>
             </DialogContent>
           </Dialog>
         </div>
+        
+        {/* Helper text for new documents */}
+        {isNewDocument && (
+          <div className="flex items-start gap-2 p-2 bg-blue-50 dark:bg-blue-950/20 rounded-md border border-blue-200 dark:border-blue-800">
+            <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+            <div className="text-xs text-blue-700 dark:text-blue-300">
+              <p className="font-medium mb-1">Getting started:</p>
+              <p>• Sections hold flows; flows hold blocks</p>
+              <p>• Drop blocks onto section rows to insert into Main flow</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Sections List */}
@@ -487,24 +576,37 @@ export function Navigator({
               items={document.sections.map(s => s.id)}
               strategy={verticalListSortingStrategy}
             >
-              {document.sections.map((section, index) => (
-                <SortableSection
-                  key={section.id}
-                  section={section}
-                  isSelected={selectedSectionId === section.id}
-                  isMultiSelected={selectedSectionIds.includes(section.id)}
-                  sectionIndex={index}
-                  totalSections={document.sections.length}
-                  onSelect={(event) => handleSectionSelect(section.id, index, event)}
-                  onAddFlow={(name) => onAddFlow(section.id, name)}
-                  onJumpToHeading={onJumpToHeading}
-                  onDeleteSection={() => onDeleteSections?.([section.id])}
-                  onRenameSection={(newName) => onRenameSection?.(section.id, newName)}
-                  onDuplicateSection={() => onDuplicateSection?.(section.id)}
-                  onMoveSectionUp={() => onMoveSectionUp?.(section.id)}
-                  onMoveSectionDown={() => onMoveSectionDown?.(section.id)}
-                />
-              ))}
+              {document.sections.map((section, index) => {
+                // Check if this section is being dragged over
+                const isDragOver = dragState.isDragging && 
+                  dragState.dragData?.type === 'block-type'
+                
+                const canAcceptDrop = isDragOver && !!dragState.dragData?.blockType
+                
+                return (
+                  <SortableSection
+                    key={section.id}
+                    section={section}
+                    isSelected={selectedSectionId === section.id}
+                    isMultiSelected={selectedSectionIds.includes(section.id)}
+                    sectionIndex={index}
+                    totalSections={document.sections.length}
+                    onSelect={(event) => handleSectionSelect(section.id, index, event)}
+                    onAddFlow={(name) => onAddFlow(section.id, name)}
+                    onJumpToHeading={onJumpToHeading}
+                    onDeleteSection={() => onDeleteSections?.([section.id])}
+                    onRenameSection={(newName) => onRenameSection?.(section.id, newName)}
+                    onDuplicateSection={() => onDuplicateSection?.(section.id)}
+                    onMoveSectionUp={() => onMoveSectionUp?.(section.id)}
+                    onMoveSectionDown={() => onMoveSectionDown?.(section.id)}
+                    onBlockDrop={(flowId, blockType, position) => 
+                      onBlockDrop?.(section.id, flowId, blockType, position)
+                    }
+                    isDragOver={isDragOver}
+                    canAcceptDrop={canAcceptDrop}
+                  />
+                )
+              })}
             </SortableContext>
           </DndContext>
         )}
