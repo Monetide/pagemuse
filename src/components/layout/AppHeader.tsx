@@ -63,11 +63,13 @@ export function AppHeader() {
           </nav>
         </div>
 
-        {/* View Mode Toggle */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">View:</span>
-          <ViewModeToggle />
-        </div>
+        {/* View Mode Toggle - only show on document pages */}
+        {location.pathname.includes('/document') && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">View:</span>
+            <ViewModeToggle />
+          </div>
+        )}
 
         {/* User Menu */}
         <div className="flex items-center space-x-4">
