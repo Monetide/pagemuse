@@ -21,6 +21,9 @@ import {
   Crown,
   Palette as PaletteIcon
 } from 'lucide-react'
+import { useAccessibility } from '@/components/accessibility/AccessibilityProvider'
+import { useKeyboardNavigation, useFocusManagement } from '@/hooks/useKeyboardNavigation'
+import { useEffect, useRef } from 'react'
 
 const mainItems = [
   { title: 'Dashboard', url: '/', icon: LayoutDashboard },
@@ -40,8 +43,35 @@ const bottomItems = [
 export function AppSidebar() {
   const { state } = useSidebar()
   const location = useLocation()
+  const { focusedSection, setFocusedSection, announce } = useAccessibility()
+  const { updateFocusableElements, focusNext, focusPrevious } = useFocusManagement()
+  const sidebarRef = useRef<HTMLDivElement>(null)
   const currentPath = location.pathname
   const isCollapsed = state === 'collapsed'
+  const isFocused = focusedSection === 'sidebar'
+
+  useEffect(() => {
+    if (sidebarRef.current) {
+      updateFocusableElements(sidebarRef.current)
+    }
+  }, [updateFocusableElements, isCollapsed])
+
+  useKeyboardNavigation({
+    onArrowDown: () => isFocused && focusNext(),
+    onArrowUp: () => isFocused && focusPrevious(),
+    onEnter: () => {
+      if (isFocused) {
+        const focusedElement = globalThis.document.activeElement as HTMLElement
+        focusedElement?.click()
+      }
+    },
+    enabled: isFocused
+  })
+
+  const handleFocus = () => {
+    setFocusedSection('sidebar')
+    announce('Navigating sidebar')
+  }
 
   const isActive = (path: string) => currentPath === path
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
@@ -49,8 +79,12 @@ export function AppSidebar() {
 
   return (
     <Sidebar
+      ref={sidebarRef}
       className="border-sidebar-border bg-sidebar"
       collapsible="icon"
+      onFocus={handleFocus}
+      role="navigation"
+      aria-label="Main navigation"
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
@@ -81,6 +115,8 @@ export function AppSidebar() {
                       end 
                       className={getNavCls}
                       title={isCollapsed ? item.title : undefined}
+                      aria-label={item.title}
+                      role="menuitem"
                     >
                       <item.icon className="h-4 w-4" />
                       {!isCollapsed && <span>{item.title}</span>}
@@ -106,6 +142,8 @@ export function AppSidebar() {
                       to={item.url} 
                       className={getNavCls}
                       title={isCollapsed ? item.title : undefined}
+                      aria-label={item.title}
+                      role="menuitem"
                     >
                       <item.icon className="h-4 w-4" />
                       {!isCollapsed && <span>{item.title}</span>}
@@ -125,11 +163,13 @@ export function AppSidebar() {
                 {bottomItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
-                      <NavLink 
-                        to={item.url} 
-                        className={getNavCls}
-                        title={isCollapsed ? item.title : undefined}
-                      >
+                        <NavLink 
+                          to={item.url} 
+                          className={getNavCls}
+                          title={isCollapsed ? item.title : undefined}
+                          aria-label={item.title}
+                          role="menuitem"
+                        >
                         <item.icon className="h-4 w-4" />
                         {!isCollapsed && <span>{item.title}</span>}
                       </NavLink>

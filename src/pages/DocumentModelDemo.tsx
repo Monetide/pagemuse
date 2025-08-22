@@ -9,6 +9,8 @@ import Inspector from '@/components/document/Inspector'
 import { LayoutPreview } from '@/components/document/LayoutPreview'
 import { StructureTree } from '@/components/document/StructureTree'
 import { CommandPalette } from '@/components/document/CommandPalette'
+import { AccessibilityProvider } from '@/components/accessibility/AccessibilityProvider'
+import { AltTextValidator } from '@/components/accessibility/AltTextValidator'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -255,370 +257,382 @@ export default function DocumentModelDemo() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {document && (
-        <DocumentHeader
-          title={document.title}
-          saveStatus={persistence.saveStatus}
-          documentMetadata={persistence.documentMetadata}
-          onTitleChange={updateTitle}
-          onSaveAs={handleSaveAs}
-          onClose={persistence.closeDocument}
-          debugMode={debugMode}
-          onDebugToggle={setDebugMode}
-        />
-      )}
-      
-      {!document ? (
-        // Document Creation Screen
-        <div className="flex-1 flex items-center justify-center">
-          <div className="max-w-md space-y-6 text-center">
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold">Create Document</h1>
-              <p className="text-muted-foreground">
-                Start with a new document or demo content
-              </p>
-            </div>
-            
-            <div className="space-y-4">
-              <Input
-                placeholder="Document title"
-                value={docTitle}
-                onChange={(e) => setDocTitle(e.target.value)}
-                className="text-center"
-              />
-              <div className="flex gap-2">
-                <Button 
-                  onClick={handleCreateDocument} 
-                  disabled={!docTitle.trim()}
-                  className="flex-1"
-                >
-                  Create Document
-                </Button>
-                <Button 
-                  onClick={createDemoDocument} 
-                  variant="outline"
-                  className="flex-1"
-                >
-                  Create Demo
-                </Button>
+    <AccessibilityProvider>
+      <div className="min-h-screen bg-background flex flex-col">
+        {document && (
+          <DocumentHeader
+            title={document.title}
+            saveStatus={persistence.saveStatus}
+            documentMetadata={persistence.documentMetadata}
+            onTitleChange={updateTitle}
+            onSaveAs={handleSaveAs}
+            onClose={persistence.closeDocument}
+            debugMode={debugMode}
+            onDebugToggle={setDebugMode}
+          />
+        )}
+        
+        {!document ? (
+          // Document Creation Screen
+          <div className="flex-1 flex items-center justify-center">
+            <div className="max-w-md space-y-6 text-center">
+              <div className="space-y-2">
+                <h1 className="text-3xl font-bold">Create Document</h1>
+                <p className="text-muted-foreground">
+                  Start with a new document or demo content
+                </p>
               </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        // 3-Pane Editor Layout
-        <div className="flex-1 flex">
-          {/* Left Sidebar */}
-          <div className={`border-r border-border bg-muted/30 transition-all duration-200 ${
-            debugMode ? 'w-60' : 'w-80'
-          }`}>
-            <Tabs defaultValue="navigator" className="h-full flex flex-col">
-              <TabsList className={`grid w-full rounded-none border-b ${
-                debugMode ? 'grid-cols-3' : 'grid-cols-2'
-              }`}>
-                <TabsTrigger value="navigator">Navigator</TabsTrigger>
-                <TabsTrigger value="blocks">Blocks</TabsTrigger>
-                {debugMode && (
-                  <TabsTrigger value="structure">Structure</TabsTrigger>
-                )}
-              </TabsList>
               
-              <TabsContent value="navigator" className="flex-1 mt-0">
-                <Navigator
-                  document={document}
-                  selectedSectionId={selectedSectionId || document.sections[0]?.id}
-                  onSectionSelect={setSelectedSectionId}
-                  onAddSection={(name) => {
-                    const section = addSection(name)
-                    if (section) {
-                      setSelectedSectionId(section.id)
-                      // Add default flow
-                      addFlow(section.id, 'Main Flow')
-                    }
-                  }}
-                  onAddFlow={(sectionId, name) => {
-                    addFlow(sectionId, name)
-                  }}
-                  onReorderSections={(sections) => {
-                    if (!document) return
-                    const updatedDoc = {
-                      ...document,
-                      sections,
-                      updated_at: new Date().toISOString()
-                    }
-                    setDocument(updatedDoc)
-                  }}
-                  onJumpToHeading={(blockId) => {
-                    // TODO: Implement jump to heading in canvas
-                    console.log('Jump to heading:', blockId)
-                  }}
+              <div className="space-y-4">
+                <Input
+                  placeholder="Document title"
+                  value={docTitle}
+                  onChange={(e) => setDocTitle(e.target.value)}
+                  className="text-center"
                 />
-              </TabsContent>
-              
-              <TabsContent value="blocks" className="flex-1 mt-0">
-                <BlockPalette
-                  onInsertBlock={(blockType) => {
-                    // Insert at the end of the primary flow of current section
-                    const currentSection = document.sections.find(s => 
-                      s.id === (selectedSectionId || document.sections[0]?.id)
-                    )
-                    if (currentSection && currentSection.flows.length > 0) {
-                      const primaryFlow = currentSection.flows[0]
-                      let content: any = ''
-                      let metadata = {}
-                      
-                      // Handle different block types with default content
-                      switch (blockType) {
-                        case 'heading':
-                          content = 'New Heading'
-                          metadata = { level: 2 }
-                          break
-                        case 'paragraph':
-                          content = 'Start typing...'
-                          break
-                        case 'ordered-list':
-                          content = ['First item', 'Second item', 'Third item']
-                          break
-                        case 'unordered-list':
-                          content = ['First item', 'Second item', 'Third item']
-                          break
-                        case 'quote':
-                          content = 'Enter your quote here...'
-                          break
-                        case 'divider':
-                          content = '---'
-                          break
-                        case 'spacer':
-                          content = ''
-                          metadata = { height: 0.5 }
-                          break
-                        case 'figure':
-                          content = {
-                            imageUrl: 'placeholder-image.jpg',
-                            caption: 'Add your caption here',
-                            number: 1
-                          }
-                          metadata = { imageHeight: 2.5 }
-                          break
-                        case 'table':
-                          content = {
-                            headers: ['Column 1', 'Column 2', 'Column 3'],
-                            rows: [
-                              ['Row 1, Cell 1', 'Row 1, Cell 2', 'Row 1, Cell 3'],
-                              ['Row 2, Cell 1', 'Row 2, Cell 2', 'Row 2, Cell 3'],
-                            ],
-                            caption: 'Table caption',
-                            number: 1
-                          }
-                          break
-                        case 'callout':
-                          content = 'Important information goes here...'
-                          metadata = { type: 'info' }
-                          break
-                      }
-                      
-                      const block = addBlock(currentSection.id, primaryFlow.id, blockType as any, content)
-                      if (block && Object.keys(metadata).length > 0) {
-                        block.metadata = { ...block.metadata, ...metadata }
-                      }
-                    }
-                  }}
-                  onDragStart={(blockType) => {
-                    // TODO: Implement drag preview and drop zones
-                    console.log('Dragging block type:', blockType)
-                  }}
-                  onDragEnd={() => {
-                    // TODO: Clean up drag state
-                    console.log('Drag ended')
-                  }}
-                />
-              </TabsContent>
-              
-              {debugMode && (
-                <TabsContent value="structure" className="flex-1 mt-0">
-                  <StructureTree
-                    document={document}
-                    selectedBlockId={selectedBlockId}
-                    onBlockSelect={setSelectedBlockId}
-                  />
-                </TabsContent>
-              )}
-            </Tabs>
-          </div>
-          
-          {/* Center Canvas */}
-          <div className="flex-1 flex flex-col">
-            {document.sections.length > 0 ? (
-              <>
-                {/* Section Tabs */}
-                {document.sections.length > 1 && (
-                  <div className="border-b border-border">
-                    <Tabs 
-                      value={selectedSectionId || document.sections[0].id} 
-                      onValueChange={setSelectedSectionId}
-                      className="w-full"
-                    >
-                      <TabsList className="h-12 w-full justify-start rounded-none bg-transparent">
-                        {document.sections.map(section => (
-                          <TabsTrigger 
-                            key={section.id} 
-                            value={section.id}
-                            className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
-                          >
-                            {section.name}
-                          </TabsTrigger>
-                        ))}
-                      </TabsList>
-                    </Tabs>
-                  </div>
-                )}
-                
-                {/* Editor Canvas */}
-                <div className="flex-1 flex flex-col overflow-hidden">
-                  {document.sections.map(section => {
-                    const isActiveSection = (selectedSectionId || document.sections[0].id) === section.id
-                    if (!isActiveSection) return null
-                    
-                    return (
-                      <EditorCanvas
-                        key={section.id}
-                        section={section}
-                        document={document}
-                        onContentChange={updateBlockContent}
-                        onNewBlock={(afterBlockId, type, content, metadata) => {
-                          if (afterBlockId === 'create-first') {
-                            const block = addBlockAfter('create-first', type, content || '')
-                            if (block && metadata && Object.keys(metadata).length > 0) {
-                              block.metadata = { ...block.metadata, ...metadata }
-                            }
-                          } else {
-                            const block = addBlockAfter(afterBlockId, type, content || '')
-                            if (block && metadata && Object.keys(metadata).length > 0) {
-                              block.metadata = { ...block.metadata, ...metadata }
-                            }
-                          }
-                        }}
-                         onDeleteBlock={deleteBlock}
-                         onBlockTypeChange={(blockId, type, metadata) => {
-                           if (!document) return
-                           
-                           const updatedDoc = {
-                             ...document,
-                             sections: document.sections.map(section => ({
-                               ...section,
-                               flows: section.flows.map(flow => ({
-                                 ...flow,
-                                 blocks: flow.blocks.map(block => 
-                                   block.id === blockId 
-                                     ? { 
-                                         ...block, 
-                                         type, 
-                                         metadata: { ...block.metadata, ...metadata } 
-                                       }
-                                     : block
-                                 )
-                               }))
-                             })),
-                             updated_at: new Date().toISOString()
-                           }
-                           setDocument(updatedDoc)
-                         }}
-                        onBlockSelect={setSelectedBlockId}
-                        onFocusChange={setFocusedBlockId}
-                      />
-                    )
-                  })}
-                  
-                  {document.sections.length === 0 && (
-                    <div className="flex-1 flex items-center justify-center">
-                      <div className="text-center space-y-4">
-                        <p className="text-muted-foreground">No sections found</p>
-                        <Button onClick={() => {
-                          setSectionName('Main Section')
-                          handleAddSection()
-                        }}>
-                          Add First Section
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center space-y-4">
-                  <p className="text-muted-foreground">No sections found</p>
-                  <Button onClick={() => {
-                    setSectionName('Main Section')
-                    handleAddSection()
-                  }}>
-                    Add First Section
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={handleCreateDocument} 
+                    disabled={!docTitle.trim()}
+                    className="flex-1"
+                  >
+                    Create Document
+                  </Button>
+                  <Button 
+                    onClick={createDemoDocument} 
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    Create Demo
                   </Button>
                 </div>
               </div>
-            )}
+            </div>
           </div>
-          
-          {/* Right Inspector/Debug Panel */}
-          <div className="flex">
-            <Inspector
-              selectedBlock={selectedBlock}
-              currentSection={document.sections.find(s => s.id === (selectedSectionId || document.sections[0]?.id))!}
-              onBlockUpdate={(blockId, updates) => {
-                if (!document) return
+        ) : (
+          // ... keep existing code (3-pane editor layout)
+          // 3-Pane Editor Layout
+          <div className="flex-1 flex">
+            {/* Left Sidebar */}
+            <div className={`border-r border-border bg-muted/30 transition-all duration-200 ${
+              debugMode ? 'w-60' : 'w-80'
+            }`}>
+              <Tabs defaultValue="navigator" className="h-full flex flex-col">
+                <TabsList className={`grid w-full rounded-none border-b ${
+                  debugMode ? 'grid-cols-3' : 'grid-cols-2'
+                }`}>
+                  <TabsTrigger value="navigator">Navigator</TabsTrigger>
+                  <TabsTrigger value="blocks">Blocks</TabsTrigger>
+                  {debugMode && (
+                    <TabsTrigger value="structure">Structure</TabsTrigger>
+                  )}
+                </TabsList>
                 
-                const updatedDoc = {
-                  ...document,
-                  sections: document.sections.map(section => ({
-                    ...section,
-                    flows: section.flows.map(flow => ({
-                      ...flow,
-                      blocks: flow.blocks.map(block => 
-                        block.id === blockId 
-                          ? { ...block, ...updates }
-                          : block
+                <TabsContent value="navigator" className="flex-1 mt-0">
+                  <Navigator
+                    document={document}
+                    selectedSectionId={selectedSectionId || document.sections[0]?.id}
+                    onSectionSelect={setSelectedSectionId}
+                    onAddSection={(name) => {
+                      const section = addSection(name)
+                      if (section) {
+                        setSelectedSectionId(section.id)
+                        // Add default flow
+                        addFlow(section.id, 'Main Flow')
+                      }
+                    }}
+                    onAddFlow={(sectionId, name) => {
+                      addFlow(sectionId, name)
+                    }}
+                    onReorderSections={(sections) => {
+                      if (!document) return
+                      const updatedDoc = {
+                        ...document,
+                        sections,
+                        updated_at: new Date().toISOString()
+                      }
+                      setDocument(updatedDoc)
+                    }}
+                    onJumpToHeading={(blockId) => {
+                      // TODO: Implement jump to heading in canvas
+                      console.log('Jump to heading:', blockId)
+                    }}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="blocks" className="flex-1 mt-0">
+                  <BlockPalette
+                    onInsertBlock={(blockType) => {
+                      // Insert at the end of the primary flow of current section
+                      const currentSection = document.sections.find(s => 
+                        s.id === (selectedSectionId || document.sections[0]?.id)
                       )
-                    }))
-                  })),
-                  updated_at: new Date().toISOString()
-                }
-                setDocument(updatedDoc)
-              }}
-              onSectionUpdate={(sectionId, updates) => {
-                if (!document) return
+                      if (currentSection && currentSection.flows.length > 0) {
+                        const primaryFlow = currentSection.flows[0]
+                        let content: any = ''
+                        let metadata = {}
+                        
+                        // Handle different block types with default content
+                        switch (blockType) {
+                          case 'heading':
+                            content = 'New Heading'
+                            metadata = { level: 2 }
+                            break
+                          case 'paragraph':
+                            content = 'Start typing...'
+                            break
+                          case 'ordered-list':
+                            content = ['First item', 'Second item', 'Third item']
+                            break
+                          case 'unordered-list':
+                            content = ['First item', 'Second item', 'Third item']
+                            break
+                          case 'quote':
+                            content = 'Enter your quote here...'
+                            break
+                          case 'divider':
+                            content = '---'
+                            break
+                          case 'spacer':
+                            content = ''
+                            metadata = { height: 0.5 }
+                            break
+                          case 'figure':
+                            content = {
+                              imageUrl: 'placeholder-image.jpg',
+                              caption: 'Add your caption here',
+                              number: 1
+                            }
+                            metadata = { imageHeight: 2.5 }
+                            break
+                          case 'table':
+                            content = {
+                              headers: ['Column 1', 'Column 2', 'Column 3'],
+                              rows: [
+                                ['Row 1, Cell 1', 'Row 1, Cell 2', 'Row 1, Cell 3'],
+                                ['Row 2, Cell 1', 'Row 2, Cell 2', 'Row 2, Cell 3'],
+                              ],
+                              caption: 'Table caption',
+                              number: 1
+                            }
+                            break
+                          case 'callout':
+                            content = 'Important information goes here...'
+                            metadata = { type: 'info' }
+                            break
+                        }
+                        
+                        const block = addBlock(currentSection.id, primaryFlow.id, blockType as any, content)
+                        if (block && Object.keys(metadata).length > 0) {
+                          block.metadata = { ...block.metadata, ...metadata }
+                        }
+                      }
+                    }}
+                    onDragStart={(blockType) => {
+                      // TODO: Implement drag preview and drop zones
+                      console.log('Dragging block type:', blockType)
+                    }}
+                    onDragEnd={() => {
+                      // TODO: Clean up drag state
+                      console.log('Drag ended')
+                    }}
+                  />
+                </TabsContent>
                 
-                const updatedDoc = {
-                  ...document,
-                  sections: document.sections.map(section =>
-                    section.id === sectionId
-                      ? { ...section, ...updates }
-                      : section
-                  ),
-                  updated_at: new Date().toISOString()
-                }
-                setDocument(updatedDoc)
-              }}
-              onDeleteBlock={deleteBlock}
-              onNewBlock={addBlockAfter}
-            />
+                {debugMode && (
+                  <TabsContent value="structure" className="flex-1 mt-0">
+                    <StructureTree
+                      document={document}
+                      selectedBlockId={selectedBlockId}
+                      onBlockSelect={setSelectedBlockId}
+                    />
+                  </TabsContent>
+                )}
+              </Tabs>
+            </div>
             
-            {/* Debug Layout Preview */}
-            {debugMode && (
-              <LayoutPreview 
-                section={document.sections.find(s => s.id === (selectedSectionId || document.sections[0]?.id))!} 
+            {/* Center Canvas */}
+            <div className="flex-1 flex flex-col">
+              {document.sections.length > 0 ? (
+                <>
+                  {/* Section Tabs */}
+                  {document.sections.length > 1 && (
+                    <div className="border-b border-border">
+                      <Tabs 
+                        value={selectedSectionId || document.sections[0].id} 
+                        onValueChange={setSelectedSectionId}
+                        className="w-full"
+                      >
+                        <TabsList className="h-12 w-full justify-start rounded-none bg-transparent">
+                          {document.sections.map(section => (
+                            <TabsTrigger 
+                              key={section.id} 
+                              value={section.id}
+                              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
+                            >
+                              {section.name}
+                            </TabsTrigger>
+                          ))}
+                        </TabsList>
+                      </Tabs>
+                    </div>
+                  )}
+                  
+                  {/* Editor Canvas */}
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    {document.sections.map(section => {
+                      const isActiveSection = (selectedSectionId || document.sections[0].id) === section.id
+                      if (!isActiveSection) return null
+                      
+                      return (
+                        <EditorCanvas
+                          key={section.id}
+                          section={section}
+                          document={document}
+                          onContentChange={updateBlockContent}
+                          onNewBlock={(afterBlockId, type, content, metadata) => {
+                            if (afterBlockId === 'create-first') {
+                              const block = addBlockAfter('create-first', type, content || '')
+                              if (block && metadata && Object.keys(metadata).length > 0) {
+                                block.metadata = { ...block.metadata, ...metadata }
+                              }
+                            } else {
+                              const block = addBlockAfter(afterBlockId, type, content || '')
+                              if (block && metadata && Object.keys(metadata).length > 0) {
+                                block.metadata = { ...block.metadata, ...metadata }
+                              }
+                            }
+                          }}
+                           onDeleteBlock={deleteBlock}
+                           onBlockTypeChange={(blockId, type, metadata) => {
+                             if (!document) return
+                             
+                             const updatedDoc = {
+                               ...document,
+                               sections: document.sections.map(section => ({
+                                 ...section,
+                                 flows: section.flows.map(flow => ({
+                                   ...flow,
+                                   blocks: flow.blocks.map(block => 
+                                     block.id === blockId 
+                                       ? { 
+                                           ...block, 
+                                           type, 
+                                           metadata: { ...block.metadata, ...metadata } 
+                                         }
+                                       : block
+                                   )
+                                 }))
+                               })),
+                               updated_at: new Date().toISOString()
+                             }
+                             setDocument(updatedDoc)
+                           }}
+                          onBlockSelect={setSelectedBlockId}
+                          onFocusChange={setFocusedBlockId}
+                        />
+                      )
+                    })}
+                    
+                    {document.sections.length === 0 && (
+                      <div className="flex-1 flex items-center justify-center">
+                        <div className="text-center space-y-4">
+                          <p className="text-muted-foreground">No sections found</p>
+                          <Button onClick={() => {
+                            setSectionName('Main Section')
+                            handleAddSection()
+                          }}>
+                            Add First Section
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center space-y-4">
+                    <p className="text-muted-foreground">No sections found</p>
+                    <Button onClick={() => {
+                      setSectionName('Main Section')
+                      handleAddSection()
+                    }}>
+                      Add First Section
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            {/* Right Inspector/Debug Panel */}
+            <div className="flex">
+              <Inspector
+                selectedBlock={selectedBlock}
+                currentSection={document.sections.find(s => s.id === (selectedSectionId || document.sections[0]?.id))!}
+                onBlockUpdate={(blockId, updates) => {
+                  if (!document) return
+                  
+                  const updatedDoc = {
+                    ...document,
+                    sections: document.sections.map(section => ({
+                      ...section,
+                      flows: section.flows.map(flow => ({
+                        ...flow,
+                        blocks: flow.blocks.map(block => 
+                          block.id === blockId 
+                            ? { ...block, ...updates }
+                            : block
+                        )
+                      }))
+                    })),
+                    updated_at: new Date().toISOString()
+                  }
+                  setDocument(updatedDoc)
+                }}
+                onSectionUpdate={(sectionId, updates) => {
+                  if (!document) return
+                  
+                  const updatedDoc = {
+                    ...document,
+                    sections: document.sections.map(section =>
+                      section.id === sectionId
+                        ? { ...section, ...updates }
+                        : section
+                    ),
+                    updated_at: new Date().toISOString()
+                  }
+                  setDocument(updatedDoc)
+                }}
+                onDeleteBlock={deleteBlock}
+                onNewBlock={addBlockAfter}
               />
-            )}
+              
+              {/* Debug Layout Preview */}
+              {debugMode && (
+                <LayoutPreview 
+                  section={document.sections.find(s => s.id === (selectedSectionId || document.sections[0]?.id))!} 
+                />
+              )}
+            </div>
           </div>
-        </div>
-      )}
-      
-      {/* Command Palette */}
-      <CommandPalette
-        open={commandPaletteOpen}
-        onOpenChange={setCommandPaletteOpen}
-        onInsertBlock={handleCommandPaletteInsert}
-      />
-    </div>
+        )}
+        
+        {/* Command Palette */}
+        <CommandPalette
+          open={commandPaletteOpen}
+          onOpenChange={setCommandPaletteOpen}
+          onInsertBlock={handleCommandPaletteInsert}
+        />
+        
+        {/* Alt Text Validator */}
+        <AltTextValidator
+          document={document}
+          onFocusFigure={(blockId) => {
+            setSelectedBlockId(blockId)
+            setFocusedBlockId(blockId)
+          }}
+        />
+      </div>
+    </AccessibilityProvider>
   )
 }

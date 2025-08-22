@@ -9,8 +9,10 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Toggle } from '@/components/ui/toggle'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { ZoomIn, ZoomOut, Maximize2, Grid3x3, Columns, Square, Ruler, Eye, EyeOff } from 'lucide-react'
+import { useAccessibility } from '@/components/accessibility/AccessibilityProvider'
+import { useKeyboardNavigation, useFocusManagement } from '@/hooks/useKeyboardNavigation'
 
 interface EditorCanvasProps {
   section: Section
@@ -271,7 +273,60 @@ export const EditorCanvas = ({
     enableSnapping: false,
     showInvisibles: false
   })
+  
+  const { focusedSection, setFocusedSection, announce } = useAccessibility()
+  const canvasRef = useRef<HTMLDivElement>(null)
+  const { updateFocusableElements, focusNext, focusPrevious } = useFocusManagement()
   const layoutResult = generateLayout(section)
+  const isFocused = focusedSection === 'canvas'
+
+  // Get all blocks for keyboard navigation
+  const allBlocks = section.flows.flatMap(flow => flow.blocks).sort((a, b) => a.order - b.order)
+  const currentBlockIndex = allBlocks.findIndex(block => block.id === selectedBlockId)
+
+  useEffect(() => {
+    if (canvasRef.current) {
+      updateFocusableElements(canvasRef.current)
+    }
+  }, [updateFocusableElements, section])
+
+  // Keyboard navigation for blocks
+  useKeyboardNavigation({
+    onArrowDown: () => {
+      if (isFocused && currentBlockIndex < allBlocks.length - 1) {
+        const nextBlock = allBlocks[currentBlockIndex + 1]
+        handleSelectBlock(nextBlock.id)
+        announce(`Selected ${nextBlock.type} block`)
+      }
+    },
+    onArrowUp: () => {
+      if (isFocused && currentBlockIndex > 0) {
+        const prevBlock = allBlocks[currentBlockIndex - 1]
+        handleSelectBlock(prevBlock.id)
+        announce(`Selected ${prevBlock.type} block`)
+      }
+    },
+    onEnter: () => {
+      if (isFocused && selectedBlockId) {
+        // Start editing the selected block
+        const blockElement = globalThis.document.getElementById(`block-${selectedBlockId}`)
+        if (blockElement) {
+          const editableElement = blockElement.querySelector('[contenteditable="true"]') as HTMLElement
+          if (editableElement) {
+            editableElement.focus()
+          } else {
+            blockElement.click()
+          }
+        }
+      }
+    },
+    enabled: isFocused
+  })
+
+  const handleFocus = () => {
+    setFocusedSection('canvas')
+    announce('Navigating document canvas')
+  }
 
   const handleZoomIn = useCallback(() => {
     setZoomLevel(prev => Math.min(prev + 0.25, 2))
@@ -303,6 +358,12 @@ export const EditorCanvas = ({
     setInternalSelectedBlockId(blockId)
     onBlockSelect?.(blockId)
     onFocusChange?.(blockId)
+    
+    // Scroll the block into view
+    const blockElement = globalThis.document.getElementById(`block-${blockId}`)
+    if (blockElement) {
+      blockElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
   }, [onBlockSelect, onFocusChange])
 
   const handleCanvasClick = useCallback((e: React.MouseEvent) => {
@@ -327,9 +388,9 @@ export const EditorCanvas = ({
   const hasContent = section.flows.some(flow => flow.blocks.length > 0)
 
   return (
-    <div className="h-full flex flex-col bg-background">
+    <div className="h-full flex flex-col bg-background" role="main" aria-label="Document editor">
       {/* Canvas Toolbar */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-muted/30 shrink-0">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-muted/30 shrink-0" role="toolbar" aria-label="Canvas controls">
         <div className="flex items-center gap-1">
           <Toggle 
             pressed={overlaySettings.showMargins} 
@@ -434,8 +495,14 @@ export const EditorCanvas = ({
       {/* Canvas Area */}
       <ScrollArea className="flex-1">
         <div 
+          ref={canvasRef}
           className="space-y-8 p-8 min-h-full cursor-text"
           onClick={handleCanvasClick}
+          onFocus={handleFocus}
+          tabIndex={0}
+          role="document"
+          aria-label="Document content area"
+          aria-describedby={selectedBlockId ? `block-${selectedBlockId}` : undefined}
         >
           {layoutResult.pages.map(pageBox => (
             <EditorPageBox 

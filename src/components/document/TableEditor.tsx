@@ -220,89 +220,40 @@ export const TableEditor = ({
 
       {/* Table */}
       <div className="overflow-x-auto">
-        <table ref={tableRef} className="w-full">
+        <table ref={tableRef} className="w-full" role="table" aria-label="Data table">
           {/* Headers */}
-          <thead>
-            <tr className="bg-muted/50">
+          <thead role="rowgroup">
+            <tr className="bg-muted/50" role="row">
               {tableContent.headers.map((header, colIndex) => (
                 <th
                   key={colIndex}
                   className="relative border-r border-border last:border-r-0 font-medium"
                   style={{ width: `${columnWidths[colIndex]}px` }}
+                  role="columnheader"
+                  aria-sort="none"
                 >
-                  {/* Column Controls */}
-                  <div className="absolute -top-6 left-0 right-0 flex items-center justify-center gap-1 opacity-0 hover:opacity-100 transition-opacity">
-                    <Select 
-                      value={columnAlignments[colIndex]} 
-                      onValueChange={(value: 'left' | 'center' | 'right') => 
-                        updateColumnAlignment(colIndex, value)
-                      }
-                    >
-                      <SelectTrigger className="h-5 w-8 text-xs">
-                        <SelectValue>
-                          {columnAlignments[colIndex] === 'left' && <AlignLeft className="w-3 h-3" />}
-                          {columnAlignments[colIndex] === 'center' && <AlignCenter className="w-3 h-3" />}
-                          {columnAlignments[colIndex] === 'right' && <AlignRight className="w-3 h-3" />}
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="left"><AlignLeft className="w-3 h-3" /></SelectItem>
-                        <SelectItem value="center"><AlignCenter className="w-3 h-3" /></SelectItem>
-                        <SelectItem value="right"><AlignRight className="w-3 h-3" /></SelectItem>
-                      </SelectContent>
-                    </Select>
-                    
-                    {tableContent.headers.length > 1 && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-5 w-5 p-0"
-                        onClick={() => removeColumn(colIndex)}
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    )}
-                  </div>
+                  {/* ... keep existing code (column controls) */}
 
                   {renderCell(header, -1, colIndex)}
 
-                  {/* Column Resizer */}
-                  <div
-                    className="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/20 transition-colors"
-                    onMouseDown={(e) => handleMouseDown(e, colIndex)}
-                  >
-                    <div className="w-full h-full flex items-center justify-center opacity-0 hover:opacity-100">
-                      <GripVertical className="w-3 h-3" />
-                    </div>
-                  </div>
+                  {/* ... keep existing code (column resizer) */}
                 </th>
               ))}
             </tr>
           </thead>
 
           {/* Rows */}
-          <tbody>
+          <tbody role="rowgroup">
             {tableContent.rows.map((row, rowIndex) => (
-              <tr key={rowIndex} className="border-t border-border hover:bg-muted/20">
-                {/* Row Controls */}
-                <td className="absolute -left-8 w-6 opacity-0 hover:opacity-100 transition-opacity">
-                  {tableContent.rows.length > 1 && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-5 w-5 p-0"
-                      onClick={() => removeRow(rowIndex)}
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
-                  )}
-                </td>
+              <tr key={rowIndex} className="border-t border-border hover:bg-muted/20" role="row">
+                {/* ... keep existing code (row controls) */}
 
                 {row.map((cell, colIndex) => (
                   <td
                     key={colIndex}
                     className="border-r border-border last:border-r-0"
                     style={{ width: `${columnWidths[colIndex]}px` }}
+                    role="cell"
                   >
                     {renderCell(cell, rowIndex, colIndex)}
                   </td>

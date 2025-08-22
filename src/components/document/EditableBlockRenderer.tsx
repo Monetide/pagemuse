@@ -328,6 +328,9 @@ export const EditableBlockRenderer = ({
               contentEditable
               suppressContentEditableWarning
               dir="ltr"
+              role="textbox"
+              aria-label={`Edit ${HeadingTag} heading`}
+              aria-level={level}
               className={`${headingClass} text-foreground mb-2 outline-none focus:ring-2 focus:ring-primary rounded px-1 text-left`}
               data-placeholder="Type / for commands"
               onInput={(e) => handleContentEdit(e.currentTarget.textContent || '')}
@@ -350,6 +353,9 @@ export const EditableBlockRenderer = ({
               className={`${headingClass} text-foreground mb-2 cursor-text hover:bg-accent/10 rounded px-1 ${isSelected ? 'ring-2 ring-primary' : ''}`}
               data-placeholder="Type / for commands"
               onClick={handleClick}
+              role="heading"
+              aria-level={level}
+              tabIndex={0}
             >
               <TextInvisibles
                 text={block.content || ''}
@@ -370,6 +376,8 @@ export const EditableBlockRenderer = ({
             contentEditable
             suppressContentEditableWarning
             dir="ltr"
+            role="textbox"
+            aria-label="Edit paragraph text"
             className="text-sm text-foreground leading-relaxed mb-3 outline-none focus:ring-2 focus:ring-primary rounded px-1 min-h-[1.2em] text-left"
             data-placeholder="Type / for commands"
             onInput={(e) => handleContentEdit(e.currentTarget.textContent || '')}
@@ -385,6 +393,9 @@ export const EditableBlockRenderer = ({
             className={`text-sm text-foreground leading-relaxed mb-3 cursor-text hover:bg-accent/10 rounded px-1 min-h-[1.2em] ${isSelected ? 'ring-2 ring-primary' : ''}`}
             data-placeholder="Type / for commands"
             onClick={handleClick}
+            tabIndex={0}
+            role="paragraph"
+            aria-label="Paragraph"
           >
             <TextInvisibles
               text={block.content || ''}
@@ -440,15 +451,23 @@ export const EditableBlockRenderer = ({
       case 'ordered-list':
         const orderedItems = Array.isArray(block.content) ? block.content : [block.content]
         return (
-          <ol className={`list-decimal list-inside text-sm text-foreground space-y-1 mb-3 ml-2 cursor-pointer hover:bg-accent/10 rounded px-1 ${isSelected ? 'ring-2 ring-primary' : ''}`} onClick={handleClick}>
+          <ol 
+            className={`list-decimal list-inside text-sm text-foreground space-y-1 mb-3 ml-2 cursor-pointer hover:bg-accent/10 rounded px-1 ${isSelected ? 'ring-2 ring-primary' : ''}`} 
+            onClick={handleClick}
+            role="list"
+            aria-label={`Ordered list with ${orderedItems.length} items`}
+            tabIndex={0}
+          >
             {orderedItems.map((item, index) => (
-              <li key={index} className="relative">
+              <li key={index} className="relative" role="listitem" aria-setsize={orderedItems.length} aria-posinset={index + 1}>
                 {isEditing && index === 0 ? (
                   <div
                     ref={textRef}
                     contentEditable
                     suppressContentEditableWarning
                     dir="ltr"
+                    role="textbox"
+                    aria-label={`Edit list item ${index + 1}`}
                     className="inline outline-none focus:ring-2 focus:ring-primary rounded px-1 text-left"
                     data-placeholder="Type / for commands"
                     onInput={(e) => {
@@ -473,15 +492,23 @@ export const EditableBlockRenderer = ({
       case 'unordered-list':
         const unorderedItems = Array.isArray(block.content) ? block.content : [block.content]
         return (
-          <ul className={`list-disc list-inside text-sm text-foreground space-y-1 mb-3 ml-2 cursor-pointer hover:bg-accent/10 rounded px-1 ${isSelected ? 'ring-2 ring-primary' : ''}`} onClick={handleClick}>
+          <ul 
+            className={`list-disc list-inside text-sm text-foreground space-y-1 mb-3 ml-2 cursor-pointer hover:bg-accent/10 rounded px-1 ${isSelected ? 'ring-2 ring-primary' : ''}`} 
+            onClick={handleClick}
+            role="list"
+            aria-label={`Unordered list with ${unorderedItems.length} items`}
+            tabIndex={0}
+          >
             {unorderedItems.map((item, index) => (
-              <li key={index} className="relative">
+              <li key={index} className="relative" role="listitem" aria-setsize={unorderedItems.length} aria-posinset={index + 1}>
                 {isEditing && index === 0 ? (
                   <div
                     ref={textRef}
                     contentEditable
                     suppressContentEditableWarning
                     dir="ltr"
+                    role="textbox"
+                    aria-label={`Edit list item ${index + 1}`}
                     className="inline outline-none focus:ring-2 focus:ring-primary rounded px-1 text-left"
                     data-placeholder="Type / for commands"
                     onInput={(e) => {

@@ -123,18 +123,30 @@ export const Inspector = ({
   }
 
   return (
-    <div className="w-80 border-l border-border bg-muted/30 flex flex-col">
+    <div className="w-80 border-l border-border bg-muted/30 flex flex-col" role="complementary" aria-label="Inspector panel">
       <div className="p-4 border-b border-border">
         <h3 className="font-semibold text-sm">Inspector</h3>
       </div>
       
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-        <TabsList className="grid w-full grid-cols-2 rounded-none border-b">
-          <TabsTrigger value="block">Block</TabsTrigger>
-          <TabsTrigger value="section">Section</TabsTrigger>
+      <Tabs 
+        value={activeTab} 
+        onValueChange={setActiveTab} 
+        className="flex-1 flex flex-col"
+        role="tablist"
+        aria-label="Inspector tabs"
+      >
+        <TabsList className="grid w-full grid-cols-2 rounded-none border-b" role="tablist">
+          <TabsTrigger value="block" role="tab" aria-controls="block-panel">Block</TabsTrigger>
+          <TabsTrigger value="section" role="tab" aria-controls="section-panel">Section</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="block" className="flex-1 mt-0 p-4 space-y-4">
+        <TabsContent 
+          value="block" 
+          className="flex-1 mt-0 p-4 space-y-4" 
+          role="tabpanel" 
+          id="block-panel"
+          aria-labelledby="block-tab"
+        >
           {selectedBlock ? (
             <>
               <div className="space-y-2">
@@ -306,7 +318,13 @@ export const Inspector = ({
           )}
         </TabsContent>
         
-        <TabsContent value="section" className="flex-1 mt-0 p-4 space-y-4">
+        <TabsContent 
+          value="section" 
+          className="flex-1 mt-0 p-4 space-y-4"
+          role="tabpanel" 
+          id="section-panel"
+          aria-labelledby="section-tab"
+        >
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium">Section</h4>

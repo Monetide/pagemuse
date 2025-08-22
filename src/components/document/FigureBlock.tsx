@@ -233,6 +233,8 @@ export const FigureBlock = ({
             ...maxWidthStyle,
             aspectRatio: data.aspectLock && data.aspectRatio ? data.aspectRatio : 'auto'
           }}
+          role="img"
+          aria-describedby={data.caption ? `caption-${Math.random()}` : undefined}
         />
         
         {isEditing && (
@@ -376,6 +378,9 @@ export const FigureBlock = ({
         ${className}
       `}
       onClick={onClick}
+      role="img"
+      aria-label={data.altText || 'Figure'}
+      tabIndex={0}
     >
       {data.imageSrc ? renderImage() : renderPlaceholder()}
       {renderCaption()}
