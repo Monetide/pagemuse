@@ -58,6 +58,7 @@ const App = () => {
                             <Route path="/" element={<Index />} />
                             <Route path="/dashboard" element={<Dashboard />} />
                             <Route path="/documents" element={<MyDocuments />} />
+                            <Route path="/documents/new/editor" element={<DocumentModelDemo />} />
                             <Route path="/documents/:id/editor" element={<DocumentModelDemo />} />
                             <Route path="/documents/:id/settings" element={<DocumentSettings />} />
                             <Route path="/templates" element={<TemplateLibrary />} />

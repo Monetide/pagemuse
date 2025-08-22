@@ -13,6 +13,8 @@ import { VersionHistoryPanel } from '@/components/document/VersionHistoryPanel'
 import { SectionDeleteDialog } from '@/components/document/SectionDeleteDialog'
 import { CanvasSectionHeader } from '@/components/document/CanvasSectionHeader'
 import { TrashPanel } from '@/components/document/TrashPanel'
+import { CoachMarks } from '@/components/onboarding/CoachMarks'
+import { useOnboarding } from '@/hooks/useOnboarding'
 
 import { AccessibilityProvider } from '@/components/accessibility/AccessibilityProvider'
 import { DragDropProvider } from '@/contexts/DragDropContext'
@@ -63,8 +65,19 @@ export default function DocumentModelDemo() {
   const [selectedBlockId, setSelectedBlockId] = useState<string>('')
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
-  const [debugMode, setDebugMode] = useState<boolean>(false)
+  const [debugMode] = useState(new URLSearchParams(window.location.search).get('debug') === '1')
   const [showVersionHistory, setShowVersionHistory] = useState(false)
+  const [showCommandPalette, setShowCommandPalette] = useState(false)
+  const [focusedSection, setFocusedSection] = useState<'navigator' | 'canvas' | 'inspector'>('canvas')
+  
+  // Onboarding
+  const {
+    showCoachMarks: isCoachMarksVisible,
+    showCoachMarks: triggerCoachMarks,
+    completeOnboarding,
+    dismissOnboarding,
+    isEligibleForOnboarding
+  } = useOnboarding()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [sectionsToDelete, setSectionsToDelete] = useState<string[]>([])
   const [showTrashPanel, setShowTrashPanel] = useState(false)
@@ -343,7 +356,7 @@ export default function DocumentModelDemo() {
             onSaveAs={handleSaveAs}
             onClose={persistence.closeDocument}
             debugMode={debugMode}
-            onDebugToggle={setDebugMode}
+            onDebugToggle={() => {}} // Debug mode is read-only from URL param
             onToggleVersionHistory={() => setShowVersionHistory(!showVersionHistory)}
           />
         )}
@@ -392,7 +405,7 @@ export default function DocumentModelDemo() {
             {/* Left Sidebar */}
             <div className={`border-r border-border bg-muted/30 transition-all duration-200 ${
               debugMode ? 'w-60' : 'w-80'
-            }`}>
+            }`} data-testid="navigator">
               <Tabs defaultValue="navigator" className="h-full flex flex-col">
                 <TabsList className={`grid w-full rounded-none border-b ${
                   debugMode 
@@ -575,8 +588,8 @@ export default function DocumentModelDemo() {
               </Tabs>
             </div>
             
-            {/* Center Canvas */}
-            <div className="flex-1 flex flex-col">
+            {/* Main Canvas */}
+            <div className="flex-1 flex flex-col" data-testid="canvas">
               {document.sections.length > 0 ? (
                 <>
                   {/* Section Tabs */}
@@ -697,7 +710,7 @@ export default function DocumentModelDemo() {
             </div>
             
             {/* Right Inspector/Debug Panel */}
-            <div className="flex">
+            <div className="flex" data-testid="inspector">
               <Inspector
                 selectedBlock={selectedBlock}
                 currentSection={document.sections.find(s => s.id === (selectedSectionId || document.sections[0]?.id))!}
@@ -778,6 +791,13 @@ export default function DocumentModelDemo() {
             setSelectedBlockId(blockId)
             setFocusedBlockId(blockId)
           }}
+        />
+        
+        {/* Coach Marks for First-time Users */}
+        <CoachMarks
+          isVisible={isCoachMarksVisible}
+          onComplete={completeOnboarding}
+          onDismissAll={dismissOnboarding}
         />
         
       </DragDropProvider>
