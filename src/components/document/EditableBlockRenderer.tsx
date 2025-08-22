@@ -7,9 +7,14 @@ import { TextInvisibles, InvisibleMarkers } from './TextInvisibles'
 import { FigureBlock } from './FigureBlock'
 import { TableEditor } from './TableEditor'
 import { BoundarySlashCommand } from './BoundarySlashCommand'
+import { CrossReference } from './CrossReference'
+import { CrossReferenceInserter } from './CrossReferenceInserter'
+import { useCrossReferences } from '@/hooks/useCrossReferences'
+import { SemanticDocument } from '@/lib/document-model'
 
 interface EditableBlockRendererProps {
   block: Block
+  document?: SemanticDocument | null
   className?: string
   onContentChange?: (blockId: string, newContent: any) => void
   onNewBlock?: (afterBlockId: string, type: Block['type'], content?: any, metadata?: any) => void
@@ -22,6 +27,7 @@ interface EditableBlockRendererProps {
 
 export const EditableBlockRenderer = ({ 
   block, 
+  document,
   className = '',
   onContentChange,
   onNewBlock,
@@ -60,7 +66,19 @@ export const EditableBlockRenderer = ({
     query: '',
     position: { x: 0, y: 0 }
   })
+  const [crossRefInserter, setCrossRefInserter] = useState<{
+    visible: boolean
+    position: { x: number; y: number }
+  }>({
+    visible: false,
+    position: { x: 0, y: 0 }
+  })
   const textRef = useRef<HTMLDivElement>(null)
+  
+  const { getElementById, referenceableElements } = useCrossReferences(document)
+  
+  // Get the current element's label if it's referenceable
+  const currentElement = referenceableElements.find(el => el.id === block.id)
   
   const isChunk = block.metadata?.isChunk
   const chunkIndex = block.metadata?.chunkIndex
@@ -72,7 +90,7 @@ export const EditableBlockRenderer = ({
     // For non-text blocks, set up boundary slash command handling
     if (!['paragraph', 'heading', 'quote'].includes(block.type)) {
       // Enable keyboard events for boundary slash commands
-      const blockElement = document.getElementById(`block-${block.id}`)
+      const blockElement = globalThis.document.getElementById(`block-${block.id}`)
       if (blockElement) {
         blockElement.focus()
       }
@@ -164,6 +182,16 @@ export const EditableBlockRenderer = ({
   }, [block.id, editContent, onNewBlock, onDeleteBlock, slashCommand.visible])
 
   const handleSlashCommandSelect = useCallback((blockType: Block['type'], content?: any, metadata?: any) => {
+    if (blockType === 'cross-reference') {
+      // Show cross-reference inserter instead of creating a block directly
+      setCrossRefInserter({
+        visible: true,
+        position: slashCommand.position
+      })
+      setSlashCommand(prev => ({ ...prev, visible: false }))
+      return
+    }
+
     // Replace the slash and query with empty string
     const currentText = editContent.toString()
     const slashIndex = currentText.lastIndexOf('/')
@@ -176,7 +204,7 @@ export const EditableBlockRenderer = ({
     // Insert new block after current one
     onNewBlock?.(block.id, blockType, content, metadata)
     setSlashCommand(prev => ({ ...prev, visible: false }))
-  }, [editContent, block.id, onContentChange, onNewBlock])
+  }, [editContent, block.id, onContentChange, onNewBlock, slashCommand.position])
 
   const handleSlashCommandClose = useCallback(() => {
     setSlashCommand(prev => ({ ...prev, visible: false }))
@@ -186,7 +214,7 @@ export const EditableBlockRenderer = ({
     if (!textRef.current) return
 
     // Apply formatting using document.execCommand (legacy but still works for basic formatting)
-    document.execCommand(command, false, value)
+    globalThis.document.execCommand(command, false, value)
     
     // Update content after formatting
     const newContent = textRef.current.textContent || ''
@@ -219,7 +247,7 @@ export const EditableBlockRenderer = ({
       e.preventDefault()
       
       // Get the position of the selected block
-      const blockElement = document.getElementById(`block-${block.id}`)
+      const blockElement = globalThis.document.getElementById(`block-${block.id}`)
       if (blockElement) {
         const rect = blockElement.getBoundingClientRect()
         
@@ -262,6 +290,16 @@ export const EditableBlockRenderer = ({
     setBoundarySlashCommand(prev => ({ ...prev, visible: false }))
   }, [])
 
+  const handleCrossRefInsert = useCallback((targetId: string, type: 'see' | 'reference' | 'page', format: 'full' | 'number-only' | 'title-only') => {
+    const crossRefContent = { targetId, type, format }
+    onNewBlock?.(block.id, 'cross-reference', crossRefContent)
+    setCrossRefInserter({ visible: false, position: { x: 0, y: 0 } })
+  }, [block.id, onNewBlock])
+
+  const handleCrossRefClose = useCallback(() => {
+    setCrossRefInserter({ visible: false, position: { x: 0, y: 0 } })
+  }, [])
+
   const handleBlur = useCallback(() => {
     // Delay hiding to allow toolbar interaction
     setTimeout(() => {
@@ -279,36 +317,50 @@ export const EditableBlockRenderer = ({
         const headingClass = level === 1 ? 'text-xl font-bold' : level === 2 ? 'text-lg font-semibold' : 'text-base font-medium'
         
         return isEditing ? (
-          <div
-            ref={textRef}
-            contentEditable
-            suppressContentEditableWarning
-            dir="ltr"
-            className={`${headingClass} text-foreground mb-2 outline-none focus:ring-2 focus:ring-primary rounded px-1 text-left`}
-            data-placeholder="Type / for commands"
-            onInput={(e) => handleContentEdit(e.currentTarget.textContent || '')}
-            onKeyDown={handleKeyDown}
-            onBlur={handleBlur}
-            onMouseUp={handleMouseUp}
-            autoFocus
-          >
-            {editContent}
+          <div className="relative">
+            {currentElement && (
+              <div className="absolute -left-16 top-0 text-xs text-muted-foreground font-medium">
+                {currentElement.number}
+              </div>
+            )}
+            <div
+              ref={textRef}
+              contentEditable
+              suppressContentEditableWarning
+              dir="ltr"
+              className={`${headingClass} text-foreground mb-2 outline-none focus:ring-2 focus:ring-primary rounded px-1 text-left`}
+              data-placeholder="Type / for commands"
+              onInput={(e) => handleContentEdit(e.currentTarget.textContent || '')}
+              onKeyDown={handleKeyDown}
+              onBlur={handleBlur}
+              onMouseUp={handleMouseUp}
+              autoFocus
+            >
+              {editContent}
+            </div>
           </div>
         ) : (
-          <HeadingTag 
-            className={`${headingClass} text-foreground mb-2 cursor-text hover:bg-accent/10 rounded px-1 ${isSelected ? 'ring-2 ring-primary' : ''}`}
-            data-placeholder="Type / for commands"
-            onClick={handleClick}
-          >
-            <TextInvisibles
-              text={block.content || ''}
-              showInvisibles={showInvisibles}
-            />
-            <InvisibleMarkers
-              showInvisibles={showInvisibles}
-              lineCount={block.content ? block.content.split('\n').length : 1}
-            />
-          </HeadingTag>
+          <div className="relative">
+            {currentElement && (
+              <div className="absolute -left-16 top-0 text-xs text-muted-foreground font-medium">
+                {currentElement.number}
+              </div>
+            )}
+            <HeadingTag 
+              className={`${headingClass} text-foreground mb-2 cursor-text hover:bg-accent/10 rounded px-1 ${isSelected ? 'ring-2 ring-primary' : ''}`}
+              data-placeholder="Type / for commands"
+              onClick={handleClick}
+            >
+              <TextInvisibles
+                text={block.content || ''}
+                showInvisibles={showInvisibles}
+              />
+              <InvisibleMarkers
+                showInvisibles={showInvisibles}
+                lineCount={block.content ? block.content.split('\n').length : 1}
+              />
+            </HeadingTag>
+          </div>
         )
       
       case 'paragraph':
@@ -458,8 +510,13 @@ export const EditableBlockRenderer = ({
             id={`block-${block.id}`}
             tabIndex={0}
             onKeyDown={handleBoundaryKeyDown}
-            className="outline-none"
+            className="outline-none relative"
           >
+            {currentElement && (
+              <div className="absolute -left-16 top-2 text-xs text-muted-foreground font-medium">
+                {currentElement.label}
+              </div>
+            )}
             <FigureBlock
               data={figureData}
               isSelected={isSelected}
@@ -478,13 +535,28 @@ export const EditableBlockRenderer = ({
             id={`block-${block.id}`}
             tabIndex={0}
             onKeyDown={handleBoundaryKeyDown}
-            className="outline-none"
+            className="outline-none relative"
           >
+            {currentElement && (
+              <div className="absolute -left-16 top-2 text-xs text-muted-foreground font-medium">
+                {currentElement.label}
+              </div>
+            )}
             <TableEditor
               block={block}
-              onContentChange={onContentChange}
-              onSelect={onSelect}
               isSelected={isSelected}
+              onContentChange={(newContent) => onContentChange?.(block.id, newContent)}
+            />
+          </div>
+        )
+      
+      case 'cross-reference':
+        return (
+          <div className={`my-2 ${isSelected ? 'ring-2 ring-primary rounded' : ''}`} onClick={handleClick}>
+            <CrossReference
+              content={block.content}
+              document={document}
+              className="text-sm"
             />
           </div>
         )
@@ -565,6 +637,16 @@ export const EditableBlockRenderer = ({
         onBlockTypeChange={handleBlockTypeChange}
         onClose={handleFormattingToolbarClose}
       />
+      {/* Cross-reference inserter */}
+      {crossRefInserter.visible && (
+        <CrossReferenceInserter
+          document={document}
+          position={crossRefInserter.position}
+          visible={crossRefInserter.visible}
+          onSelect={handleCrossRefInsert}
+          onClose={handleCrossRefClose}
+        />
+      )}
     </div>
   )
 }

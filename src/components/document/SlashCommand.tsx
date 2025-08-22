@@ -117,6 +117,14 @@ const COMMANDS: CommandItem[] = [
     keywords: ['spacer', 'space', 'blank', 'gap'],
     defaultContent: '',
     defaultMetadata: { height: 0.5 }
+  },
+  {
+    type: 'cross-reference',
+    label: 'Cross Reference',
+    description: 'Link to heading, figure, or table',
+    icon: <MessageSquare className="w-4 h-4" />,
+    keywords: ['reference', 'cross-ref', 'link', 'see', 'ref'],
+    defaultContent: { targetId: '', type: 'see', format: 'full' }
   }
 ]
 

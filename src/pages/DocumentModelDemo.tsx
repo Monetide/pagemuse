@@ -484,6 +484,7 @@ export default function DocumentModelDemo() {
                       <EditorCanvas
                         key={section.id}
                         section={section}
+                        document={document}
                         onContentChange={updateBlockContent}
                         onNewBlock={(afterBlockId, type, content, metadata) => {
                           if (afterBlockId === 'create-first') {

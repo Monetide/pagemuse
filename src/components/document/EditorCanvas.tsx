@@ -1,4 +1,4 @@
-import { Section, Block } from '@/lib/document-model'
+import { Section, Block, SemanticDocument } from '@/lib/document-model'
 import { generateLayout, PageBox } from '@/lib/layout-engine'
 import { EditableBlockRenderer } from './EditableBlockRenderer'
 import { Rulers } from './Rulers'
@@ -14,6 +14,7 @@ import { ZoomIn, ZoomOut, Maximize2, Grid3x3, Columns, Square, Ruler, Eye, EyeOf
 
 interface EditorCanvasProps {
   section: Section
+  document?: SemanticDocument | null
   onContentChange?: (blockId: string, newContent: any) => void
   onNewBlock?: (afterBlockId: string, type: Block['type'], content?: any, metadata?: any) => void
   onDeleteBlock?: (blockId: string) => void
@@ -41,6 +42,7 @@ const PAGE_SIZES = {
 
 const EditorPageBox = ({ 
   pageBox, 
+  document,
   onContentChange, 
   onNewBlock, 
   onDeleteBlock,
@@ -53,6 +55,7 @@ const EditorPageBox = ({
   overlaySettings
 }: { 
   pageBox: PageBox
+  document?: SemanticDocument | null
   onContentChange?: (blockId: string, newContent: any) => void
   onNewBlock?: (afterBlockId: string, type: Block['type'], content?: any, metadata?: any) => void
   onDeleteBlock?: (blockId: string) => void
@@ -212,6 +215,7 @@ const EditorPageBox = ({
                     <EditableBlockRenderer
                       key={`${block.id}-${blockIndex}`}
                       block={block}
+                      document={document}
                       onContentChange={onContentChange}
                       onNewBlock={onNewBlock}
                       onDeleteBlock={onDeleteBlock}
@@ -247,6 +251,7 @@ const EditorPageBox = ({
 
 export const EditorCanvas = ({ 
   section, 
+  document,
   onContentChange, 
   onNewBlock, 
   onDeleteBlock,
@@ -436,6 +441,7 @@ export const EditorCanvas = ({
             <EditorPageBox 
               key={pageBox.id} 
               pageBox={pageBox}
+              document={document}
               onContentChange={onContentChange}
               onNewBlock={onNewBlock}
               onDeleteBlock={onDeleteBlock}
