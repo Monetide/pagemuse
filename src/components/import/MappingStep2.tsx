@@ -4,7 +4,7 @@ import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
-import { Section, BookOpen, MessageSquareQuote, Hash } from 'lucide-react'
+import { Section, BookOpen, MessageSquareQuote, Hash, CheckCircle } from 'lucide-react'
 import { MappingConfig } from './MappingWizard'
 import { IRDocument } from '@/lib/ir-types'
 
@@ -226,83 +226,207 @@ export function MappingStep2({ config, updateConfig, irDocument }: MappingStep2P
         </CardContent>
       </Card>
 
-      {/* Callout Mapping */}
-      <Card className="border-0 shadow-soft">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageSquareQuote className="w-5 h-5" />
-            Callout Mapping
-          </CardTitle>
-          <CardDescription>
-            How should blockquotes and similar elements be handled?
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium mb-1">Found Content</div>
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <span>{blockquoteCount} Blockquotes</span>
-                <span>{calloutCount} Detected Callouts</span>
+        {/* Callout Mapping */}
+        <Card className="border-0 shadow-soft">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquareQuote className="w-5 h-5" />
+              Callout Mapping
+            </CardTitle>
+            <CardDescription>
+              How should blockquotes and similar elements be handled?
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium mb-1">Found Content</div>
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <span>{blockquoteCount} Blockquotes</span>
+                  <span>{calloutCount} Detected Callouts</span>
+                </div>
               </div>
             </div>
-          </div>
-          
-          <Separator />
-          
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Blockquote Handling</Label>
-              <Select
-                value={config.calloutMapping.blockquoteHandling}
-                onValueChange={(value: 'quote' | 'callout' | 'auto') => 
-                  updateConfig({
-                    calloutMapping: { ...config.calloutMapping, blockquoteHandling: value }
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="auto">Auto-detect (Recommended)</SelectItem>
-                  <SelectItem value="quote">Always Quote blocks</SelectItem>
-                  <SelectItem value="callout">Always Callout blocks</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Auto-detect looks for patterns like "**Note:**" to determine callout type
-              </p>
-            </div>
             
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Default Callout Type</Label>
-              <Select
-                value={config.calloutMapping.defaultCalloutType}
-                onValueChange={(value: 'info' | 'note' | 'warning' | 'error' | 'success') => 
-                  updateConfig({
-                    calloutMapping: { ...config.calloutMapping, defaultCalloutType: value }
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="note">Note (Default)</SelectItem>
-                  <SelectItem value="info">Info</SelectItem>
-                  <SelectItem value="warning">Warning</SelectItem>
-                  <SelectItem value="error">Error</SelectItem>
-                  <SelectItem value="success">Success</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Used when blockquotes can't be auto-detected as specific callout types
-              </p>
+            <Separator />
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Blockquote Handling</Label>
+                <Select
+                  value={config.calloutMapping.blockquoteHandling}
+                  onValueChange={(value: 'quote' | 'callout' | 'auto') => 
+                    updateConfig({
+                      calloutMapping: { ...config.calloutMapping, blockquoteHandling: value }
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">Auto-detect (Recommended)</SelectItem>
+                    <SelectItem value="quote">Always Quote blocks</SelectItem>
+                    <SelectItem value="callout">Always Callout blocks</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Auto-detect looks for patterns like "**Note:**" to determine callout type
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Default Callout Type</Label>
+                <Select
+                  value={config.calloutMapping.defaultCalloutType}
+                  onValueChange={(value: 'info' | 'note' | 'warning' | 'error' | 'success') => 
+                    updateConfig({
+                      calloutMapping: { ...config.calloutMapping, defaultCalloutType: value }
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="note">Note (Default)</SelectItem>
+                    <SelectItem value="info">Info</SelectItem>
+                    <SelectItem value="warning">Warning</SelectItem>
+                    <SelectItem value="error">Error</SelectItem>
+                    <SelectItem value="success">Success</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Used when blockquotes can't be auto-detected as specific callout types
+                </p>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  )
-}
+          </CardContent>
+        </Card>
+
+        {/* Quality & Cleanup Options */}
+        <Card className="border-0 shadow-soft">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5" />
+              Quality & Cleanup
+            </CardTitle>
+            <CardDescription>
+              Automatic fixes to improve document quality and formatting
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="remove-hyphens" className="text-sm">
+                  Remove line-end hyphens
+                </Label>
+                <Switch
+                  id="remove-hyphens"
+                  checked={config.cleanupOptions?.removeHyphens ?? true}
+                  onCheckedChange={(checked) => 
+                    updateConfig({
+                      cleanupOptions: {
+                        ...config.cleanupOptions,
+                        removeHyphens: checked
+                      }
+                    })
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label htmlFor="collapse-spaces" className="text-sm">
+                  Collapse double spaces
+                </Label>
+                <Switch
+                  id="collapse-spaces"
+                  checked={config.cleanupOptions?.collapseSpaces ?? true}
+                  onCheckedChange={(checked) => 
+                    updateConfig({
+                      cleanupOptions: {
+                        ...config.cleanupOptions,
+                        collapseSpaces: checked
+                      }
+                    })
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label htmlFor="normalize-lists" className="text-sm">
+                  Normalize list formatting
+                </Label>
+                <Switch
+                  id="normalize-lists"
+                  checked={config.cleanupOptions?.normalizeLists ?? true}
+                  onCheckedChange={(checked) => 
+                    updateConfig({
+                      cleanupOptions: {
+                        ...config.cleanupOptions,
+                        normalizeLists: checked
+                      }
+                    })
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label htmlFor="detect-captions" className="text-sm">
+                  Detect figure captions
+                </Label>
+                <Switch
+                  id="detect-captions"
+                  checked={config.cleanupOptions?.detectFigureCaptions ?? true}
+                  onCheckedChange={(checked) => 
+                    updateConfig({
+                      cleanupOptions: {
+                        ...config.cleanupOptions,
+                        detectFigureCaptions: checked
+                      }
+                    })
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label htmlFor="keep-with-next" className="text-sm">
+                  Add keep-with-next to headings
+                </Label>
+                <Switch
+                  id="keep-with-next"
+                  checked={config.cleanupOptions?.addKeepWithNext ?? true}
+                  onCheckedChange={(checked) => 
+                    updateConfig({
+                      cleanupOptions: {
+                        ...config.cleanupOptions,
+                        addKeepWithNext: checked
+                      }
+                    })
+                  }
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label htmlFor="cross-references" className="text-sm">
+                  Create cross-references
+                </Label>
+                <Switch
+                  id="cross-references"
+                  checked={config.cleanupOptions?.createCrossReferences ?? true}
+                  onCheckedChange={(checked) => 
+                    updateConfig({
+                      cleanupOptions: {
+                        ...config.cleanupOptions,
+                        createCrossReferences: checked
+                      }
+                    })
+                  }
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }

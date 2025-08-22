@@ -8,6 +8,7 @@ import { PDFProcessingOptions, processPDFFile } from '@/lib/pdf-processor'
 import { PDFProcessingDialog } from '@/components/import/PDFProcessingDialog'
 import { MappingWizard, MappingConfig } from '@/components/import/MappingWizard'
 import { IRDocument } from '@/lib/ir-types'
+import { CleanupResult } from '@/lib/post-import-cleaner'
 
 export const useImport = () => {
   const [isImporting, setIsImporting] = useState(false)
@@ -113,7 +114,7 @@ export const useImport = () => {
     }
   }, [toast])
 
-  const handleMappingConfirm = useCallback((config: MappingConfig, mappedDocument: SemanticDocument) => {
+  const handleMappingConfirm = useCallback((config: MappingConfig, mappedDocument: SemanticDocument, cleanupResult?: CleanupResult) => {
     if (!pendingHandlers) return
     
     const { mode, currentDocument, onCreateDocument, onUpdateDocument } = pendingHandlers
@@ -147,9 +148,11 @@ export const useImport = () => {
           break
       }
       
+      const changeCount = cleanupResult?.changes.length || 0
       toast({
         title: "Import Successful",
-        description: `Successfully imported ${pendingFileName} with custom mapping`
+        description: `Successfully imported ${pendingFileName} with custom mapping` + 
+                     (changeCount > 0 ? ` (${changeCount} quality fixes applied)` : '')
       })
       
     } catch (error) {

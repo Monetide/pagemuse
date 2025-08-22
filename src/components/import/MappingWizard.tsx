@@ -6,6 +6,9 @@ import { CheckCircle, ArrowLeft, ArrowRight } from 'lucide-react'
 import { MappingStep1 } from './MappingStep1'
 import { MappingStep2 } from './MappingStep2'
 import { MappingStep3 } from './MappingStep3'
+import { CleanupResultsPanel } from './CleanupResultsPanel'
+import { PostImportCleaner, getDefaultCleanupOptions, CleanupOptions, CleanupResult } from '@/lib/post-import-cleaner'
+import { IRMapper } from '@/lib/ir-mapper'
 import { IRDocument } from '@/lib/ir-types'
 import { SemanticDocument } from '@/lib/document-model'
 import { Template } from '@/hooks/useSupabaseData'
@@ -35,6 +38,7 @@ export interface MappingConfig {
     blockquoteHandling: 'quote' | 'callout' | 'auto'
     defaultCalloutType: 'info' | 'note' | 'warning' | 'error' | 'success'
   }
+  cleanupOptions: CleanupOptions
   
   // Step 3: Preview Fixups
   structuralEdits: {
@@ -52,7 +56,7 @@ interface MappingWizardProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   irDocument: IRDocument
-  onConfirm: (config: MappingConfig, mappedDocument: SemanticDocument) => void
+  onConfirm: (config: MappingConfig, mappedDocument: SemanticDocument, cleanupResult?: CleanupResult) => void
   currentDocument?: SemanticDocument
   fileName?: string
 }
@@ -86,6 +90,7 @@ export function MappingWizard({
       blockquoteHandling: 'auto',
       defaultCalloutType: 'note'
     },
+    cleanupOptions: getDefaultCleanupOptions('text'), // Will be updated based on file type
     structuralEdits: {
       headingPromotions: {},
       headingDemotions: {},
@@ -98,6 +103,7 @@ export function MappingWizard({
   })
   
   const [previewDocument, setPreviewDocument] = useState<SemanticDocument | null>(null)
+  const [cleanupResult, setCleanupResult] = useState<CleanupResult | null>(null)
 
   const updateConfig = useCallback((updates: Partial<MappingConfig>) => {
     setConfig(prev => ({ ...prev, ...updates }))
@@ -115,8 +121,20 @@ export function MappingWizard({
     }
   }, [currentStep])
 
-  const handleConfirm = useCallback(() => {
-    if (previewDocument) {
+  const handleConfirm = useCallback(async () => {
+    if (!previewDocument) return
+    
+    try {
+      // Apply post-import cleanups
+      const cleaner = new PostImportCleaner(config.cleanupOptions)
+      const cleanupResult = cleaner.cleanDocument(previewDocument)
+      
+      setCleanupResult(cleanupResult)
+      onConfirm(config, cleanupResult.document, cleanupResult)
+      onOpenChange(false)
+    } catch (error) {
+      console.error('Failed to apply cleanups:', error)
+      // Fallback to original document if cleanup fails
       onConfirm(config, previewDocument)
       onOpenChange(false)
     }
@@ -187,29 +205,38 @@ export function MappingWizard({
         </DialogHeader>
 
         {/* Step Content */}
-        <div className="flex-1 overflow-hidden">
-          {currentStep === 1 && (
-            <MappingStep1
-              config={config}
-              updateConfig={updateConfig}
-              currentDocument={currentDocument}
-              irDocument={irDocument}
-            />
-          )}
-          {currentStep === 2 && (
-            <MappingStep2
-              config={config}
-              updateConfig={updateConfig}
-              irDocument={irDocument}
-            />
-          )}
-          {currentStep === 3 && (
-            <MappingStep3
-              config={config}
-              updateConfig={updateConfig}
-              irDocument={irDocument}
-              onPreviewUpdate={setPreviewDocument}
-            />
+        <div className="flex-1 overflow-hidden flex">
+          <div className="flex-1">
+            {currentStep === 1 && (
+              <MappingStep1
+                config={config}
+                updateConfig={updateConfig}
+                currentDocument={currentDocument}
+                irDocument={irDocument}
+              />
+            )}
+            {currentStep === 2 && (
+              <MappingStep2
+                config={config}
+                updateConfig={updateConfig}
+                irDocument={irDocument}
+              />
+            )}
+            {currentStep === 3 && (
+              <MappingStep3
+                config={config}
+                updateConfig={updateConfig}
+                irDocument={irDocument}
+                onPreviewUpdate={setPreviewDocument}
+              />
+            )}
+          </div>
+          
+          {/* Right sidebar for cleanup results */}
+          {cleanupResult && (
+            <div className="w-80 border-l border-border">
+              <CleanupResultsPanel cleanupResult={cleanupResult} />
+            </div>
           )}
         </div>
 
