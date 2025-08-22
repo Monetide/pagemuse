@@ -444,11 +444,17 @@ export default function DocumentModelDemo() {
                         key={section.id}
                         section={section}
                         onContentChange={updateBlockContent}
-                        onNewBlock={(afterBlockId, type) => {
+                        onNewBlock={(afterBlockId, type, content, metadata) => {
                           if (afterBlockId === 'create-first') {
-                            addBlockAfter('create-first', type, '')
+                            const block = addBlockAfter('create-first', type, content || '')
+                            if (block && metadata && Object.keys(metadata).length > 0) {
+                              block.metadata = { ...block.metadata, ...metadata }
+                            }
                           } else {
-                            addBlockAfter(afterBlockId, type, '')
+                            const block = addBlockAfter(afterBlockId, type, content || '')
+                            if (block && metadata && Object.keys(metadata).length > 0) {
+                              block.metadata = { ...block.metadata, ...metadata }
+                            }
                           }
                         }}
                         onDeleteBlock={deleteBlock}

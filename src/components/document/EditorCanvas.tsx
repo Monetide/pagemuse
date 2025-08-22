@@ -13,7 +13,7 @@ import { ZoomIn, ZoomOut, Maximize2, Grid3x3, Columns, Square } from 'lucide-rea
 interface EditorCanvasProps {
   section: Section
   onContentChange?: (blockId: string, newContent: any) => void
-  onNewBlock?: (afterBlockId: string, type: Block['type']) => void
+  onNewBlock?: (afterBlockId: string, type: Block['type'], content?: any, metadata?: any) => void
   onDeleteBlock?: (blockId: string) => void
   selectedBlockId?: string
   onBlockSelect?: (blockId: string) => void
@@ -46,7 +46,7 @@ const EditorPageBox = ({
 }: { 
   pageBox: PageBox
   onContentChange?: (blockId: string, newContent: any) => void
-  onNewBlock?: (afterBlockId: string, type: Block['type']) => void
+  onNewBlock?: (afterBlockId: string, type: Block['type'], content?: any, metadata?: any) => void
   onDeleteBlock?: (blockId: string) => void
   selectedBlockId?: string
   onSelectBlock?: (blockId: string) => void

@@ -1,12 +1,13 @@
 import { Block } from '@/lib/document-model'
 import { Minus, Image, Table } from 'lucide-react'
 import { useState, useRef, useCallback, KeyboardEvent } from 'react'
+import { SlashCommand } from './SlashCommand'
 
 interface EditableBlockRendererProps {
   block: Block
   className?: string
   onContentChange?: (blockId: string, newContent: any) => void
-  onNewBlock?: (afterBlockId: string, type: Block['type']) => void
+  onNewBlock?: (afterBlockId: string, type: Block['type'], content?: any, metadata?: any) => void
   onDeleteBlock?: (blockId: string) => void
   isSelected?: boolean
   onSelect?: (blockId: string) => void
@@ -23,6 +24,15 @@ export const EditableBlockRenderer = ({
 }: EditableBlockRendererProps) => {
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState(block.content)
+  const [slashCommand, setSlashCommand] = useState<{
+    visible: boolean
+    query: string
+    position: { x: number; y: number }
+  }>({
+    visible: false,
+    query: '',
+    position: { x: 0, y: 0 }
+  })
   const textRef = useRef<HTMLDivElement>(null)
   
   const isChunk = block.metadata?.isChunk
@@ -39,23 +49,89 @@ export const EditableBlockRenderer = ({
   const handleContentEdit = useCallback((newContent: string) => {
     setEditContent(newContent)
     onContentChange?.(block.id, newContent)
-  }, [block.id, onContentChange])
+    
+    // Check for slash command
+    const lastChar = newContent[newContent.length - 1]
+    if (lastChar === '/' && textRef.current) {
+      const rect = textRef.current.getBoundingClientRect()
+      const selection = window.getSelection()
+      const range = selection?.getRangeAt(0)
+      
+      if (range) {
+        const rangeRect = range.getBoundingClientRect()
+        setSlashCommand({
+          visible: true,
+          query: '',
+          position: {
+            x: rangeRect.left || rect.left + 20,
+            y: rangeRect.bottom || rect.bottom + 5
+          }
+        })
+      }
+    } else if (slashCommand.visible) {
+      // Check if we're still typing after the slash
+      const slashIndex = newContent.lastIndexOf('/')
+      if (slashIndex !== -1) {
+        const query = newContent.substring(slashIndex + 1)
+        setSlashCommand(prev => ({
+          ...prev,
+          query
+        }))
+      } else {
+        // No slash found, hide menu
+        setSlashCommand(prev => ({
+          ...prev,
+          visible: false
+        }))
+      }
+    }
+  }, [block.id, onContentChange, slashCommand.visible])
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // If slash command is visible, let it handle the keys
+    if (slashCommand.visible && ['ArrowUp', 'ArrowDown', 'Enter', 'Escape'].includes(e.key)) {
+      return // Let SlashCommand component handle these
+    }
+    
+    if (e.key === 'Enter' && !e.shiftKey && !slashCommand.visible) {
       e.preventDefault()
       onNewBlock?.(block.id, 'paragraph')
       setIsEditing(false)
+      setSlashCommand(prev => ({ ...prev, visible: false }))
     } else if (e.key === 'Backspace' && !editContent.toString().trim()) {
       e.preventDefault()
       onDeleteBlock?.(block.id)
     } else if (e.key === 'Escape') {
       setIsEditing(false)
+      setSlashCommand(prev => ({ ...prev, visible: false }))
     }
-  }, [block.id, editContent, onNewBlock, onDeleteBlock])
+  }, [block.id, editContent, onNewBlock, onDeleteBlock, slashCommand.visible])
+
+  const handleSlashCommandSelect = useCallback((blockType: Block['type'], content?: any, metadata?: any) => {
+    // Replace the slash and query with empty string
+    const currentText = editContent.toString()
+    const slashIndex = currentText.lastIndexOf('/')
+    if (slashIndex !== -1) {
+      const beforeSlash = currentText.substring(0, slashIndex)
+      setEditContent(beforeSlash)
+      onContentChange?.(block.id, beforeSlash)
+    }
+    
+    // Insert new block after current one
+    onNewBlock?.(block.id, blockType, content, metadata)
+    setSlashCommand(prev => ({ ...prev, visible: false }))
+  }, [editContent, block.id, onContentChange, onNewBlock])
+
+  const handleSlashCommandClose = useCallback(() => {
+    setSlashCommand(prev => ({ ...prev, visible: false }))
+  }, [])
 
   const handleBlur = useCallback(() => {
-    setIsEditing(false)
+    // Delay hiding to allow slash command interaction
+    setTimeout(() => {
+      setIsEditing(false)
+      setSlashCommand(prev => ({ ...prev, visible: false }))
+    }, 200)
   }, [])
 
   const renderEditableContent = () => {
@@ -244,7 +320,7 @@ export const EditableBlockRenderer = ({
   }
 
   return (
-    <div className={`block-content ${className}`}>
+    <div className={`block-content ${className} relative`}>
       {(isChunk || isTableChunk) && (
         <div className="text-xs text-accent font-medium mb-1 flex items-center gap-1">
           <span className="w-2 h-2 bg-accent rounded-full" />
@@ -255,6 +331,15 @@ export const EditableBlockRenderer = ({
         </div>
       )}
       {renderEditableContent()}
+      
+      {/* Slash Command Menu */}
+      <SlashCommand
+        position={slashCommand.position}
+        query={slashCommand.query}
+        visible={slashCommand.visible}
+        onSelect={handleSlashCommandSelect}
+        onClose={handleSlashCommandClose}
+      />
     </div>
   )
 }
