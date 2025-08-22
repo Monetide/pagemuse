@@ -39,8 +39,10 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { SaveStatus, DocumentMetadata } from '@/hooks/useDocumentPersistence'
+import { ShareDialog } from './ShareDialog'
 
 interface DocumentHeaderProps {
+  documentId?: string
   title: string
   saveStatus: SaveStatus
   documentMetadata: DocumentMetadata | null
@@ -53,6 +55,7 @@ interface DocumentHeaderProps {
 }
 
 export function DocumentHeader({
+  documentId,
   title,
   saveStatus,
   documentMetadata,
@@ -260,14 +263,26 @@ export function DocumentHeader({
               <Command className="w-4 h-4" />
             </Button>
             
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {/* TODO: Implement share */}}
-              title="Share"
-            >
-              <Share className="w-4 h-4" />
-            </Button>
+            {documentId ? (
+              <ShareDialog documentId={documentId} documentTitle={title}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  title="Share Document"
+                >
+                  <Share className="w-4 h-4" />
+                </Button>
+              </ShareDialog>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled
+                title="Save document to enable sharing"
+              >
+                <Share className="w-4 h-4" />
+              </Button>
+            )}
             
             <Button
               variant="ghost"

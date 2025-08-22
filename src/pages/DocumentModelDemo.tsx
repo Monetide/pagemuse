@@ -268,6 +268,7 @@ export default function DocumentModelDemo() {
         <div className="min-h-screen bg-background flex flex-col">
           {document && (
           <DocumentHeader
+            documentId={document.id}
             title={document.title}
             saveStatus={persistence.saveStatus}
             documentMetadata={persistence.documentMetadata}
