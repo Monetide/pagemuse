@@ -14,7 +14,8 @@ import {
   Minus, 
   Move,
   FileText,
-  GripVertical
+  GripVertical,
+  BookOpen
 } from 'lucide-react'
 import { Block } from '@/lib/document-model'
 import { cn } from '@/lib/utils'
@@ -104,6 +105,13 @@ const blockTypes: BlockType[] = [
     name: 'Spacer',
     description: 'Vertical spacing',
     icon: Move,
+    category: 'layout'
+  },
+  {
+    type: 'table-of-contents',
+    name: 'Table of Contents',
+    description: 'Dynamic TOC with page numbers',
+    icon: BookOpen,
     category: 'layout'
   }
 ]

@@ -1,6 +1,8 @@
-import { Block } from '@/lib/document-model'
-import { Minus, Image, Table, FileText } from 'lucide-react'
+import { Block, SemanticDocument } from '@/lib/document-model'
+import { Minus, Image, Table, FileText, BookOpen } from 'lucide-react'
 import { FootnoteInserter } from './FootnoteInserter'
+import { TOCRenderer } from './TOCRenderer'
+import { LayoutResult } from '@/lib/layout-engine'
 import { useState, useRef, useCallback, KeyboardEvent, useEffect } from 'react'
 import { SlashCommand } from './SlashCommand'
 import { FormattingToolbar } from './FormattingToolbar'
@@ -12,11 +14,11 @@ import { BoundarySlashCommand } from './BoundarySlashCommand'
 import { CrossReference } from './CrossReference'
 import { CrossReferenceInserter } from './CrossReferenceInserter'
 import { useCrossReferences } from '@/hooks/useCrossReferences'
-import { SemanticDocument } from '@/lib/document-model'
 
 interface EditableBlockRendererProps {
   block: Block
   document?: SemanticDocument | null
+  layoutResults?: Map<string, LayoutResult>
   className?: string
   onContentChange?: (blockId: string, newContent: any) => void
   onNewBlock?: (afterBlockId: string, type: Block['type'], content?: any, metadata?: any) => void
@@ -24,6 +26,7 @@ interface EditableBlockRendererProps {
   onBlockTypeChange?: (blockId: string, type: Block['type'], metadata?: any) => void
   isSelected?: boolean
   onSelect?: (blockId: string) => void
+  onTOCEntryClick?: (blockId: string, sectionId: string) => void
   showInvisibles?: boolean
   sectionId: string
   flowId: string
@@ -33,6 +36,7 @@ interface EditableBlockRendererProps {
 export const EditableBlockRenderer = ({ 
   block, 
   document,
+  layoutResults,
   className = '',
   onContentChange,
   onNewBlock,
@@ -40,6 +44,7 @@ export const EditableBlockRenderer = ({
   onBlockTypeChange,
   isSelected,
   onSelect,
+  onTOCEntryClick,
   showInvisibles = false,
   sectionId,
   flowId,
@@ -689,6 +694,25 @@ const [editContent, setEditContent] = useState(initialText)
                 </div>
               </div>
             </div>
+          </div>
+        )
+
+      case 'table-of-contents':
+        return (
+          <div 
+            className={`toc-block cursor-pointer hover:bg-accent/10 rounded p-2 ${isSelected ? 'ring-2 ring-primary' : ''}`}
+            onClick={handleClick}
+            tabIndex={0}
+            onKeyDown={handleBoundaryKeyDown}
+            id={`block-${block.id}`}
+          >
+            <TOCRenderer
+              block={block}
+              document={document}
+              layoutResults={layoutResults}
+              currentSectionId={sectionId}
+              onEntryClick={onTOCEntryClick}
+            />
           </div>
         )
 

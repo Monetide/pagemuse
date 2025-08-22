@@ -10,7 +10,8 @@ import {
   Table2, 
   MessageSquare,
   ArrowRight,
-  FileText
+  FileText,
+  BookOpen
 } from 'lucide-react'
 
 interface SlashCommandProps {
@@ -134,6 +135,29 @@ const COMMANDS: CommandItem[] = [
     icon: <FileText className="w-4 h-4" />,
     keywords: ['footnote', 'note', 'reference', 'citation'],
     defaultContent: { number: 1, content: 'Footnote content' }
+  },
+  {
+    type: 'table-of-contents',
+    label: 'Table of Contents',
+    description: 'Dynamic table of contents with page numbers',
+    icon: <BookOpen className="w-4 h-4" />,
+    keywords: ['toc', 'table of contents', 'index', 'navigation'],
+    defaultContent: {
+      title: 'Table of Contents',
+      includeLevels: [true, true, true, false, false, false],
+      excludeSections: [],
+      columns: 1,
+      columnGap: 0.5,
+      showPageNumbers: true,
+      pageNumberAlignment: 'right',
+      leader: 'dots',
+      indentPerLevel: 0.25,
+      itemSpacing: 0.125,
+      linkStyle: 'hover',
+      autoUpdate: true,
+      allowPageBreaks: true,
+      showContinued: true
+    }
   }
 ]
 

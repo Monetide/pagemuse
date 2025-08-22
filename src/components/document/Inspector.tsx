@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { FigureInspector } from './FigureInspector'
 import { TableInspector } from './TableInspector'
 import { ChartInspector } from './ChartInspector'
+import { TOCInspector } from './TOCInspector'
 import { PageMasterSettings } from './PageMasterSettings'
 import { LayoutPresetSelector } from './LayoutPresetSelector'
 import { useAccessibility } from '../accessibility/AccessibilityProvider'
@@ -20,10 +21,12 @@ import { RotateCcw } from 'lucide-react'
 interface InspectorProps {
   selectedBlock?: Block
   currentSection: Section
+  allSections?: Section[]
   onBlockUpdate?: (blockId: string, updates: Partial<Block>) => void
   onSectionUpdate?: (sectionId: string, updates: Partial<Section>) => void
   onDeleteBlock?: (blockId: string) => void
   onNewBlock?: (afterBlockId: string, type: Block['type'], content?: any, metadata?: any) => void
+  onTOCRefresh?: () => void
 }
 
 const PAGE_SIZES = [
@@ -36,10 +39,12 @@ const PAGE_SIZES = [
 export const Inspector = ({ 
   selectedBlock, 
   currentSection, 
+  allSections = [],
   onBlockUpdate, 
   onSectionUpdate,
   onDeleteBlock,
-  onNewBlock
+  onNewBlock,
+  onTOCRefresh
 }: InspectorProps) => {
   const [activeTab, setActiveTab] = useState('block')
   const [showPresets, setShowPresets] = useState(false)
@@ -150,6 +155,21 @@ export const Inspector = ({
               onNewBlock(selectedBlock.id, selectedBlock.type, selectedBlock.content, selectedBlock.metadata)
             }
           }}
+        />
+      </div>
+    )
+  }
+
+  // Handle table of contents blocks with dedicated inspector
+  if (selectedBlock?.type === 'table-of-contents') {
+    return (
+      <div className="w-80 border-l border-border bg-background p-4 overflow-y-auto">
+        <TOCInspector
+          block={selectedBlock}
+          sections={allSections}
+          currentSectionId={currentSection.id}
+          onUpdate={(content) => onBlockUpdate?.(selectedBlock.id, { content })}
+          onRefresh={onTOCRefresh}
         />
       </div>
     )

@@ -1,13 +1,26 @@
-import { Block } from '@/lib/document-model'
-import { Minus, Image, Table, BarChart, FileText } from 'lucide-react'
+import { Block, SemanticDocument } from '@/lib/document-model'
+import { Minus, Image, Table, BarChart, FileText, BookOpen } from 'lucide-react'
 import { FootnoteMarkerRenderer } from './FootnoteMarkerRenderer'
+import { TOCRenderer } from './TOCRenderer'
+import { LayoutResult } from '@/lib/layout-engine'
 
 interface BlockRendererProps {
   block: Block
+  document?: SemanticDocument | null
+  layoutResults?: Map<string, LayoutResult>
+  currentSectionId?: string
+  onTOCEntryClick?: (blockId: string, sectionId: string) => void
   className?: string
 }
 
-export const BlockRenderer = ({ block, className = '' }: BlockRendererProps) => {
+export const BlockRenderer = ({ 
+  block, 
+  document, 
+  layoutResults,
+  currentSectionId,
+  onTOCEntryClick,
+  className = '' 
+}: BlockRendererProps) => {
   const isChunk = block.metadata?.isChunk
   const chunkIndex = block.metadata?.chunkIndex
   const isTableChunk = block.metadata?.isTableChunk
@@ -296,6 +309,18 @@ export const BlockRenderer = ({ block, className = '' }: BlockRendererProps) => 
               </div>
             </div>
           </div>
+        )
+      
+      case 'table-of-contents':
+        return (
+          <TOCRenderer
+            block={block}
+            document={document}
+            layoutResults={layoutResults}
+            currentSectionId={currentSectionId}
+            onEntryClick={onTOCEntryClick}
+            className="mb-4"
+          />
         )
       
       default:
