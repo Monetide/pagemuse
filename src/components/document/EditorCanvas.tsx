@@ -38,6 +38,7 @@ const EditorPageBox = ({
   onContentChange, 
   onNewBlock, 
   onDeleteBlock,
+  onBlockTypeChange,
   selectedBlockId,
   onSelectBlock,
   hasContent,
@@ -49,6 +50,7 @@ const EditorPageBox = ({
   onContentChange?: (blockId: string, newContent: any) => void
   onNewBlock?: (afterBlockId: string, type: Block['type'], content?: any, metadata?: any) => void
   onDeleteBlock?: (blockId: string) => void
+  onBlockTypeChange?: (blockId: string, type: Block['type'], metadata?: any) => void
   selectedBlockId?: string
   onSelectBlock?: (blockId: string) => void
   hasContent?: boolean
@@ -374,6 +376,7 @@ export const EditorCanvas = ({
               onContentChange={onContentChange}
               onNewBlock={onNewBlock}
               onDeleteBlock={onDeleteBlock}
+              onBlockTypeChange={onBlockTypeChange}
               selectedBlockId={selectedBlockId}
               onSelectBlock={handleSelectBlock}
               hasContent={hasContent}
