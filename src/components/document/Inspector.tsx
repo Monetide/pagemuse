@@ -529,3 +529,5 @@ export const Inspector = ({
     </div>
   )
 }
+
+export default Inspector
