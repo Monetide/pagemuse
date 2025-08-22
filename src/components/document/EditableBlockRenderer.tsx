@@ -1,6 +1,6 @@
 import { Block } from '@/lib/document-model'
 import { Minus, Image, Table } from 'lucide-react'
-import { useState, useRef, useCallback, KeyboardEvent } from 'react'
+import { useState, useRef, useCallback, KeyboardEvent, useEffect } from 'react'
 import { SlashCommand } from './SlashCommand'
 import { FormattingToolbar } from './FormattingToolbar'
 import { TextInvisibles, InvisibleMarkers } from './TextInvisibles'
@@ -82,8 +82,22 @@ const [editContent, setEditContent] = useState(initialText)
     position: { x: 0, y: 0 }
   })
   const textRef = useRef<HTMLDivElement>(null)
+  const seededRef = useRef(false)
   
   const { getElementById, referenceableElements } = useCrossReferences(document)
+  
+  // Seed contentEditable only once on edit start to avoid caret jump
+  useEffect(() => {
+    if (isEditing) {
+      if (textRef.current && !seededRef.current) {
+        const value = typeof block.content === 'string' ? block.content : (block.content as any)?.text || ''
+        textRef.current.textContent = value
+        seededRef.current = true
+      }
+    } else {
+      seededRef.current = false
+    }
+  }, [isEditing])
   
   // Get the current element's label if it's referenceable
   const currentElement = referenceableElements.find(el => el.id === block.id)
@@ -129,7 +143,6 @@ const [editContent, setEditContent] = useState(initialText)
   }, [isEditing])
 
   const handleContentEdit = useCallback((newContent: string) => {
-    setEditContent(newContent)
     onContentChange?.(block.id, newContent)
     
     // Check for slash command
@@ -180,14 +193,17 @@ const [editContent, setEditContent] = useState(initialText)
       onNewBlock?.(block.id, 'paragraph')
       setIsEditing(false)
       setSlashCommand(prev => ({ ...prev, visible: false }))
-    } else if (e.key === 'Backspace' && !editContent.toString().trim()) {
-      e.preventDefault()
-      onDeleteBlock?.(block.id)
+    } else if (e.key === 'Backspace') {
+      const currentText = textRef.current?.textContent || ''
+      if (!currentText.trim()) {
+        e.preventDefault()
+        onDeleteBlock?.(block.id)
+      }
     } else if (e.key === 'Escape') {
       setIsEditing(false)
       setSlashCommand(prev => ({ ...prev, visible: false }))
     }
-  }, [block.id, editContent, onNewBlock, onDeleteBlock, slashCommand.visible])
+  }, [block.id, onNewBlock, onDeleteBlock, slashCommand.visible])
 
   const handleSlashCommandSelect = useCallback((blockType: Block['type'], content?: any, metadata?: any) => {
     if (blockType === 'cross-reference') {
@@ -201,18 +217,18 @@ const [editContent, setEditContent] = useState(initialText)
     }
 
     // Replace the slash and query with empty string
-    const currentText = editContent.toString()
+    const currentText = textRef.current?.textContent || ''
     const slashIndex = currentText.lastIndexOf('/')
     if (slashIndex !== -1) {
       const beforeSlash = currentText.substring(0, slashIndex)
-      setEditContent(beforeSlash)
+      if (textRef.current) textRef.current.textContent = beforeSlash
       onContentChange?.(block.id, beforeSlash)
     }
     
     // Insert new block after current one
     onNewBlock?.(block.id, blockType, content, metadata)
     setSlashCommand(prev => ({ ...prev, visible: false }))
-  }, [editContent, block.id, onContentChange, onNewBlock, slashCommand.position])
+  }, [block.id, onContentChange, onNewBlock, slashCommand.position])
 
   const handleSlashCommandClose = useCallback(() => {
     setSlashCommand(prev => ({ ...prev, visible: false }))
@@ -226,7 +242,6 @@ const [editContent, setEditContent] = useState(initialText)
     
     // Update content after formatting
     const newContent = textRef.current.textContent || ''
-    setEditContent(newContent)
     onContentChange?.(block.id, newContent)
     
     // Hide toolbar after applying format
@@ -235,15 +250,11 @@ const [editContent, setEditContent] = useState(initialText)
 
   const handleBlockTypeChange = useCallback((newType: Block['type'], metadata?: any) => {
     if (!onBlockTypeChange) return
-    
-    // Get current content or selected text
-    const content = formattingToolbar.selectedText || editContent
     onBlockTypeChange(block.id, newType, metadata)
-    
     // Hide toolbar
     setFormattingToolbar(prev => ({ ...prev, visible: false }))
     setIsEditing(false)
-  }, [block.id, onBlockTypeChange, formattingToolbar.selectedText, editContent])
+  }, [block.id, onBlockTypeChange])
 
   const handleFormattingToolbarClose = useCallback(() => {
     setFormattingToolbar(prev => ({ ...prev, visible: false }))
@@ -346,9 +357,7 @@ const [editContent, setEditContent] = useState(initialText)
               onBlur={handleBlur}
               onMouseUp={handleMouseUp}
               autoFocus
-            >
-              {editContent}
-            </div>
+            ></div>
           </div>
         ) : (
           <div className="relative">
@@ -393,9 +402,8 @@ const [editContent, setEditContent] = useState(initialText)
               onBlur={handleBlur}
               onMouseUp={handleMouseUp}
               autoFocus
-          >
-            {editContent}
-          </div>
+            >
+            </div>
         ) : (
           <p 
             className={`text-sm text-foreground leading-relaxed mb-3 cursor-text hover:bg-accent/10 rounded px-1 min-h-[1.2em] ${isSelected ? 'ring-2 ring-primary' : ''}`}
@@ -436,7 +444,6 @@ const [editContent, setEditContent] = useState(initialText)
             onMouseUp={handleMouseUp}
             autoFocus
             >
-              {editContent}
             </div>
           </blockquote>
         ) : (
