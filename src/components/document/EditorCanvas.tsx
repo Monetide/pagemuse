@@ -15,6 +15,7 @@ interface EditorCanvasProps {
   onContentChange?: (blockId: string, newContent: any) => void
   onNewBlock?: (afterBlockId: string, type: Block['type'], content?: any, metadata?: any) => void
   onDeleteBlock?: (blockId: string) => void
+  onBlockTypeChange?: (blockId: string, type: Block['type'], metadata?: any) => void
   selectedBlockId?: string
   onBlockSelect?: (blockId: string) => void
 }
@@ -189,6 +190,7 @@ const EditorPageBox = ({
                       onContentChange={onContentChange}
                       onNewBlock={onNewBlock}
                       onDeleteBlock={onDeleteBlock}
+                      onBlockTypeChange={onBlockTypeChange}
                       isSelected={selectedBlockId === block.id}
                       onSelect={onSelectBlock}
                     />
@@ -222,6 +224,7 @@ export const EditorCanvas = ({
   onContentChange, 
   onNewBlock, 
   onDeleteBlock,
+  onBlockTypeChange,
   selectedBlockId: externalSelectedBlockId,
   onBlockSelect
 }: EditorCanvasProps) => {

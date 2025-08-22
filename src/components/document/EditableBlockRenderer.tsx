@@ -2,6 +2,7 @@ import { Block } from '@/lib/document-model'
 import { Minus, Image, Table } from 'lucide-react'
 import { useState, useRef, useCallback, KeyboardEvent } from 'react'
 import { SlashCommand } from './SlashCommand'
+import { FormattingToolbar } from './FormattingToolbar'
 
 interface EditableBlockRendererProps {
   block: Block
@@ -9,6 +10,7 @@ interface EditableBlockRendererProps {
   onContentChange?: (blockId: string, newContent: any) => void
   onNewBlock?: (afterBlockId: string, type: Block['type'], content?: any, metadata?: any) => void
   onDeleteBlock?: (blockId: string) => void
+  onBlockTypeChange?: (blockId: string, type: Block['type'], metadata?: any) => void
   isSelected?: boolean
   onSelect?: (blockId: string) => void
 }
@@ -19,6 +21,7 @@ export const EditableBlockRenderer = ({
   onContentChange,
   onNewBlock,
   onDeleteBlock,
+  onBlockTypeChange,
   isSelected,
   onSelect
 }: EditableBlockRendererProps) => {
@@ -33,6 +36,15 @@ export const EditableBlockRenderer = ({
     query: '',
     position: { x: 0, y: 0 }
   })
+  const [formattingToolbar, setFormattingToolbar] = useState<{
+    visible: boolean
+    position: { x: number; y: number }
+    selectedText: string
+  }>({
+    visible: false,
+    position: { x: 0, y: 0 },
+    selectedText: ''
+  })
   const textRef = useRef<HTMLDivElement>(null)
   
   const isChunk = block.metadata?.isChunk
@@ -45,6 +57,27 @@ export const EditableBlockRenderer = ({
       setIsEditing(true)
     }
   }, [block.id, block.type, onSelect])
+
+  const handleMouseUp = useCallback(() => {
+    if (!isEditing || !textRef.current) return
+
+    const selection = window.getSelection()
+    if (selection && selection.toString().trim().length > 0) {
+      const range = selection.getRangeAt(0)
+      const rect = range.getBoundingClientRect()
+      
+      setFormattingToolbar({
+        visible: true,
+        position: {
+          x: rect.left + (rect.width / 2),
+          y: rect.top
+        },
+        selectedText: selection.toString()
+      })
+    } else {
+      setFormattingToolbar(prev => ({ ...prev, visible: false }))
+    }
+  }, [isEditing])
 
   const handleContentEdit = useCallback((newContent: string) => {
     setEditContent(newContent)
@@ -126,11 +159,43 @@ export const EditableBlockRenderer = ({
     setSlashCommand(prev => ({ ...prev, visible: false }))
   }, [])
 
+  const handleFormat = useCallback((command: string, value?: string) => {
+    if (!textRef.current) return
+
+    // Apply formatting using document.execCommand (legacy but still works for basic formatting)
+    document.execCommand(command, false, value)
+    
+    // Update content after formatting
+    const newContent = textRef.current.textContent || ''
+    setEditContent(newContent)
+    onContentChange?.(block.id, newContent)
+    
+    // Hide toolbar after applying format
+    setFormattingToolbar(prev => ({ ...prev, visible: false }))
+  }, [block.id, onContentChange])
+
+  const handleBlockTypeChange = useCallback((newType: Block['type'], metadata?: any) => {
+    if (!onBlockTypeChange) return
+    
+    // Get current content or selected text
+    const content = formattingToolbar.selectedText || editContent
+    onBlockTypeChange(block.id, newType, metadata)
+    
+    // Hide toolbar
+    setFormattingToolbar(prev => ({ ...prev, visible: false }))
+    setIsEditing(false)
+  }, [block.id, onBlockTypeChange, formattingToolbar.selectedText, editContent])
+
+  const handleFormattingToolbarClose = useCallback(() => {
+    setFormattingToolbar(prev => ({ ...prev, visible: false }))
+  }, [])
+
   const handleBlur = useCallback(() => {
-    // Delay hiding to allow slash command interaction
+    // Delay hiding to allow toolbar interaction
     setTimeout(() => {
       setIsEditing(false)
       setSlashCommand(prev => ({ ...prev, visible: false }))
+      setFormattingToolbar(prev => ({ ...prev, visible: false }))
     }, 200)
   }, [])
 
@@ -150,6 +215,7 @@ export const EditableBlockRenderer = ({
             onInput={(e) => handleContentEdit(e.currentTarget.textContent || '')}
             onKeyDown={handleKeyDown}
             onBlur={handleBlur}
+            onMouseUp={handleMouseUp}
             autoFocus
           >
             {editContent}
@@ -171,9 +237,10 @@ export const EditableBlockRenderer = ({
             suppressContentEditableWarning
             className="text-sm text-foreground leading-relaxed mb-3 outline-none focus:ring-2 focus:ring-primary rounded px-1 min-h-[1.2em]"
             onInput={(e) => handleContentEdit(e.currentTarget.textContent || '')}
-            onKeyDown={handleKeyDown}
-            onBlur={handleBlur}
-            autoFocus
+              onKeyDown={handleKeyDown}
+              onBlur={handleBlur}
+              onMouseUp={handleMouseUp}
+              autoFocus
           >
             {editContent}
           </div>
@@ -195,9 +262,10 @@ export const EditableBlockRenderer = ({
               suppressContentEditableWarning
               className="text-muted-foreground outline-none focus:ring-2 focus:ring-primary rounded px-1 min-h-[1.2em]"
               onInput={(e) => handleContentEdit(e.currentTarget.textContent || '')}
-              onKeyDown={handleKeyDown}
-              onBlur={handleBlur}
-              autoFocus
+            onKeyDown={handleKeyDown}
+            onBlur={handleBlur}
+            onMouseUp={handleMouseUp}
+            autoFocus
             >
               {editContent}
             </div>
@@ -339,6 +407,16 @@ export const EditableBlockRenderer = ({
         visible={slashCommand.visible}
         onSelect={handleSlashCommandSelect}
         onClose={handleSlashCommandClose}
+      />
+      
+      {/* Formatting Toolbar */}
+      <FormattingToolbar
+        position={formattingToolbar.position}
+        visible={formattingToolbar.visible}
+        selectedText={formattingToolbar.selectedText}
+        onFormat={handleFormat}
+        onBlockTypeChange={handleBlockTypeChange}
+        onClose={handleFormattingToolbarClose}
       />
     </div>
   )

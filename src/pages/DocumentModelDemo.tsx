@@ -457,9 +457,33 @@ export default function DocumentModelDemo() {
                             }
                           }
                         }}
-                        onDeleteBlock={deleteBlock}
-                        selectedBlockId={selectedBlockId}
-                        onBlockSelect={setSelectedBlockId}
+                         onDeleteBlock={deleteBlock}
+                         onBlockTypeChange={(blockId, type, metadata) => {
+                           if (!document) return
+                           
+                           const updatedDoc = {
+                             ...document,
+                             sections: document.sections.map(section => ({
+                               ...section,
+                               flows: section.flows.map(flow => ({
+                                 ...flow,
+                                 blocks: flow.blocks.map(block => 
+                                   block.id === blockId 
+                                     ? { 
+                                         ...block, 
+                                         type, 
+                                         metadata: { ...block.metadata, ...metadata } 
+                                       }
+                                     : block
+                                 )
+                               }))
+                             })),
+                             updated_at: new Date().toISOString()
+                           }
+                           setDocument(updatedDoc)
+                         }}
+                         selectedBlockId={selectedBlockId}
+                         onBlockSelect={setSelectedBlockId}
                       />
                     )
                   })}
