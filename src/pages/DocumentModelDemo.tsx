@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { useDocumentModel } from '@/hooks/useDocumentModel'
+import { useDocumentSectionManagement } from '@/hooks/useDocumentSectionManagement'
 import { DocumentHeader } from '@/components/document/DocumentHeader'
 import { Navigator } from '@/components/document/Navigator'
 import { BlockPalette } from '@/components/document/BlockPalette'
@@ -10,6 +10,9 @@ import { LayoutPreview } from '@/components/document/LayoutPreview'
 import { StructureTree } from '@/components/document/StructureTree'
 import { CommandPalette } from '@/components/document/CommandPalette'
 import { VersionHistoryPanel } from '@/components/document/VersionHistoryPanel'
+import { SectionDeleteDialog } from '@/components/document/SectionDeleteDialog'
+import { CanvasSectionHeader } from '@/components/document/CanvasSectionHeader'
+import { TrashPanel } from '@/components/document/TrashPanel'
 import { DragGhost } from '@/components/document/DragGhost'
 import { AccessibilityProvider } from '@/components/accessibility/AccessibilityProvider'
 import { DragDropProvider } from '@/contexts/DragDropContext'
@@ -18,36 +21,53 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageMaster, Section, Block } from '@/lib/document-model'
-import { History } from 'lucide-react'
+import { History, Trash2 } from 'lucide-react'
 
 export default function DocumentModelDemo() {
   const { id } = useParams()
   const documentId = id === 'new' ? undefined : id
   const { 
-  document,
-  createNewDocument,
-  loadDocument,
-  addSection,
-  addFlow,
-  addBlock,
-  setDocument,
-  updateTitle,
-  updateBlockContent,
-  deleteBlock,
-  addBlockAfter,
-  revertToVersion,
-  persistence
-} = useDocumentModel()
+    document,
+    createNewDocument,
+    loadDocument,
+    addSection,
+    addFlow,
+    addBlock,
+    setDocument,
+    updateTitle,
+    updateBlockContent,
+    deleteBlock,
+    addBlockAfter,
+    revertToVersion,
+    persistence,
+    // Section management functions
+    trashedSections,
+    handleDeleteSections,
+    handleRestoreSection,
+    handleUndoLastDeletion,
+    handleRenameSection,
+    handleDuplicateSection,
+    handleMoveSectionUp,
+    handleMoveSectionDown,
+    permanentlyDeleteSection,
+    emptyTrash,
+    canDeleteSections,
+    getAdjacentSections
+  } = useDocumentSectionManagement()
   const [docTitle, setDocTitle] = useState('')
   const [sectionName, setSectionName] = useState('')
   const [flowName, setFlowName] = useState('')
   const [blockContent, setBlockContent] = useState('')
   const [selectedSectionId, setSelectedSectionId] = useState<string>('')
+  const [selectedSectionIds, setSelectedSectionIds] = useState<string[]>([])
   const [selectedBlockId, setSelectedBlockId] = useState<string>('')
   const [debugMode, setDebugMode] = useState<boolean>(false)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null)
   const [showVersionHistory, setShowVersionHistory] = useState(false)
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [sectionsToDelete, setSectionsToDelete] = useState<string[]>([])
+  const [showTrashPanel, setShowTrashPanel] = useState(false)
 
   const handleCreateDocument = () => {
     if (docTitle.trim()) {
@@ -62,6 +82,39 @@ export default function DocumentModelDemo() {
       setSectionName('')
     }
   }
+
+  // Section deletion handlers
+  const handleDeleteSectionRequest = (sectionIds: string[]) => {
+    setSectionsToDelete(sectionIds)
+    setShowDeleteDialog(true)
+  }
+
+  const handleConfirmDeleteSections = (
+    sectionIds: string[],
+    contentAction: 'delete' | 'move',
+    targetSectionId?: string,
+    removeCrossRefs?: boolean
+  ) => {
+    handleDeleteSections(sectionIds, contentAction, targetSectionId, removeCrossRefs)
+    setShowDeleteDialog(false)
+    setSectionsToDelete([])
+  }
+
+  // Command palette handlers
+  const handleDeleteCurrentSection = () => {
+    if (selectedSectionId) {
+      handleDeleteSectionRequest([selectedSectionId])
+    }
+  }
+
+  const handleDeleteSelectedSections = () => {
+    if (selectedSectionIds.length > 0) {
+      handleDeleteSectionRequest(selectedSectionIds)
+    }
+  }
+
+  const currentSection = document?.sections.find(s => s.id === selectedSectionId)
+  const currentSectionName = currentSection?.name || ''
 
   const handleAddFlow = (sectionId: string) => {
     if (flowName.trim() && document) {
@@ -330,11 +383,11 @@ export default function DocumentModelDemo() {
                 <TabsList className={`grid w-full rounded-none border-b ${
                   debugMode 
                     ? showVersionHistory 
-                      ? 'grid-cols-4' 
-                      : 'grid-cols-3'
+                      ? trashedSections.length > 0 ? 'grid-cols-5' : 'grid-cols-4' 
+                      : trashedSections.length > 0 ? 'grid-cols-4' : 'grid-cols-3'
                     : showVersionHistory
-                      ? 'grid-cols-3'
-                      : 'grid-cols-2'
+                      ? trashedSections.length > 0 ? 'grid-cols-4' : 'grid-cols-3'
+                      : trashedSections.length > 0 ? 'grid-cols-3' : 'grid-cols-2'
                 }`}>
                   <TabsTrigger value="navigator">Navigator</TabsTrigger>
                   <TabsTrigger value="blocks">Blocks</TabsTrigger>
@@ -342,6 +395,12 @@ export default function DocumentModelDemo() {
                     <TabsTrigger value="history">
                       <History className="h-4 w-4 mr-1" />
                       History
+                    </TabsTrigger>
+                  )}
+                  {trashedSections.length > 0 && (
+                    <TabsTrigger value="trash">
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Trash ({trashedSections.length})
                     </TabsTrigger>
                   )}
                   {debugMode && (
@@ -353,11 +412,14 @@ export default function DocumentModelDemo() {
                   <Navigator
                     document={document}
                     selectedSectionId={selectedSectionId || document.sections[0]?.id}
+                    selectedSectionIds={selectedSectionIds}
                     onSectionSelect={setSelectedSectionId}
+                    onMultiSectionSelect={setSelectedSectionIds}
                     onAddSection={(name) => {
                       const section = addSection(name)
                       if (section) {
                         setSelectedSectionId(section.id)
+                        setSelectedSectionIds([section.id])
                         // Add default flow
                         addFlow(section.id, 'Main Flow')
                       }
@@ -378,8 +440,24 @@ export default function DocumentModelDemo() {
                       // TODO: Implement jump to heading in canvas
                       console.log('Jump to heading:', blockId)
                     }}
+                    onDeleteSections={handleDeleteSectionRequest}
+                    onRenameSection={handleRenameSection}
+                    onDuplicateSection={handleDuplicateSection}
+                    onMoveSectionUp={handleMoveSectionUp}
+                    onMoveSectionDown={handleMoveSectionDown}
                   />
                 </TabsContent>
+                
+                {trashedSections.length > 0 && (
+                  <TabsContent value="trash" className="flex-1 mt-0">
+                    <TrashPanel
+                      trashedSections={trashedSections}
+                      onRestoreSection={(trashedSection) => handleRestoreSection(trashedSection.id)}
+                      onPermanentlyDelete={permanentlyDeleteSection}
+                      onEmptyTrash={emptyTrash}
+                    />
+                  </TabsContent>
+                )}
                 
                 <TabsContent value="blocks" className="flex-1 mt-0">
                   <BlockPalette
@@ -517,52 +595,64 @@ export default function DocumentModelDemo() {
                       if (!isActiveSection) return null
                       
                       return (
-                        <EditorCanvas
-                          key={section.id}
-                          section={section}
-                          document={document}
-                          onContentChange={updateBlockContent}
-                          onNewBlock={(afterBlockId, type, content, metadata) => {
-                            if (afterBlockId === 'create-first') {
-                              const block = addBlockAfter('create-first', type, content || '')
-                              if (block && metadata && Object.keys(metadata).length > 0) {
-                                block.metadata = { ...block.metadata, ...metadata }
+                        <div key={section.id} className="flex-1 flex flex-col">
+                          {/* Canvas Section Header - shows when cursor is in section */}
+                          {focusedBlockId && section.flows.some(flow => 
+                            flow.blocks.some(block => block.id === focusedBlockId)
+                          ) && (
+                            <CanvasSectionHeader
+                              section={section}
+                              canDelete={canDeleteSections([section.id])}
+                              onDeleteSection={() => handleDeleteSectionRequest([section.id])}
+                            />
+                          )}
+                          
+                          <EditorCanvas
+                            section={section}
+                            document={document}
+                            onContentChange={updateBlockContent}
+                            onNewBlock={(afterBlockId, type, content, metadata) => {
+                              if (afterBlockId === 'create-first') {
+                                const block = addBlockAfter('create-first', type, content || '')
+                                if (block && metadata && Object.keys(metadata).length > 0) {
+                                  block.metadata = { ...block.metadata, ...metadata }
+                                }
+                              } else {
+                                const block = addBlockAfter(afterBlockId, type, content || '')
+                                if (block && metadata && Object.keys(metadata).length > 0) {
+                                  block.metadata = { ...block.metadata, ...metadata }
+                                }
                               }
-                            } else {
-                              const block = addBlockAfter(afterBlockId, type, content || '')
-                              if (block && metadata && Object.keys(metadata).length > 0) {
-                                block.metadata = { ...block.metadata, ...metadata }
-                              }
-                            }
-                          }}
-                           onDeleteBlock={deleteBlock}
-                           onBlockTypeChange={(blockId, type, metadata) => {
-                             if (!document) return
-                             
-                             const updatedDoc = {
-                               ...document,
-                               sections: document.sections.map(section => ({
-                                 ...section,
-                                 flows: section.flows.map(flow => ({
-                                   ...flow,
-                                   blocks: flow.blocks.map(block => 
-                                     block.id === blockId 
-                                       ? { 
-                                           ...block, 
-                                           type, 
-                                           metadata: { ...block.metadata, ...metadata } 
-                                         }
-                                       : block
-                                   )
-                                 }))
-                               })),
-                               updated_at: new Date().toISOString()
-                             }
-                             setDocument(updatedDoc)
-                           }}
-                          onBlockSelect={setSelectedBlockId}
-                          onFocusChange={setFocusedBlockId}
-                        />
+                            }}
+                             onDeleteBlock={deleteBlock}
+                             onBlockTypeChange={(blockId, type, metadata) => {
+                               if (!document) return
+                               
+                               const updatedDoc = {
+                                 ...document,
+                                 sections: document.sections.map(section => ({
+                                   ...section,
+                                   flows: section.flows.map(flow => ({
+                                     ...flow,
+                                     blocks: flow.blocks.map(block => 
+                                       block.id === blockId 
+                                         ? { 
+                                             ...block, 
+                                             type, 
+                                             metadata: { ...block.metadata, ...metadata } 
+                                           }
+                                         : block
+                                     )
+                                   }))
+                                 })),
+                                 updated_at: new Date().toISOString()
+                               }
+                               setDocument(updatedDoc)
+                             }}
+                            onBlockSelect={setSelectedBlockId}
+                            onFocusChange={setFocusedBlockId}
+                          />
+                        </div>
                       )
                     })}
                     
@@ -601,6 +691,7 @@ export default function DocumentModelDemo() {
               <Inspector
                 selectedBlock={selectedBlock}
                 currentSection={document.sections.find(s => s.id === (selectedSectionId || document.sections[0]?.id))!}
+                allSections={document.sections}
                 onBlockUpdate={(blockId, updates) => {
                   if (!document) return
                   
@@ -636,6 +727,8 @@ export default function DocumentModelDemo() {
                   setDocument(updatedDoc)
                 }}
                 onDeleteBlock={deleteBlock}
+                onDeleteSection={(sectionId) => handleDeleteSectionRequest([sectionId])}
+                canDeleteSection={selectedSectionId ? canDeleteSections([selectedSectionId]) : false}
                 onNewBlock={addBlockAfter}
               />
               
@@ -653,6 +746,19 @@ export default function DocumentModelDemo() {
           open={commandPaletteOpen}
           onOpenChange={setCommandPaletteOpen}
           onInsertBlock={handleCommandPaletteInsert}
+          onDeleteCurrentSection={handleDeleteCurrentSection}
+          onDeleteSelectedSections={handleDeleteSelectedSections}
+          hasSelectedSections={selectedSectionIds.length > 1}
+          currentSectionName={currentSectionName}
+        />
+        
+        {/* Section Delete Dialog */}
+        <SectionDeleteDialog
+          open={showDeleteDialog}
+          onOpenChange={setShowDeleteDialog}
+          sections={document?.sections || []}
+          selectedSectionIds={sectionsToDelete}
+          onDeleteSections={handleConfirmDeleteSections}
         />
         
         {/* Alt Text Validator */}
