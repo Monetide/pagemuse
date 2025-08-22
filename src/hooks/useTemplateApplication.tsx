@@ -111,6 +111,7 @@ function convertSupabaseTemplate(supabaseTemplate: Template) {
     template.starterContent = supabaseTemplate.metadata.starterContent || template.starterContent
     template.behaviors = supabaseTemplate.metadata.behaviors || template.behaviors
     template.numbering = supabaseTemplate.metadata.numbering || template.numbering
+    template.validationPreset = supabaseTemplate.metadata.validationPreset || template.validationPreset
   }
 
   return template

@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ColorwaySelector } from './ColorwaySelector'
+import { ValidationPresetSelector } from './ValidationPresetSelector'
 import { createDefaultThemeTokens, switchColorway } from '@/lib/template-model'
 import { 
   FileText,
@@ -17,7 +18,8 @@ import {
   Layout,
   Type,
   Image,
-  BarChart3
+  BarChart3,
+  Shield
 } from 'lucide-react'
 import { Template } from '@/hooks/useSupabaseData'
 
@@ -38,6 +40,7 @@ export function TemplatePreview({
 }: TemplatePreviewProps) {
   const [themeTokens, setThemeTokens] = useState(() => createDefaultThemeTokens())
   const [selectedColorway, setSelectedColorway] = useState(themeTokens.activeColorway)
+  const [selectedValidationPreset, setSelectedValidationPreset] = useState('default')
 
   const handleColorwayChange = (colorwayId: string) => {
     const updatedTokens = switchColorway(themeTokens, colorwayId)
@@ -118,21 +121,25 @@ export function TemplatePreview({
         </DialogHeader>
 
         <div className="flex-1 min-h-0">
-          <Tabs defaultValue="preview" className="h-full flex flex-col">
-            <TabsList className="grid w-full grid-cols-3 flex-shrink-0">
-              <TabsTrigger value="preview" className="flex items-center gap-2">
-                <Eye className="w-4 h-4" />
-                Preview Pages
-              </TabsTrigger>
-              <TabsTrigger value="details" className="flex items-center gap-2">
-                <FileText className="w-4 h-4" />
-                Details
-              </TabsTrigger>
-              <TabsTrigger value="styles" className="flex items-center gap-2">
-                <Palette className="w-4 h-4" />
-                Styles
-              </TabsTrigger>
-            </TabsList>
+            <Tabs defaultValue="preview" className="h-full flex flex-col">
+              <TabsList className="grid w-full grid-cols-4 flex-shrink-0">
+                <TabsTrigger value="preview" className="flex items-center gap-2">
+                  <Eye className="w-4 h-4" />
+                  Preview Pages
+                </TabsTrigger>
+                <TabsTrigger value="details" className="flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Details
+                </TabsTrigger>
+                <TabsTrigger value="styles" className="flex items-center gap-2">
+                  <Palette className="w-4 h-4" />
+                  Styles
+                </TabsTrigger>
+                <TabsTrigger value="validation" className="flex items-center gap-2">
+                  <Shield className="w-4 h-4" />
+                  Validation
+                </TabsTrigger>
+              </TabsList>
 
             <div className="flex-1 min-h-0 mt-4">
               <TabsContent value="preview" className="h-full mt-0">
@@ -249,7 +256,7 @@ export function TemplatePreview({
                       variant="palette"
                     />
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <h4 className="font-medium mb-4">Current Color Palette</h4>
                         <div className="grid grid-cols-4 gap-3">
@@ -371,6 +378,25 @@ export function TemplatePreview({
                         </div>
                       </div>
                     </div>
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+
+              <TabsContent value="validation" className="h-full mt-0">
+                <ScrollArea className="h-full">
+                  <div className="space-y-6">
+                    <div>
+                      <h4 className="font-medium mb-2">Template Validation Rules</h4>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        These validation rules will be automatically applied to documents using this template
+                      </p>
+                    </div>
+                    
+                    <ValidationPresetSelector
+                      selectedPreset={selectedValidationPreset}
+                      onPresetChange={setSelectedValidationPreset}
+                      showDetails={true}
+                    />
                   </div>
                 </ScrollArea>
               </TabsContent>

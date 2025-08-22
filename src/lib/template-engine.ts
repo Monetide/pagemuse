@@ -39,18 +39,19 @@ export class TemplateEngine {
     // Create new document with template metadata
     const document = createDocument(title || template.name)
     
-    // Apply template metadata
-    document.metadata = {
-      ...document.metadata,
-      templateId: template.id,
-      templateVersion: template.version,
-      themeTokens: template.themeTokens,
-      objectStyles: template.objectStyles,
-      behaviors: template.behaviors,
-      numbering: template.numbering,
-      tocDefaults: template.tocDefaults,
-      exportDefaults: template.exportDefaults
-    }
+      // Apply template metadata
+      document.metadata = {
+        ...document.metadata,
+        templateId: template.id,
+        templateVersion: template.version,
+        themeTokens: template.themeTokens,
+        objectStyles: template.objectStyles,
+        behaviors: template.behaviors,
+        numbering: template.numbering,
+        validationPreset: template.validationPreset,
+        tocDefaults: template.tocDefaults,
+        exportDefaults: template.exportDefaults
+      }
     
     // Apply starter content if provided
     if (template.starterContent && replaceContent) {
@@ -313,6 +314,7 @@ export class TemplateEngine {
       
       behaviors: document.metadata?.behaviors || this.getDefaultBehaviors(),
       numbering: document.metadata?.numbering || this.getDefaultNumbering(),
+      validationPreset: document.metadata?.validationPreset || this.getDefaultValidationPreset(),
       tocDefaults: document.metadata?.tocDefaults || this.getDefaultTOCDefaults(),
       exportDefaults: document.metadata?.exportDefaults || this.getDefaultExportDefaults(),
       
@@ -466,6 +468,20 @@ export class TemplateEngine {
       tables: { enabled: true, prefix: 'Table', format: '{prefix} {n}' },
       equations: { enabled: true, prefix: 'Equation', format: '({n})' },
       footnotes: { enabled: true, format: 'numeric', restart: 'never' }
+    }
+  }
+  
+  private static getDefaultValidationPreset(): any {
+    return {
+      id: 'default',
+      name: 'Standard Validation',
+      rules: {
+        typography: { minBodyFontSize: 10.5, minHeadingFontSize: 12 },
+        accessibility: { minContrastRatio: 4.5, requireAltText: true },
+        layout: { minMargins: 0.75, maxColumnsPerPage: 3 },
+        content: { maxOrphans: 2, maxWidows: 2 },
+        brand: { enforceColorPalette: false }
+      }
     }
   }
   

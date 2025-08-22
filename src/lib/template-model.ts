@@ -150,6 +150,58 @@ export interface TemplateBehaviors {
   }
 }
 
+export interface TemplateValidationPreset {
+  id: string
+  name: string
+  description: string
+  rules: {
+    typography: {
+      minBodyFontSize: number // in points
+      minHeadingFontSize: number
+      maxLineLength: number // in characters
+      hyphenationEnabled: boolean
+      requireProperHeadingHierarchy: boolean
+    }
+    accessibility: {
+      minContrastRatio: number // WCAG standard (4.5:1 for AA, 7:1 for AAA)
+      requireAltText: boolean
+      requireDescriptiveLinks: boolean
+      maxClickTargetSize: number // in pixels
+    }
+    layout: {
+      minMargins: number // in inches
+      maxColumnsPerPage: number
+      requireConsistentSpacing: boolean
+      enforceGridAlignment: boolean
+    }
+    content: {
+      maxOrphans: number // lines at bottom of page
+      maxWidows: number // lines at top of page
+      requireCaptions: boolean
+      enforceNumberingConsistency: boolean
+    }
+    brand: {
+      enforceColorPalette: boolean
+      requireBrandElements: boolean
+      enforceTypographySystem: boolean
+    }
+  }
+  severity: {
+    typography: 'error' | 'warning' | 'info'
+    accessibility: 'error' | 'warning' | 'info'
+    layout: 'error' | 'warning' | 'info'
+    content: 'error' | 'warning' | 'info'
+    brand: 'error' | 'warning' | 'info'
+  }
+  autoFix: {
+    typography: boolean
+    accessibility: boolean
+    layout: boolean
+    content: boolean
+    brand: boolean
+  }
+}
+
 export interface TemplateNumbering {
   headings: {
     enabled: boolean
@@ -270,6 +322,7 @@ export interface Template {
   // Configuration
   behaviors: TemplateBehaviors
   numbering: TemplateNumbering
+  validationPreset: TemplateValidationPreset
   tocDefaults: TemplateTOCDefaults
   exportDefaults: TemplateExportDefaults
   
@@ -314,6 +367,7 @@ export function createTemplate(
     
     behaviors: createDefaultBehaviors(),
     numbering: createDefaultNumbering(),
+    validationPreset: createDefaultValidationPreset(),
     tocDefaults: createDefaultTOCDefaults(),
     exportDefaults: createDefaultExportDefaults(),
     
@@ -564,6 +618,174 @@ function createDefaultBehaviors(): TemplateBehaviors {
       shareSettings: 'private'
     }
   }
+}
+
+/**
+ * Default validation preset
+ */
+function createDefaultValidationPreset(): TemplateValidationPreset {
+  return {
+    id: 'default',
+    name: 'Standard Validation',
+    description: 'Balanced validation rules for professional documents',
+    rules: {
+      typography: {
+        minBodyFontSize: 10.5,
+        minHeadingFontSize: 12,
+        maxLineLength: 80,
+        hyphenationEnabled: false,
+        requireProperHeadingHierarchy: true
+      },
+      accessibility: {
+        minContrastRatio: 4.5,
+        requireAltText: true,
+        requireDescriptiveLinks: true,
+        maxClickTargetSize: 44
+      },
+      layout: {
+        minMargins: 0.75,
+        maxColumnsPerPage: 3,
+        requireConsistentSpacing: true,
+        enforceGridAlignment: false
+      },
+      content: {
+        maxOrphans: 2,
+        maxWidows: 2,
+        requireCaptions: true,
+        enforceNumberingConsistency: true
+      },
+      brand: {
+        enforceColorPalette: false,
+        requireBrandElements: false,
+        enforceTypographySystem: true
+      }
+    },
+    severity: {
+      typography: 'warning',
+      accessibility: 'error',
+      layout: 'warning',
+      content: 'info',
+      brand: 'info'
+    },
+    autoFix: {
+      typography: false,
+      accessibility: false,
+      layout: true,
+      content: true,
+      brand: false
+    }
+  }
+}
+
+/**
+ * Create validation preset variations
+ */
+export function createValidationPresets(): TemplateValidationPreset[] {
+  return [
+    createDefaultValidationPreset(),
+    {
+      id: 'strict',
+      name: 'Strict Compliance',
+      description: 'Rigorous validation for professional publications',
+      rules: {
+        typography: {
+          minBodyFontSize: 12,
+          minHeadingFontSize: 14,
+          maxLineLength: 70,
+          hyphenationEnabled: false,
+          requireProperHeadingHierarchy: true
+        },
+        accessibility: {
+          minContrastRatio: 7.0, // WCAG AAA
+          requireAltText: true,
+          requireDescriptiveLinks: true,
+          maxClickTargetSize: 44
+        },
+        layout: {
+          minMargins: 1.0,
+          maxColumnsPerPage: 2,
+          requireConsistentSpacing: true,
+          enforceGridAlignment: true
+        },
+        content: {
+          maxOrphans: 1,
+          maxWidows: 1,
+          requireCaptions: true,
+          enforceNumberingConsistency: true
+        },
+        brand: {
+          enforceColorPalette: true,
+          requireBrandElements: true,
+          enforceTypographySystem: true
+        }
+      },
+      severity: {
+        typography: 'error',
+        accessibility: 'error',
+        layout: 'error',
+        content: 'warning',
+        brand: 'warning'
+      },
+      autoFix: {
+        typography: true,
+        accessibility: false,
+        layout: true,
+        content: true,
+        brand: false
+      }
+    },
+    {
+      id: 'relaxed',
+      name: 'Flexible Guidelines',
+      description: 'Permissive validation for creative documents',
+      rules: {
+        typography: {
+          minBodyFontSize: 9,
+          minHeadingFontSize: 10,
+          maxLineLength: 100,
+          hyphenationEnabled: true,
+          requireProperHeadingHierarchy: false
+        },
+        accessibility: {
+          minContrastRatio: 3.0,
+          requireAltText: false,
+          requireDescriptiveLinks: false,
+          maxClickTargetSize: 36
+        },
+        layout: {
+          minMargins: 0.5,
+          maxColumnsPerPage: 4,
+          requireConsistentSpacing: false,
+          enforceGridAlignment: false
+        },
+        content: {
+          maxOrphans: 3,
+          maxWidows: 3,
+          requireCaptions: false,
+          enforceNumberingConsistency: false
+        },
+        brand: {
+          enforceColorPalette: false,
+          requireBrandElements: false,
+          enforceTypographySystem: false
+        }
+      },
+      severity: {
+        typography: 'info',
+        accessibility: 'warning',
+        layout: 'info',
+        content: 'info',
+        brand: 'info'
+      },
+      autoFix: {
+        typography: false,
+        accessibility: false,
+        layout: false,
+        content: false,
+        brand: false
+      }
+    }
+  ]
 }
 
 /**
