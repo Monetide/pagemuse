@@ -17,7 +17,8 @@ import {
   Download,
   Settings,
   Command,
-  Bug
+  Bug,
+  History
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -48,6 +49,7 @@ interface DocumentHeaderProps {
   onClose: () => void
   debugMode?: boolean
   onDebugToggle?: (enabled: boolean) => void
+  onToggleVersionHistory?: () => void
 }
 
 export function DocumentHeader({
@@ -58,7 +60,8 @@ export function DocumentHeader({
   onSaveAs,
   onClose,
   debugMode = false,
-  onDebugToggle
+  onDebugToggle,
+  onToggleVersionHistory
 }: DocumentHeaderProps) {
   const navigate = useNavigate()
   const { id } = useParams()
@@ -235,6 +238,18 @@ export function DocumentHeader({
             >
               <Bug className="w-4 h-4" />
             </Toggle>
+            
+            {/* Version History Toggle */}
+            {onToggleVersionHistory && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onToggleVersionHistory}
+                title="Version History"
+              >
+                <History className="h-4 w-4" />
+              </Button>
+            )}
             
             <Button
               variant="ghost"

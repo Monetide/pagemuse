@@ -9,30 +9,33 @@ import Inspector from '@/components/document/Inspector'
 import { LayoutPreview } from '@/components/document/LayoutPreview'
 import { StructureTree } from '@/components/document/StructureTree'
 import { CommandPalette } from '@/components/document/CommandPalette'
+import { VersionHistoryPanel } from '@/components/document/VersionHistoryPanel'
 import { AccessibilityProvider } from '@/components/accessibility/AccessibilityProvider'
 import { AltTextValidator } from '@/components/accessibility/AltTextValidator'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageMaster, Section, Block } from '@/lib/document-model'
+import { History } from 'lucide-react'
 
 export default function DocumentModelDemo() {
   const { id } = useParams()
   const documentId = id === 'new' ? undefined : id
   const { 
-    document, 
-    createNewDocument, 
-    loadDocument,
-    addSection, 
-    addFlow, 
-    addBlock, 
-    setDocument, 
-    updateTitle,
-    updateBlockContent,
-    deleteBlock,
-    addBlockAfter,
-    persistence 
-  } = useDocumentModel()
+  document,
+  createNewDocument,
+  loadDocument,
+  addSection,
+  addFlow,
+  addBlock,
+  setDocument,
+  updateTitle,
+  updateBlockContent,
+  deleteBlock,
+  addBlockAfter,
+  revertToVersion,
+  persistence
+} = useDocumentModel()
   const [docTitle, setDocTitle] = useState('')
   const [sectionName, setSectionName] = useState('')
   const [flowName, setFlowName] = useState('')
@@ -42,6 +45,7 @@ export default function DocumentModelDemo() {
   const [debugMode, setDebugMode] = useState<boolean>(false)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null)
+  const [showVersionHistory, setShowVersionHistory] = useState(false)
 
   const handleCreateDocument = () => {
     if (docTitle.trim()) {
@@ -269,6 +273,7 @@ export default function DocumentModelDemo() {
             onClose={persistence.closeDocument}
             debugMode={debugMode}
             onDebugToggle={setDebugMode}
+            onToggleVersionHistory={() => setShowVersionHistory(!showVersionHistory)}
           />
         )}
         
@@ -319,10 +324,22 @@ export default function DocumentModelDemo() {
             }`}>
               <Tabs defaultValue="navigator" className="h-full flex flex-col">
                 <TabsList className={`grid w-full rounded-none border-b ${
-                  debugMode ? 'grid-cols-3' : 'grid-cols-2'
+                  debugMode 
+                    ? showVersionHistory 
+                      ? 'grid-cols-4' 
+                      : 'grid-cols-3'
+                    : showVersionHistory
+                      ? 'grid-cols-3'
+                      : 'grid-cols-2'
                 }`}>
                   <TabsTrigger value="navigator">Navigator</TabsTrigger>
                   <TabsTrigger value="blocks">Blocks</TabsTrigger>
+                  {showVersionHistory && (
+                    <TabsTrigger value="history">
+                      <History className="h-4 w-4 mr-1" />
+                      History
+                    </TabsTrigger>
+                  )}
                   {debugMode && (
                     <TabsTrigger value="structure">Structure</TabsTrigger>
                   )}
@@ -437,9 +454,20 @@ export default function DocumentModelDemo() {
                       console.log('Drag ended')
                     }}
                   />
-                </TabsContent>
-                
-                {debugMode && (
+                 </TabsContent>
+                 
+                 {showVersionHistory && (
+                   <TabsContent value="history" className="flex-1 mt-0">
+                     <VersionHistoryPanel
+                       documentId={persistence.currentDocumentId!}
+                       currentDocument={document}
+                       onRevertToVersion={revertToVersion}
+                       className="h-full"
+                     />
+                   </TabsContent>
+                 )}
+                 
+                 {debugMode && (
                   <TabsContent value="structure" className="flex-1 mt-0">
                     <StructureTree
                       document={document}

@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
 import { SemanticDocument } from '@/lib/document-model'
 import { useToast } from '@/hooks/use-toast'
+import { useDocumentVersions } from '@/hooks/useDocumentVersions'
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error'
 
@@ -22,6 +23,7 @@ export const useDocumentPersistence = () => {
   const { user } = useAuth()
   const { toast } = useToast()
   const navigate = useNavigate()
+  const { createVersion, createSafetySnapshot } = useDocumentVersions(currentDocumentId || undefined)
 
   // Auto-save with debouncing
   const saveDocument = useCallback(async (document: SemanticDocument) => {
@@ -64,6 +66,11 @@ export const useDocumentPersistence = () => {
 
       setSaveStatus('saved')
       
+      // Create version after successful save
+      if (result.id) {
+        await createVersion(result.id, document, 'autosave')
+      }
+      
       // Update metadata
       setDocumentMetadata({
         title: result.title,
@@ -88,7 +95,7 @@ export const useDocumentPersistence = () => {
       setTimeout(() => setSaveStatus('idle'), 3000)
       return null
     }
-  }, [user, currentDocumentId, toast])
+  }, [user, currentDocumentId, toast, createVersion])
 
   // Load document
   const loadDocument = useCallback(async (documentId: string) => {

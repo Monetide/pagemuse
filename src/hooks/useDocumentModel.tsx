@@ -13,6 +13,7 @@ import {
   addSectionToDocument
 } from '@/lib/document-model'
 import { useDocumentPersistence } from '@/hooks/useDocumentPersistence'
+import { DocumentVersion } from '@/hooks/useDocumentVersions'
 
 export const useDocumentModel = () => {
   const [document, setDocument] = useState<SemanticDocument | null>(null)
@@ -274,6 +275,12 @@ export const useDocumentModel = () => {
     }
   }, [autoSaveTimeoutId])
 
+  // Revert to version functionality
+  const revertToVersion = useCallback((version: DocumentVersion) => {
+    setDocument(version.content)
+    triggerAutoSave(version.content)
+  }, [triggerAutoSave])
+
   return {
     document,
     createNewDocument,
@@ -286,6 +293,7 @@ export const useDocumentModel = () => {
     updateBlockContent,
     deleteBlock,
     addBlockAfter,
+    revertToVersion,
     persistence
   }
 }
