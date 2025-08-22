@@ -36,7 +36,35 @@ export const TableEditor = ({
   onSelect, 
   isSelected 
 }: TableEditorProps) => {
-  const tableContent = block.content as TableContent
+  // Normalize content to a safe shape
+  const raw = (block.content || {}) as Partial<TableContent>
+  const headers: string[] = Array.isArray(raw.headers) && raw.headers.length > 0
+    ? raw.headers
+    : ['Column 1', 'Column 2', 'Column 3']
+  const rows: string[][] = Array.isArray(raw.rows) && raw.rows.length > 0
+    ? raw.rows.map(r => {
+        const base = Array.isArray(r) ? [...r] : []
+        // Ensure each row has the same number of columns as headers
+        while (base.length < headers.length) base.push('')
+        return base.slice(0, headers.length)
+      })
+    : [new Array(headers.length).fill('')]
+  const caption: string = typeof raw.caption === 'string' ? raw.caption : 'Table caption'
+  const number: number = typeof raw.number === 'number' ? raw.number : 1
+
+  const tableContent: TableContent = {
+    headers,
+    rows,
+    caption,
+    number,
+    columnAlignments: Array.isArray(raw.columnAlignments)
+      ? [...raw.columnAlignments, ...new Array(Math.max(0, headers.length - raw.columnAlignments.length)).fill('left')].slice(0, headers.length)
+      : new Array(headers.length).fill('left'),
+    columnWidths: Array.isArray(raw.columnWidths)
+      ? [...raw.columnWidths, ...new Array(Math.max(0, headers.length - raw.columnWidths.length)).fill(100)].slice(0, headers.length)
+      : new Array(headers.length).fill(100)
+  }
+
   const [isEditing, setIsEditing] = useState(false)
   const [editingCell, setEditingCell] = useState<{ row: number; col: number } | null>(null)
   const [resizingColumn, setResizingColumn] = useState<number | null>(null)
