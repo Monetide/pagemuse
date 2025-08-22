@@ -131,15 +131,18 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
-  /* Placeholder text styling */
-  .empty\\:before\\:content-\\[attr\\(data-placeholder\\)\\]:empty:before {
-    content: attr(data-placeholder);
+  body {
+    @apply bg-background text-foreground;
   }
   
-  .empty\\:before\\:text-muted-foreground\\/50:empty:before {
+  /* Placeholder text for empty contentEditable elements */
+  [contenteditable]:empty:before {
+    content: attr(data-placeholder);
     color: hsl(var(--muted-foreground) / 0.5);
+    font-style: italic;
+    pointer-events: none;
   }
-
+  
   /* Figure block styling */
   figure {
     margin-top: var(--figure-margin-top);
@@ -160,9 +163,5 @@ All colors MUST be HSL.
   
   .upload-zone:hover {
     background-color: var(--upload-hover-color);
-  }
-
-  body {
-    @apply bg-background text-foreground;
   }
 }

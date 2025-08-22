@@ -215,7 +215,7 @@ export const EditableBlockRenderer = ({
             ref={textRef}
             contentEditable
             suppressContentEditableWarning
-            className={`${headingClass} text-foreground mb-2 outline-none focus:ring-2 focus:ring-primary rounded px-1 empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/50`}
+            className={`${headingClass} text-foreground mb-2 outline-none focus:ring-2 focus:ring-primary rounded px-1`}
             data-placeholder="Type / for commands"
             onInput={(e) => handleContentEdit(e.currentTarget.textContent || '')}
             onKeyDown={handleKeyDown}
@@ -227,9 +227,7 @@ export const EditableBlockRenderer = ({
           </div>
         ) : (
           <HeadingTag 
-            className={`${headingClass} text-foreground mb-2 cursor-text hover:bg-accent/10 rounded px-1 ${isSelected ? 'ring-2 ring-primary' : ''} ${
-              !block.content ? 'empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/50' : ''
-            }`}
+            className={`${headingClass} text-foreground mb-2 cursor-text hover:bg-accent/10 rounded px-1 ${isSelected ? 'ring-2 ring-primary' : ''}`}
             data-placeholder="Type / for commands"
             onClick={handleClick}
           >
@@ -250,7 +248,7 @@ export const EditableBlockRenderer = ({
             ref={textRef}
             contentEditable
             suppressContentEditableWarning
-            className="text-sm text-foreground leading-relaxed mb-3 outline-none focus:ring-2 focus:ring-primary rounded px-1 min-h-[1.2em] empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/50"
+            className="text-sm text-foreground leading-relaxed mb-3 outline-none focus:ring-2 focus:ring-primary rounded px-1 min-h-[1.2em]"
             data-placeholder="Type / for commands"
             onInput={(e) => handleContentEdit(e.currentTarget.textContent || '')}
               onKeyDown={handleKeyDown}
@@ -262,9 +260,7 @@ export const EditableBlockRenderer = ({
           </div>
         ) : (
           <p 
-            className={`text-sm text-foreground leading-relaxed mb-3 cursor-text hover:bg-accent/10 rounded px-1 min-h-[1.2em] ${isSelected ? 'ring-2 ring-primary' : ''} ${
-              !block.content ? 'empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/50' : ''
-            }`}
+            className={`text-sm text-foreground leading-relaxed mb-3 cursor-text hover:bg-accent/10 rounded px-1 min-h-[1.2em] ${isSelected ? 'ring-2 ring-primary' : ''}`}
             data-placeholder="Type / for commands"
             onClick={handleClick}
           >
@@ -290,7 +286,7 @@ export const EditableBlockRenderer = ({
               ref={textRef}
               contentEditable
               suppressContentEditableWarning
-              className="text-muted-foreground outline-none focus:ring-2 focus:ring-primary rounded px-1 min-h-[1.2em] empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/50"
+              className="text-muted-foreground outline-none focus:ring-2 focus:ring-primary rounded px-1 min-h-[1.2em]"
               data-placeholder="Type / for commands"
               onInput={(e) => handleContentEdit(e.currentTarget.textContent || '')}
             onKeyDown={handleKeyDown}
@@ -303,9 +299,7 @@ export const EditableBlockRenderer = ({
           </blockquote>
         ) : (
           <blockquote 
-            className={`border-l-4 border-accent pl-4 py-2 text-sm text-muted-foreground italic mb-3 bg-muted/20 cursor-text hover:bg-muted/30 rounded-r ${isSelected ? 'ring-2 ring-primary' : ''} ${
-              !block.content ? 'empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/50' : ''
-            }`}
+            className={`border-l-4 border-accent pl-4 py-2 text-sm text-muted-foreground italic mb-3 bg-muted/20 cursor-text hover:bg-muted/30 rounded-r ${isSelected ? 'ring-2 ring-primary' : ''}`}
             data-placeholder="Type / for commands"
             onClick={handleClick}
           >
@@ -331,7 +325,7 @@ export const EditableBlockRenderer = ({
                     ref={textRef}
                     contentEditable
                     suppressContentEditableWarning
-                    className="inline outline-none focus:ring-2 focus:ring-primary rounded px-1 empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/50"
+                    className="inline outline-none focus:ring-2 focus:ring-primary rounded px-1"
                     data-placeholder="Type / for commands"
                     onInput={(e) => {
                       const newItems = [...orderedItems]
@@ -363,7 +357,7 @@ export const EditableBlockRenderer = ({
                     ref={textRef}
                     contentEditable
                     suppressContentEditableWarning
-                    className="inline outline-none focus:ring-2 focus:ring-primary rounded px-1 empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/50"
+                    className="inline outline-none focus:ring-2 focus:ring-primary rounded px-1"
                     data-placeholder="Type / for commands"
                     onInput={(e) => {
                       const newItems = [...unorderedItems]
@@ -432,9 +426,7 @@ export const EditableBlockRenderer = ({
                           }}
                         >
                           <div 
-                            className={`min-h-[1em] ${
-                              !cell ? 'empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/50' : ''
-                            }`}
+                            className={`min-h-[1em]`}
                             data-placeholder="Type / for commands"
                           >
                             <TextInvisibles text={cell} showInvisibles={showInvisibles} />
@@ -448,9 +440,7 @@ export const EditableBlockRenderer = ({
             </div>
             {tableData.caption && (
               <div 
-                className={`text-xs text-center text-muted-foreground italic mt-2 cursor-text hover:bg-accent/10 rounded px-1 ${
-                  !tableData.caption ? 'empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground/50' : ''
-                }`}
+                className={`text-xs text-center text-muted-foreground italic mt-2 cursor-text hover:bg-accent/10 rounded px-1`}
                 data-placeholder="Type / for commands"
                 onClick={(e) => {
                   e.stopPropagation()
