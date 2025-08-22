@@ -1,8 +1,11 @@
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ColorwaySelector } from './ColorwaySelector'
+import { createDefaultThemeTokens, switchColorway } from '@/lib/template-model'
 import { 
   FileText,
   Crown,
@@ -33,6 +36,14 @@ export function TemplatePreview({
   onUseTemplate, 
   mode 
 }: TemplatePreviewProps) {
+  const [themeTokens, setThemeTokens] = useState(() => createDefaultThemeTokens())
+  const [selectedColorway, setSelectedColorway] = useState(themeTokens.activeColorway)
+
+  const handleColorwayChange = (colorwayId: string) => {
+    const updatedTokens = switchColorway(themeTokens, colorwayId)
+    setThemeTokens(updatedTokens)
+    setSelectedColorway(colorwayId)
+  }
   // Mock preview pages - in real implementation, these would come from template data
   const previewPages = [
     {
@@ -92,9 +103,17 @@ export function TemplatePreview({
                 {template.description || 'A professional template for your documents'}
               </DialogDescription>
             </div>
-            <Button onClick={onUseTemplate} className="ml-4">
-              {mode === 'apply' ? 'Apply Template' : 'Use This Template'}
-            </Button>
+            <div className="flex items-center gap-3 ml-4">
+              <ColorwaySelector
+                themeTokens={themeTokens}
+                selectedColorway={selectedColorway}
+                onColorwayChange={handleColorwayChange}
+                variant="compact"
+              />
+              <Button onClick={onUseTemplate}>
+                {mode === 'apply' ? 'Apply Template' : 'Use This Template'}
+              </Button>
+            </div>
           </div>
         </DialogHeader>
 
@@ -223,21 +242,43 @@ export function TemplatePreview({
               <TabsContent value="styles" className="h-full mt-0">
                 <ScrollArea className="h-full">
                   <div className="space-y-6">
+                    <ColorwaySelector
+                      themeTokens={themeTokens}
+                      selectedColorway={selectedColorway}
+                      onColorwayChange={handleColorwayChange}
+                      variant="palette"
+                    />
+                    
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <h4 className="font-medium mb-4">Color Palette</h4>
-                        <div className="grid grid-cols-6 gap-2">
-                          {[
-                            '#1a1a1a', '#3b82f6', '#8b5cf6', '#10b981', 
-                            '#f59e0b', '#ef4444', '#6b7280', '#f3f4f6'
-                          ].map((color, index) => (
-                            <div 
-                              key={index}
-                              className="aspect-square rounded-md border-2 border-white shadow-sm"
-                              style={{ backgroundColor: color }}
-                              title={color}
-                            />
-                          ))}
+                        <h4 className="font-medium mb-4">Current Color Palette</h4>
+                        <div className="grid grid-cols-4 gap-3">
+                          {(() => {
+                            const activeColorway = themeTokens.colorways.find(c => c.id === selectedColorway)
+                            if (!activeColorway) return null
+                            
+                            const colors = [
+                              { name: 'Primary', value: activeColorway.palette.primary },
+                              { name: 'Secondary', value: activeColorway.palette.secondary },
+                              { name: 'Accent', value: activeColorway.palette.accent },
+                              { name: 'Success', value: activeColorway.palette.success },
+                              { name: 'Warning', value: activeColorway.palette.warning },
+                              { name: 'Destructive', value: activeColorway.palette.destructive },
+                              { name: 'Muted', value: activeColorway.palette.muted },
+                              { name: 'Border', value: activeColorway.palette.border }
+                            ]
+                            
+                            return colors.map((color, index) => (
+                              <div key={index} className="text-center">
+                                <div 
+                                  className="aspect-square rounded-md border-2 border-white shadow-sm mb-2"
+                                  style={{ backgroundColor: color.value }}
+                                  title={color.value}
+                                />
+                                <span className="text-xs text-muted-foreground">{color.name}</span>
+                              </div>
+                            ))
+                          })()}
                         </div>
                       </div>
 
@@ -267,14 +308,49 @@ export function TemplatePreview({
                     <div>
                       <h4 className="font-medium mb-4">Component Styles</h4>
                       <div className="grid gap-4">
-                        <div className="border rounded-lg p-4 bg-blue-50/50">
-                          <h5 className="font-medium text-blue-900 mb-2">Info Callout</h5>
-                          <p className="text-sm text-blue-800">This is how informational callouts will appear in your document.</p>
-                        </div>
-                        <div className="border rounded-lg p-4 bg-amber-50/50">
-                          <h5 className="font-medium text-amber-900 mb-2">Warning Callout</h5>
-                          <p className="text-sm text-amber-800">This is how warning callouts will appear in your document.</p>
-                        </div>
+                        {(() => {
+                          const activeColorway = themeTokens.colorways.find(c => c.id === selectedColorway)
+                          if (!activeColorway) return null
+                          
+                          return (
+                            <>
+                              <div 
+                                className="border rounded-lg p-4"
+                                style={{ 
+                                  backgroundColor: `${activeColorway.palette.primary}15`,
+                                  borderColor: activeColorway.palette.primary 
+                                }}
+                              >
+                                <h5 
+                                  className="font-medium mb-2"
+                                  style={{ color: activeColorway.palette.primary }}
+                                >
+                                  Primary Callout
+                                </h5>
+                                <p className="text-sm" style={{ color: activeColorway.palette.foreground }}>
+                                  This is how primary callouts will appear with the selected colorway.
+                                </p>
+                              </div>
+                              <div 
+                                className="border rounded-lg p-4"
+                                style={{ 
+                                  backgroundColor: `${activeColorway.palette.warning}15`,
+                                  borderColor: activeColorway.palette.warning 
+                                }}
+                              >
+                                <h5 
+                                  className="font-medium mb-2"
+                                  style={{ color: activeColorway.palette.warning }}
+                                >
+                                  Warning Callout
+                                </h5>
+                                <p className="text-sm" style={{ color: activeColorway.palette.foreground }}>
+                                  This is how warning callouts will appear with the selected colorway.
+                                </p>
+                              </div>
+                            </>
+                          )
+                        })()}
                         <div className="border rounded-lg overflow-hidden">
                           <table className="w-full">
                             <thead className="bg-muted">

@@ -20,16 +20,37 @@ import {
  * Template Model - Defines reusable document templates
  */
 
+export interface TemplateColorPalette {
+  primary: string
+  primaryForeground: string
+  secondary: string
+  secondaryForeground: string
+  accent: string
+  accentForeground: string
+  background: string
+  foreground: string
+  muted: string
+  mutedForeground: string
+  border: string
+  destructive: string
+  destructiveForeground: string
+  success: string
+  successForeground: string
+  warning: string
+  warningForeground: string
+}
+
+export interface TemplateColorway {
+  id: string
+  name: string
+  description: string
+  palette: TemplateColorPalette
+  isDefault?: boolean
+}
+
 export interface TemplateThemeTokens {
-  colors: {
-    primary: string
-    secondary: string
-    accent: string
-    background: string
-    foreground: string
-    muted: string
-    border: string
-  }
+  colorways: TemplateColorway[]
+  activeColorway: string
   typography: {
     fontFamily: {
       heading: string
@@ -310,19 +331,95 @@ export function createTemplate(
 }
 
 /**
+ * Create default colorways
+ */
+function createDefaultColorways(): TemplateColorway[] {
+  return [
+    {
+      id: 'default',
+      name: 'Professional',
+      description: 'Clean and professional dark blue theme',
+      palette: {
+        primary: 'hsl(222, 84%, 5%)',
+        primaryForeground: 'hsl(0, 0%, 100%)',
+        secondary: 'hsl(210, 40%, 95%)',
+        secondaryForeground: 'hsl(222, 84%, 5%)',
+        accent: 'hsl(210, 40%, 8%)',
+        accentForeground: 'hsl(0, 0%, 100%)',
+        background: 'hsl(0, 0%, 100%)',
+        foreground: 'hsl(222, 84%, 5%)',
+        muted: 'hsl(210, 40%, 95%)',
+        mutedForeground: 'hsl(215, 20%, 65%)',
+        border: 'hsl(214, 32%, 91%)',
+        destructive: 'hsl(0, 84%, 60%)',
+        destructiveForeground: 'hsl(0, 0%, 100%)',
+        success: 'hsl(142, 76%, 36%)',
+        successForeground: 'hsl(0, 0%, 100%)',
+        warning: 'hsl(38, 92%, 50%)',
+        warningForeground: 'hsl(0, 0%, 100%)'
+      },
+      isDefault: true
+    },
+    {
+      id: 'ocean',
+      name: 'Ocean Blue',
+      description: 'Calming ocean-inspired blue palette',
+      palette: {
+        primary: 'hsl(200, 100%, 28%)',
+        primaryForeground: 'hsl(0, 0%, 100%)',
+        secondary: 'hsl(200, 50%, 95%)',
+        secondaryForeground: 'hsl(200, 100%, 28%)',
+        accent: 'hsl(195, 100%, 35%)',
+        accentForeground: 'hsl(0, 0%, 100%)',
+        background: 'hsl(0, 0%, 100%)',
+        foreground: 'hsl(200, 50%, 10%)',
+        muted: 'hsl(200, 50%, 95%)',
+        mutedForeground: 'hsl(200, 30%, 50%)',
+        border: 'hsl(200, 50%, 85%)',
+        destructive: 'hsl(0, 84%, 60%)',
+        destructiveForeground: 'hsl(0, 0%, 100%)',
+        success: 'hsl(160, 84%, 39%)',
+        successForeground: 'hsl(0, 0%, 100%)',
+        warning: 'hsl(38, 92%, 50%)',
+        warningForeground: 'hsl(0, 0%, 100%)'
+      }
+    },
+    {
+      id: 'forest',
+      name: 'Forest Green',
+      description: 'Natural green theme for sustainability reports',
+      palette: {
+        primary: 'hsl(140, 100%, 20%)',
+        primaryForeground: 'hsl(0, 0%, 100%)',
+        secondary: 'hsl(140, 30%, 95%)',
+        secondaryForeground: 'hsl(140, 100%, 20%)',
+        accent: 'hsl(120, 100%, 25%)',
+        accentForeground: 'hsl(0, 0%, 100%)',
+        background: 'hsl(0, 0%, 100%)',
+        foreground: 'hsl(140, 50%, 10%)',
+        muted: 'hsl(140, 30%, 95%)',
+        mutedForeground: 'hsl(140, 20%, 50%)',
+        border: 'hsl(140, 30%, 85%)',
+        destructive: 'hsl(0, 84%, 60%)',
+        destructiveForeground: 'hsl(0, 0%, 100%)',
+        success: 'hsl(142, 76%, 36%)',
+        successForeground: 'hsl(0, 0%, 100%)',
+        warning: 'hsl(45, 93%, 47%)',
+        warningForeground: 'hsl(0, 0%, 100%)'
+      }
+    }
+  ]
+}
+
+/**
  * Default theme tokens
  */
-function createDefaultThemeTokens(): TemplateThemeTokens {
+export function createDefaultThemeTokens(): TemplateThemeTokens {
+  const colorways = createDefaultColorways()
+  
   return {
-    colors: {
-      primary: 'hsl(222, 84%, 5%)',
-      secondary: 'hsl(210, 40%, 95%)',
-      accent: 'hsl(210, 40%, 8%)',
-      background: 'hsl(0, 0%, 100%)',
-      foreground: 'hsl(222, 84%, 5%)',
-      muted: 'hsl(210, 40%, 95%)',
-      border: 'hsl(214, 32%, 91%)'
-    },
+    colorways,
+    activeColorway: 'default',
     typography: {
       fontFamily: {
         heading: 'Inter, system-ui, sans-serif',
@@ -369,6 +466,31 @@ function createDefaultThemeTokens(): TemplateThemeTokens {
         slideUp: 'slideUp 0.3s ease-out'
       }
     }
+  }
+}
+
+/**
+ * Get active colorway from theme tokens
+ */
+export function getActiveColorway(themeTokens: TemplateThemeTokens): TemplateColorway | null {
+  return themeTokens.colorways.find(c => c.id === themeTokens.activeColorway) || 
+         themeTokens.colorways.find(c => c.isDefault) ||
+         themeTokens.colorways[0] ||
+         null
+}
+
+/**
+ * Switch colorway in theme tokens
+ */
+export function switchColorway(themeTokens: TemplateThemeTokens, colorwayId: string): TemplateThemeTokens {
+  const colorway = themeTokens.colorways.find(c => c.id === colorwayId)
+  if (!colorway) {
+    return themeTokens
+  }
+
+  return {
+    ...themeTokens,
+    activeColorway: colorwayId
   }
 }
 
