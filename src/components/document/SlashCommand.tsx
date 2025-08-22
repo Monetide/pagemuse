@@ -79,11 +79,11 @@ const COMMANDS: CommandItem[] = [
     icon: <Image className="w-4 h-4" />,
     keywords: ['figure', 'image', 'img', 'picture', 'photo'],
     defaultContent: {
-      imageUrl: 'placeholder-image.jpg',
-      caption: 'Add your caption here',
-      number: 1
-    },
-    defaultMetadata: { imageHeight: 2.5 }
+      altText: '',
+      caption: '',
+      size: 'column-width',
+      aspectLock: true
+    }
   },
   {
     type: 'table',

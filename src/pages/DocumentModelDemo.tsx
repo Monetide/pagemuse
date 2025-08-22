@@ -557,6 +557,8 @@ export default function DocumentModelDemo() {
                 }
                 setDocument(updatedDoc)
               }}
+              onDeleteBlock={deleteBlock}
+              onNewBlock={addBlockAfter}
             />
             
             {/* Debug Layout Preview */}

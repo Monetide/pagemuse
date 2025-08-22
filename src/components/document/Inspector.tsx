@@ -9,12 +9,15 @@ import { Badge } from '@/components/ui/badge'
 import { Block, Section, PageMaster } from '@/lib/document-model'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { FigureInspector } from './FigureInspector'
 
 interface InspectorProps {
   selectedBlock?: Block
   currentSection: Section
   onBlockUpdate?: (blockId: string, updates: Partial<Block>) => void
   onSectionUpdate?: (sectionId: string, updates: Partial<Section>) => void
+  onDeleteBlock?: (blockId: string) => void
+  onNewBlock?: (afterBlockId: string, type: Block['type'], content?: any, metadata?: any) => void
 }
 
 const PAGE_SIZES = [
@@ -28,7 +31,9 @@ export const Inspector = ({
   selectedBlock, 
   currentSection, 
   onBlockUpdate, 
-  onSectionUpdate 
+  onSectionUpdate,
+  onDeleteBlock,
+  onNewBlock
 }: InspectorProps) => {
   const [activeTab, setActiveTab] = useState('block')
 
@@ -83,6 +88,24 @@ export const Inspector = ({
       [side]: value
     }
     handlePageMasterUpdate({ margins: updatedMargins })
+  }
+
+  // Handle figure blocks with dedicated inspector
+  if (selectedBlock?.type === 'figure') {
+    return (
+      <div className="w-80 border-l border-border bg-background p-4 overflow-y-auto">
+        <FigureInspector
+          block={selectedBlock}
+          onUpdate={(updates) => onBlockUpdate?.(selectedBlock.id, updates)}
+          onDelete={() => onDeleteBlock?.(selectedBlock.id)}
+          onDuplicate={() => {
+            if (onNewBlock) {
+              onNewBlock(selectedBlock.id, selectedBlock.type, selectedBlock.content, selectedBlock.metadata)
+            }
+          }}
+        />
+      </div>
+    )
   }
 
   return (
@@ -221,45 +244,7 @@ export const Inspector = ({
                 </div>
               )}
 
-              {selectedBlock.type === 'figure' && (
-                <div className="space-y-3">
-                  <h4 className="text-sm font-medium">Figure Properties</h4>
-                  <div>
-                    <Label className="text-xs">Image Height (inches)</Label>
-                    <Input
-                      type="number"
-                      step="0.1"
-                      min="0.5"
-                      value={selectedBlock.metadata?.imageHeight || 2}
-                      onChange={(e) => handleBlockMetadataUpdate('imageHeight', parseFloat(e.target.value) || 2)}
-                      className="h-8 text-xs"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs">Alt Text</Label>
-                    <Input
-                      value={selectedBlock.metadata?.altText || ''}
-                      onChange={(e) => handleBlockMetadataUpdate('altText', e.target.value)}
-                      className="h-8 text-xs"
-                      placeholder="Describe the image..."
-                    />
-                  </div>
-                  {typeof selectedBlock.content === 'object' && selectedBlock.content && (
-                    <div>
-                      <Label className="text-xs">Caption</Label>
-                      <Textarea
-                        value={selectedBlock.content.caption || ''}
-                        onChange={(e) => handleBlockContentUpdate({
-                          ...selectedBlock.content,
-                          caption: e.target.value
-                        })}
-                        className="text-xs min-h-[60px]"
-                        placeholder="Add a caption..."
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* Remove the old figure block handling since it's now handled above */}
 
               {selectedBlock.type === 'table' && typeof selectedBlock.content === 'object' && selectedBlock.content && (
                 <div className="space-y-3">

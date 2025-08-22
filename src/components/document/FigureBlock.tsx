@@ -89,7 +89,7 @@ export const FigureBlock = ({
       
       // Upload to Supabase Storage
       const { data: uploadData, error } = await supabase.storage
-        .from('figures')
+        .from('media')
         .upload(fileName, file)
 
       if (error) {
@@ -100,7 +100,7 @@ export const FigureBlock = ({
 
       // Get public URL
       const { data: urlData } = supabase.storage
-        .from('figures')
+        .from('media')
         .getPublicUrl(fileName)
 
       // Get image dimensions
