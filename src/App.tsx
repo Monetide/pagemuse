@@ -17,6 +17,8 @@ import DocumentModelDemo from "./pages/DocumentModelDemo";
 import DocumentSettings from "./pages/DocumentSettings";
 import DocumentModelRedirect from "./components/DocumentModelRedirect";
 import { Navigate } from "react-router-dom";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { HealthCheck } from "@/components/HealthCheck";
 
 const queryClient = new QueryClient();
 
@@ -26,10 +28,12 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <HealthCheck />
         <BrowserRouter>
-          <AuthGate>
-            <AppLayout>
-              <Routes>
+          <ErrorBoundary>
+            <AuthGate>
+              <AppLayout>
+                <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/documents" element={<MyDocuments />} />
                 <Route path="/documents/:id/editor" element={<DocumentModelDemo />} />
@@ -44,9 +48,10 @@ const App = () => (
                 <Route path="/reset-password" element={<ResetPassword />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
-              </Routes>
-            </AppLayout>
-          </AuthGate>
+                </Routes>
+              </AppLayout>
+            </AuthGate>
+          </ErrorBoundary>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
