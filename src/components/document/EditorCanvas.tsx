@@ -1,5 +1,5 @@
 import { Section, Block, SemanticDocument } from '@/lib/document-model'
-import { generateLayout, PageBox } from '@/lib/layout-engine'
+import { generateLayout, PageBox, LayoutResult } from '@/lib/layout-engine'
 import { EditableBlockRenderer } from './EditableBlockRenderer'
 import { EmptyCanvasState } from './EmptyCanvasState'
 import { CanvasDropZone } from './CanvasDropZone'
@@ -39,6 +39,8 @@ interface EditorCanvasProps {
   onTitleChange?: (newTitle: string) => void
   onImport?: (files: File[], mode: ImportMode) => Promise<void>
   templateSnippets?: import('@/lib/template-model').TemplateSnippet[]
+  startPageNumber?: number
+  precomputedLayout?: LayoutResult
 }
 
 interface OverlaySettings {
@@ -305,7 +307,7 @@ const EditorPageBox = ({
   )
 }
 
-export const EditorCanvas = ({ section, document, onContentChange, onNewBlock, onDeleteBlock, onBlockTypeChange, selectedBlockId: externalSelectedBlockId, onBlockSelect, onFocusChange, onTitleChange, onImport }: EditorCanvasProps) => {
+export const EditorCanvas = ({ section, document, onContentChange, onNewBlock, onDeleteBlock, onBlockTypeChange, selectedBlockId: externalSelectedBlockId, onBlockSelect, onFocusChange, onTitleChange, onImport, startPageNumber, precomputedLayout }: EditorCanvasProps) => {
   const { triggerCoachMarks } = useOnboarding()
   const [internalSelectedBlockId, setInternalSelectedBlockId] = useState<string>()
   const selectedBlockId = externalSelectedBlockId || internalSelectedBlockId
@@ -331,22 +333,10 @@ export const EditorCanvas = ({ section, document, onContentChange, onNewBlock, o
   const { dragState, updateDrag, endDrag, setContainer } = useDragDropContext()
   const { hitTestDropZone } = useDropZoneDetection()
   const layoutResult = useMemo(() => {
-    if (!document) {
-      return generateLayout(section)
-    }
-    
-    // Calculate the starting page number based on previous sections
-    const currentSectionIndex = document.sections.findIndex(s => s.id === section.id)
-    let startPageNumber = 1
-    
-    // Calculate total pages from all previous sections
-    for (let i = 0; i < currentSectionIndex; i++) {
-      const prevSectionLayout = generateLayout(document.sections[i])
-      startPageNumber += prevSectionLayout.totalPages
-    }
-    
-    return generateLayout(section, startPageNumber)
-  }, [section, document])
+    if (precomputedLayout) return precomputedLayout
+    const start = startPageNumber ?? 1
+    return generateLayout(section, start)
+  }, [section, precomputedLayout, startPageNumber])
   const isFocused = focusedSection === 'canvas'
 
   // Get all blocks for keyboard navigation

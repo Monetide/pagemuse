@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { useDocumentSectionManagement } from '@/hooks/useDocumentSectionManagement'
 import { DocumentHeader } from '@/components/document/DocumentHeader'
@@ -24,6 +24,7 @@ import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageMaster, Section, Block, createDocument, createSection, createFlow, createBlock, addBlockToFlow, addFlowToSection, addSectionToDocument } from '@/lib/document-model'
 import { History, Trash2 } from 'lucide-react'
+import { generateLayout, LayoutResult } from '@/lib/layout-engine'
 
 export default function DocumentModelDemo() {
   const { id } = useParams()
@@ -341,6 +342,19 @@ export default function DocumentModelDemo() {
     
     addBlockAfter(targetBlockId, blockType, content, metadata)
   }
+
+  const { startPages, layoutsById } = useMemo(() => {
+    const res = { startPages: new Map<string, number>(), layoutsById: new Map<string, LayoutResult>() }
+    if (!document) return res
+    let current = 1
+    for (const sec of document.sections) {
+      res.startPages.set(sec.id, current)
+      const layout = generateLayout(sec, current)
+      res.layoutsById.set(sec.id, layout)
+      current += layout.totalPages
+    }
+    return res
+  }, [document])
 
   return (
     <AccessibilityProvider>
@@ -757,6 +771,8 @@ export default function DocumentModelDemo() {
                           <EditorCanvas
                             section={section}
                             document={document}
+                            startPageNumber={startPages.get(section.id)}
+                            precomputedLayout={layoutsById.get(section.id)}
                             onContentChange={updateBlockContent}
                             onNewBlock={(afterBlockId, type, content, metadata) => {
                               if (afterBlockId === 'create-first') {
