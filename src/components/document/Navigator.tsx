@@ -133,7 +133,6 @@ function SortableSection({
   const [showAddFlow, setShowAddFlow] = useState(false)
   const [isRenaming, setIsRenaming] = useState(false)
   const [renameName, setRenameName] = useState(section.name)
-  const [showMenu, setShowMenu] = useState(false)
   
   const {
     attributes,
@@ -230,8 +229,6 @@ function SortableSection({
               }
             }
           }}
-          onMouseEnter={() => setShowMenu(true)}
-          onMouseLeave={() => setShowMenu(false)}
         >
           <div
             className="cursor-grab hover:text-primary"
@@ -284,48 +281,46 @@ function SortableSection({
           
           <span className="text-xs text-muted-foreground">{section.flows.length}</span>
           
-          {(showMenu || isMultiSelected) && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-6 w-6 p-0 opacity-60 hover:opacity-100"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <MoreHorizontal className="w-3 h-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setIsRenaming(true)}>
-                  Rename
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onDuplicateSection?.()}>
-                  Duplicate
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => onMoveSectionUp?.()} 
-                  disabled={!canMoveUp}
-                >
-                  Move Up
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => onMoveSectionDown?.()} 
-                  disabled={!canMoveDown}
-                >
-                  Move Down
-                </DropdownMenuItem>
-                <DropdownMenuItem 
-                  onClick={() => onDeleteSection?.()} 
-                  disabled={!canDelete}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete section...
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-60 hover:!opacity-100 transition-opacity"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MoreHorizontal className="w-3 h-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="z-50">
+              <DropdownMenuItem onClick={() => setIsRenaming(true)}>
+                Rename
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onDuplicateSection?.()}>
+                Duplicate
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => onMoveSectionUp?.()} 
+                disabled={!canMoveUp}
+              >
+                Move Up
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => onMoveSectionDown?.()} 
+                disabled={!canMoveDown}
+              >
+                Move Down
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => onDeleteSection?.()} 
+                disabled={!canDelete}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete section...
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </SectionContextMenu>
 
