@@ -96,11 +96,6 @@ export function useTemplateApplication() {
 
 // Helper function to convert Supabase template to our template model
 function convertSupabaseTemplate(supabaseTemplate: Template) {
-  // Check if this is already a full template (from starter templates)
-  if (supabaseTemplate.metadata?.template) {
-    return supabaseTemplate.metadata.template
-  }
-
   const template = createTemplate(
     supabaseTemplate.name,
     supabaseTemplate.description || '',
