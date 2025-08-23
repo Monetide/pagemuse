@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import { 
   Users, 
   FileText, 
@@ -17,30 +18,10 @@ import {
   ChevronRight
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useAdminDashboardStats } from '@/hooks/useAdminDashboardStats'
 
 export default function AdminPanel() {
-  const [stats] = useState({
-    totalUsers: 1247,
-    activeUsers: 892,
-    totalDocuments: 5634,
-    totalTemplates: 156,
-    storageUsed: '2.3 GB',
-    systemHealth: 'Excellent'
-  })
-
-  const recentActivity = [
-    { user: 'John Doe', action: 'Created new document', time: '5 minutes ago', type: 'document' },
-    { user: 'Jane Smith', action: 'Uploaded template', time: '12 minutes ago', type: 'template' },
-    { user: 'Mike Johnson', action: 'Joined the platform', time: '1 hour ago', type: 'user' },
-    { user: 'Sarah Wilson', action: 'Published document', time: '2 hours ago', type: 'document' },
-  ]
-
-  const topTemplates = [
-    { name: 'Business Report', usage: 234, category: 'Business' },
-    { name: 'Marketing Proposal', usage: 189, category: 'Marketing' },
-    { name: 'Project Brief', usage: 156, category: 'Business' },
-    { name: 'Newsletter Template', usage: 142, category: 'Marketing' },
-  ]
+  const { stats, recentActivity, topTemplates, loading, error } = useAdminDashboardStats()
 
   const getActivityIcon = (type: string) => {
     switch (type) {
@@ -58,6 +39,32 @@ export default function AdminPanel() {
       case 'user': return 'text-green-600'
       default: return 'text-gray-600'
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6">
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 bg-muted rounded w-1/3"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-24 bg-muted rounded-lg"></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="text-center py-12">
+          <p className="text-destructive mb-4">Failed to load admin stats: {error}</p>
+          <Button onClick={() => window.location.reload()}>Try Again</Button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -87,7 +94,9 @@ export default function AdminPanel() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Users</p>
                 <p className="text-2xl font-bold text-foreground">{stats.totalUsers}</p>
-                <p className="text-xs text-green-600 mt-1">+12% from last month</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {stats.activeUsers > 0 ? `${Math.round((stats.activeUsers / stats.totalUsers) * 100)}% are active` : 'No activity yet'}
+                </p>
               </div>
               <div className="p-3 rounded-lg bg-blue-100 text-blue-600">
                 <Users className="w-5 h-5" />
@@ -102,7 +111,9 @@ export default function AdminPanel() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Active Users</p>
                 <p className="text-2xl font-bold text-foreground">{stats.activeUsers}</p>
-                <p className="text-xs text-green-600 mt-1">+8% from last week</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {stats.totalUsers > 0 ? `${stats.activeUsers} currently active` : 'No users yet'}
+                </p>
               </div>
               <div className="p-3 rounded-lg bg-green-100 text-green-600">
                 <Activity className="w-5 h-5" />
@@ -117,7 +128,9 @@ export default function AdminPanel() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Documents</p>
                 <p className="text-2xl font-bold text-foreground">{stats.totalDocuments}</p>
-                <p className="text-xs text-blue-600 mt-1">+156 this week</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {stats.totalDocuments > 0 ? 'Total created by users' : 'No documents yet'}
+                </p>
               </div>
               <div className="p-3 rounded-lg bg-purple-100 text-purple-600">
                 <FileText className="w-5 h-5" />
@@ -132,7 +145,9 @@ export default function AdminPanel() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Templates</p>
                 <p className="text-2xl font-bold text-foreground">{stats.totalTemplates}</p>
-                <p className="text-xs text-purple-600 mt-1">+5 this month</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {stats.totalTemplates > 0 ? 'Available in library' : 'No templates yet'}
+                </p>
               </div>
               <div className="p-3 rounded-lg bg-orange-100 text-orange-600">
                 <Palette className="w-5 h-5" />
@@ -164,21 +179,27 @@ export default function AdminPanel() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {recentActivity.map((activity, index) => {
-                  const IconComponent = getActivityIcon(activity.type)
-                  return (
-                    <div key={index} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                      <div className={`p-2 rounded-lg bg-muted ${getActivityColor(activity.type)}`}>
-                        <IconComponent className="w-4 h-4" />
+                {recentActivity.length > 0 ? (
+                  recentActivity.map((activity, index) => {
+                    const IconComponent = getActivityIcon(activity.type)
+                    return (
+                      <div key={index} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                        <div className={`p-2 rounded-lg bg-muted ${getActivityColor(activity.type)}`}>
+                          <IconComponent className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium text-foreground">{activity.user}</p>
+                          <p className="text-sm text-muted-foreground">{activity.action}</p>
+                        </div>
+                        <span className="text-xs text-muted-foreground">{activity.time}</span>
                       </div>
-                      <div className="flex-1">
-                        <p className="font-medium text-foreground">{activity.user}</p>
-                        <p className="text-sm text-muted-foreground">{activity.action}</p>
-                      </div>
-                      <span className="text-xs text-muted-foreground">{activity.time}</span>
-                    </div>
-                  )
-                })}
+                    )
+                  })
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">No recent activity</p>
+                  </div>
+                )}
                 <Button variant="ghost" className="w-full mt-4">
                   View All Activity
                   <ChevronRight className="w-4 h-4 ml-2" />
@@ -198,24 +219,30 @@ export default function AdminPanel() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {topTemplates.map((template, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-gradient-to-br from-primary/20 to-purple-500/20 rounded-lg flex items-center justify-center">
-                        <span className="text-sm font-bold text-primary">#{index + 1}</span>
+                {topTemplates.length > 0 ? (
+                  topTemplates.map((template, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gradient-to-br from-primary/20 to-purple-500/20 rounded-lg flex items-center justify-center">
+                          <span className="text-sm font-bold text-primary">#{index + 1}</span>
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">{template.name}</p>
+                          <Badge variant="secondary" className="text-xs">
+                            {template.category}
+                          </Badge>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-foreground">{template.name}</p>
-                        <Badge variant="secondary" className="text-xs">
-                          {template.category}
-                        </Badge>
-                      </div>
+                      <span className="text-sm font-medium text-muted-foreground">
+                        {template.usage} uses
+                      </span>
                     </div>
-                    <span className="text-sm font-medium text-muted-foreground">
-                      {template.usage} uses
-                    </span>
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">No template usage data yet</p>
                   </div>
-                ))}
+                )}
                 <Button variant="ghost" className="w-full mt-4">
                   View All Templates
                   <ChevronRight className="w-4 h-4 ml-2" />
