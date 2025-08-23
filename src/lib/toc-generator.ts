@@ -67,8 +67,7 @@ export const generateTOC = (
     if (section.includeInTOC === false) continue
 
     const layoutResult = layoutResults.get(section.id)
-    if (!layoutResult) continue
-
+    
     // Process each flow in the section
     for (const flow of section.flows.sort((a, b) => a.order - b.order)) {
       for (const block of flow.blocks.sort((a, b) => a.order - b.order)) {
@@ -81,20 +80,24 @@ export const generateTOC = (
           // Check if heading has "include in TOC" disabled
           if (block.metadata?.includeInTOC === false) continue
 
-          // Find the page number for this block
-          const pageNumber = findBlockPageNumber(block.id, layoutResult)
-          
-          if (pageNumber > 0) {
-            entries.push({
-              id: crypto.randomUUID(),
-              text: typeof block.content === 'string' ? block.content : block.content?.text || 'Untitled',
-              level,
-              pageNumber,
-              sectionId: section.id,
-              sectionName: section.name,
-              blockId: block.id
-            })
+          // Find the page number for this block (or use 1 as default for screen mode)
+          let pageNumber = 1
+          if (layoutResult) {
+            const foundPageNumber = findBlockPageNumber(block.id, layoutResult)
+            if (foundPageNumber > 0) {
+              pageNumber = foundPageNumber
+            }
           }
+          
+          entries.push({
+            id: crypto.randomUUID(),
+            text: typeof block.content === 'string' ? block.content : block.content?.text || 'Untitled',
+            level,
+            pageNumber,
+            sectionId: section.id,
+            sectionName: section.name,
+            blockId: block.id
+          })
         }
       }
     }
