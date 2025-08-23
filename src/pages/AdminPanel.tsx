@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -250,28 +251,78 @@ export default function AdminPanel() {
         </TabsContent>
 
         <TabsContent value="content">
-          <Card className="border-0 shadow-soft">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-primary" />
-                Content Management
-              </CardTitle>
-              <CardDescription>
-                Moderate templates, documents, and media content
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="text-center py-12">
-              <Palette className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold text-foreground mb-2">Content Moderation</h3>
-              <p className="text-muted-foreground mb-6">
-                Content management tools coming soon
-              </p>
-              <Button className="bg-gradient-primary hover:shadow-glow transition-all duration-200">
-                <Shield className="w-4 h-4 mr-2" />
-                Review Content
-              </Button>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Templates Management */}
+            <Card className="border-0 shadow-soft hover:shadow-lg transition-all duration-200 cursor-pointer group">
+              <Link to="/admin/templates">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Palette className="w-5 h-5 text-primary" />
+                    Templates
+                  </CardTitle>
+                  <CardDescription>
+                    Manage global templates and visibility
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="text-center py-8">
+                  <div className="w-16 h-16 mx-auto bg-primary/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
+                    <Palette className="w-8 h-8 text-primary" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {stats.totalTemplates} templates available
+                  </p>
+                </CardContent>
+              </Link>
+            </Card>
+
+            {/* Documents Management */}
+            <Card className="border-0 shadow-soft">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-primary" />
+                  Documents
+                </CardTitle>
+                <CardDescription>
+                  Review and moderate user documents
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="text-center py-8">
+                <div className="w-16 h-16 mx-auto bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+                  <FileText className="w-8 h-8 text-blue-600" />
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {stats.totalDocuments} documents created
+                </p>
+                <Button variant="outline" size="sm">
+                  Review Content
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Media Management */}
+            <Card className="border-0 shadow-soft">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Database className="w-5 h-5 text-primary" />
+                  Media Library
+                </CardTitle>
+                <CardDescription>
+                  Manage uploaded media and assets
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="text-center py-8">
+                <div className="w-16 h-16 mx-auto bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+                  <Database className="w-8 h-8 text-purple-600" />
+                </div>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {stats.storageUsed} storage used
+                </p>
+                <Button variant="outline" size="sm">
+                  Manage Media
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="system">
