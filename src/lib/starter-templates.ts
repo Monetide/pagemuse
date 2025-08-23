@@ -630,7 +630,7 @@ export const createMarketingEBookTemplate = (): Template => {
       },
       {
         name: 'TOC',
-        layoutIntent: 'toc' as LayoutIntent,
+        layoutIntent: 'executive-summary' as LayoutIntent,
         flows: [
           {
             name: 'Primary',
