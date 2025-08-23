@@ -688,29 +688,6 @@ export default function DocumentModelDemo() {
             <div className="flex-1 flex flex-col" data-testid="canvas">
               {document.sections.length > 0 ? (
                 <>
-                  {/* Section Tabs */}
-                  {document.sections.length > 1 && (
-                    <div className="border-b border-border">
-                      <Tabs 
-                        value={selectedSectionId || document.sections[0].id} 
-                        onValueChange={setSelectedSectionId}
-                        className="w-full"
-                      >
-                        <TabsList className="h-12 w-full justify-start rounded-none bg-transparent">
-                          {document.sections.map(section => (
-                            <TabsTrigger 
-                              key={section.id} 
-                              value={section.id}
-                              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent"
-                            >
-                              {section.name}
-                            </TabsTrigger>
-                          ))}
-                        </TabsList>
-                      </Tabs>
-                    </div>
-                  )}
-                  
                   {/* Editor Canvas */}
                   <div className="flex-1 flex flex-col overflow-hidden">
                     {document.sections.map(section => {
