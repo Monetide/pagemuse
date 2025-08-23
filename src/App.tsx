@@ -14,6 +14,7 @@ import MyDocuments from "./pages/MyDocuments";
 import TemplateLibrary from "./pages/TemplateLibrary";
 import MediaLibrary from "./pages/MediaLibrary";
 import AdminPanel from "./pages/AdminPanel";
+import { AdminGuard } from "./components/auth/AdminGuard";
 import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
 import DocumentModelDemo from "./pages/DocumentModelDemo";
@@ -63,7 +64,11 @@ const App = () => {
                             <Route path="/documents/:id/settings" element={<DocumentSettings />} />
                             <Route path="/templates" element={<TemplateLibrary />} />
                             <Route path="/media" element={<MediaLibrary />} />
-                            <Route path="/admin" element={<AdminPanel />} />
+                    <Route path="/admin" element={
+                      <AdminGuard>
+                        <AdminPanel />
+                      </AdminGuard>
+                    } />
                             <Route path="/settings" element={<div className="p-6">Settings coming soon...</div>} />
                             {/* Redirects from old paths */}
                             <Route path="/document-model" element={<DocumentModelRedirect />} />

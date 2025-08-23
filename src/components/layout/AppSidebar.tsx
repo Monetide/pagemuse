@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { useAccessibility } from '@/components/accessibility/AccessibilityProvider'
 import { useKeyboardNavigation, useFocusManagement } from '@/hooks/useKeyboardNavigation'
+import { useAdminRole } from '@/hooks/useAdminRole'
 import { useEffect, useRef } from 'react'
 
 const mainItems = [
@@ -45,6 +46,7 @@ export function AppSidebar() {
   const location = useLocation()
   const { focusedSection, setFocusedSection, announce } = useAccessibility()
   const { updateFocusableElements, focusNext, focusPrevious } = useFocusManagement()
+  const { isAdmin } = useAdminRole()
   const sidebarRef = useRef<HTMLDivElement>(null)
   const currentPath = location.pathname
   const isCollapsed = state === 'collapsed'
@@ -128,32 +130,34 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Admin Section - Show based on user role */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/60 text-xs font-medium">
-            {!isCollapsed && 'ADMIN'}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {adminItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink 
-                      to={item.url} 
-                      className={getNavCls}
-                      title={isCollapsed ? item.title : undefined}
-                      aria-label={item.title}
-                      role="menuitem"
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {!isCollapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* Admin Section - Only show for admin users */}
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-sidebar-foreground/60 text-xs font-medium">
+              {!isCollapsed && 'ADMIN'}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {adminItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink 
+                        to={item.url} 
+                        className={getNavCls}
+                        title={isCollapsed ? item.title : undefined}
+                        aria-label={item.title}
+                        role="menuitem"
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {!isCollapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {/* Bottom Navigation */}
         <div className="mt-auto">
