@@ -11,11 +11,13 @@ import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { ViewModeToggle } from '@/components/document/ViewModeToggle'
 import { ValidationButton } from '@/components/document/ValidationButton'
 import { useAuth } from '@/hooks/useAuth'
+import { useAdminRole } from '@/hooks/useAdminRole'
 import { User, LogOut, Settings, Shield } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 
 export function AppHeader() {
   const { user, signOut } = useAuth()
+  const { isAdmin } = useAdminRole()
   const location = useLocation()
 
   const handleSignOut = async () => {
@@ -25,14 +27,12 @@ export function AppHeader() {
   const userDisplayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'User'
   const userInitials = userDisplayName.slice(0, 2).toUpperCase()
 
-  // Check if user is admin (you may need to adjust this based on your user role system)
-  const isAdmin = user?.user_metadata?.role === 'admin' || user?.email?.includes('admin')
-
   const navigationItems = [
     { name: 'Dashboard', path: '/' },
     { name: 'Documents', path: '/documents' },
     { name: 'Templates', path: '/templates' },
     { name: 'Media', path: '/media' },
+    ...(isAdmin ? [{ name: 'Admin', path: '/admin' }] : []),
   ]
 
   return (
