@@ -172,6 +172,49 @@ export function TemplatePreview({ data }: TemplatePreviewProps) {
             </div>
           )}
 
+          {/* SVG Motif Overlay Demo */}
+          {data.motifs && data.colorway && (
+            <>
+              {/* Background Pattern */}
+              {(() => {
+                const bgAsset = data.motifs.assets.find((a: any) => a.type === 'body-bg')
+                const bgVariant = bgAsset?.variants.find((v: any) => v.id === data.motifs.selection['body-bg'])
+                
+                if (bgVariant) {
+                  return (
+                    <div 
+                      className="absolute inset-0 pointer-events-none"
+                      style={{
+                        backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(bgVariant.svg)}")`,
+                        backgroundRepeat: 'repeat',
+                        backgroundSize: '100px 100px',
+                        opacity: 0.05
+                      }}
+                    />
+                  )
+                }
+              })()}
+              
+              {/* Cover Shape */}
+              {(() => {
+                const shapeAsset = data.motifs.assets.find((a: any) => a.type === 'cover-shape')
+                const shapeVariant = shapeAsset?.variants.find((v: any) => v.id === data.motifs.selection['cover-shape'])
+                
+                if (shapeVariant) {
+                  return (
+                    <div className="absolute top-2 right-2 w-8 h-6 opacity-30">
+                      <img 
+                        src={`data:image/svg+xml,${encodeURIComponent(shapeVariant.svg)}`}
+                        alt="Cover shape"
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  )
+                }
+              })()}
+            </>
+          )}
+
           {/* Colorway Compliance Badge */}
           {data.colorway && (
             <div className="absolute bottom-2 right-4">

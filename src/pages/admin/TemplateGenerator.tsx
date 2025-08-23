@@ -392,6 +392,34 @@ export default function TemplateGenerator() {
                         </div>
                       </div>
                     )}
+                    {state.seedData.formData?.motifs && (
+                      <div className="flex justify-between text-sm items-center">
+                        <span className="text-muted-foreground">Motifs:</span>
+                        <div className="flex items-center gap-2">
+                          <div className="flex gap-1">
+                            {Object.entries(state.seedData.formData.motifs.selection).map(([type, variantId]) => {
+                              const asset = state.seedData.formData?.motifs?.assets.find((a: any) => a.type === type)
+                              const variant = asset?.variants.find((v: any) => v.id === variantId)
+                              
+                              if (!variant) return null
+                              
+                              return (
+                                <img 
+                                  key={type}
+                                  src={variant.preview}
+                                  alt={variant.name}
+                                  className="w-4 h-3 object-contain border border-border rounded opacity-75"
+                                  title={`${type}: ${variant.name}`}
+                                />
+                              )
+                            })}
+                          </div>
+                          <span className="text-xs">
+                            {Object.keys(state.seedData.formData.motifs.selection).length} assets
+                          </span>
+                        </div>
+                      </div>
+                    )}
                     {state.seedData.formData?.typography && (
                       <div className="flex justify-between text-sm items-center">
                         <span className="text-muted-foreground">Typography:</span>

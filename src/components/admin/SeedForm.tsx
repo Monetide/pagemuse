@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { TypographySelector, type TypographyPairing } from '@/components/admin/TypographySelector'
 import { ColorwaySelector, type Colorway } from '@/components/admin/ColorwaySelector'
+import { MotifSelector, type MotifSelection, type MotifAsset } from '@/components/admin/MotifSelector'
 import { 
   Form,
   FormControl,
@@ -65,6 +66,14 @@ const seedFormSchema = z.object({
       borderSubtle: z.string(),
     }),
     isCompliant: z.boolean(),
+  }).optional(),
+  motifs: z.object({
+    selection: z.object({
+      'body-bg': z.string(),
+      'divider': z.string(),
+      'cover-shape': z.string(),
+    }),
+    assets: z.array(z.any()),
   }).optional(),
   logo: z.any().optional(),
   referenceImage: z.any().optional(),
@@ -122,6 +131,7 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
         serif: { name: 'Source Serif 4', family: 'font-source-serif' }
       },
       colorway: undefined,
+      motifs: undefined,
       logo: undefined,
       referenceImage: undefined,
     },
@@ -200,6 +210,13 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
       name: colorway.name,
       colors: colorway.colors,
       isCompliant: colorway.isCompliant,
+    }, { shouldValidate: true })
+  }
+
+  const handleMotifChange = (selection: MotifSelection, assets: MotifAsset[]) => {
+    setValue('motifs', {
+      selection,
+      assets
     }, { shouldValidate: true })
   }
 
@@ -434,6 +451,18 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
           brandColor={watch('primaryColor')}
           selectedColorway={watch('colorway')?.id}
           onSelectionChange={handleColorwayChange}
+        />
+
+        {/* SVG Motifs */}
+        <MotifSelector 
+          colors={watch('colorway') ? {
+            brand: watch('colorway')!.colors.brand,
+            brandSecondary: watch('colorway')!.colors.brandSecondary,
+            borderSubtle: watch('colorway')!.colors.borderSubtle,
+            textMuted: watch('colorway')!.colors.textMuted,
+          } : undefined}
+          selectedMotifs={watch('motifs')?.selection}
+          onSelectionChange={handleMotifChange}
         />
 
         {/* Typography Pairing */}
