@@ -566,16 +566,23 @@ export const generateLayout = (section: Section, startPageNumber: number = 1): L
   const updatedColumnWidth = (updatedContentWidth - updatedTotalGapWidth) / currentPageMaster.columns
   
   // Always create at least one page, even if empty
+  let safetyCounter = 0
+  const MAX_PAGES_PER_SECTION = 500
   do {
+    if (safetyCounter++ > MAX_PAGES_PER_SECTION) {
+      console.warn('Layout safety limit reached; truncating to prevent OOM')
+      break
+    }
+
     const columnBoxes: ColumnBox[] = []
     let pageHasContent = false
     let currentPageMasterForPage = currentPageMaster
     let dedicatedPageCreated = false
-    
+
     // Check if the next block needs a dedicated page
     if (blockQueue.length > 0 && blockQueue[0].metadata?.requiresDedicatedPage) {
       const block = blockQueue.shift()!
-      
+
       // Create dedicated page with single column using full content width
       const dedicatedColumnBox: ColumnBox = {
         id: `page-${currentPageNumber}-dedicated`,
@@ -589,7 +596,7 @@ export const generateLayout = (section: Section, startPageNumber: number = 1): L
           blocksRemaining: blockQueue.length
         }
       }
-      
+
       const dedicatedPageBox: PageBox = {
         id: `page-${currentPageNumber}`,
         pageNumber: currentPageNumber,
@@ -600,23 +607,24 @@ export const generateLayout = (section: Section, startPageNumber: number = 1): L
         columnBoxes: [dedicatedColumnBox],
         hasOverflow: blockQueue.length > 0
       }
-      
+
       pages.push(dedicatedPageBox)
       currentPageNumber++
       dedicatedPageCreated = true
-      
+
       // Mark block placement
       if (block.metadata) {
         block.metadata.placementReason = 'dedicated-page'
       }
     }
-    
+
     // If we created a dedicated page, continue to next iteration
     if (dedicatedPageCreated) {
       continue
     }
-    
+
     // Create column boxes for this page (normal multi-column layout)
+    const queueLengthAtStart = blockQueue.length
     for (let colIndex = 0; colIndex < currentPageMasterForPage.columns; colIndex++) {
       const columnBox: ColumnBox = {
         id: `page-${currentPageNumber}-col-${colIndex}`,
@@ -626,15 +634,15 @@ export const generateLayout = (section: Section, startPageNumber: number = 1): L
         content: [],
         isFull: false
       }
-      
+
       // Fill column with blocks, applying pagination rules
       let currentColumnHeight = 0
-      
+
       while (blockQueue.length > 0) {
         const nextBlock = blockQueue[0]
         const followingBlock = blockQueue.length > 1 ? blockQueue[1] : null
         const remainingHeight = updatedAvailableHeight - currentColumnHeight
-        
+
         // Skip dedicated page blocks in normal columns (handled above)
         if (nextBlock.metadata?.requiresDedicatedPage) {
           columnBox.isFull = true
@@ -644,23 +652,23 @@ export const generateLayout = (section: Section, startPageNumber: number = 1): L
           }
           break
         }
-        
+
         // Check pagination rules
         const ruleCheck = checkPaginationRules(
-          nextBlock, 
-          followingBlock, 
-          remainingHeight, 
-          updatedColumnWidth, 
+          nextBlock,
+          followingBlock,
+          remainingHeight,
+          updatedColumnWidth,
           blockQueue
         )
-        
+
         if (ruleCheck.canPlace) {
           // Block can be placed, add it
           const block = blockQueue.shift()!
           columnBox.content.push(block)
           currentColumnHeight += estimateBlockHeight(block, updatedColumnWidth)
           pageHasContent = true
-          
+
           // Add debug info about rule application
           if (block.metadata) {
             block.metadata.placementReason = 'normal'
@@ -670,27 +678,27 @@ export const generateLayout = (section: Section, startPageNumber: number = 1): L
           if (ruleCheck.reason === 'insufficient-space' || ruleCheck.reason === 'break-avoid') {
             // Try splitting if possible
             const splitCheck = canSplitWithRules(nextBlock, remainingHeight, updatedColumnWidth)
-            
+
             if (splitCheck.canSplit && ['paragraph', 'quote', 'table'].includes(nextBlock.type) && remainingHeight > 0.5) {
               let splitBlocks: Block[]
-              
+
               if (nextBlock.type === 'table') {
                 splitBlocks = splitTable(nextBlock, remainingHeight, updatedColumnWidth)
               } else {
                 splitBlocks = splitBlock(nextBlock, remainingHeight, updatedColumnWidth)
               }
-              
+
               if (splitBlocks.length > 1) {
                 // Remove original and add split blocks
                 blockQueue.shift()
                 blockQueue.unshift(...splitBlocks)
-                
+
                 // Place first chunk
                 const firstChunk = blockQueue.shift()!
                 columnBox.content.push(firstChunk)
                 currentColumnHeight += estimateBlockHeight(firstChunk, updatedColumnWidth)
                 pageHasContent = true
-                
+
                 // Mark as split due to pagination rules
                 if (firstChunk.metadata) {
                   firstChunk.metadata.placementReason = `split-${ruleCheck.reason}`
@@ -699,10 +707,10 @@ export const generateLayout = (section: Section, startPageNumber: number = 1): L
               }
             }
           }
-          
+
           // Cannot place or split - mark column as full
           columnBox.isFull = true
-          
+
           // Add metadata about why column ended
           columnBox.metadata = {
             endReason: ruleCheck.reason,
@@ -711,13 +719,37 @@ export const generateLayout = (section: Section, startPageNumber: number = 1): L
           break
         }
       }
-      
+
       columnBoxes.push(columnBox)
-      
+
       // If no more blocks, don't fill remaining columns
       if (blockQueue.length === 0) break
     }
-    
+
+    // Fallback: if we couldn't place anything on this page and queue didn't shrink, force a rescue dedicated page for the first block
+    if (!pageHasContent && blockQueue.length > 0 && blockQueue.length === queueLengthAtStart) {
+      const stuck = blockQueue.shift()!
+      const rescueColumn: ColumnBox = {
+        id: `page-${currentPageNumber}-rescue`,
+        columnIndex: 0,
+        width: updatedContentWidth,
+        height: updatedAvailableHeight,
+        content: [stuck],
+        isFull: true,
+        metadata: { endReason: 'rescue-fallback', blocksRemaining: blockQueue.length }
+      }
+      pages.push({
+        id: `page-${currentPageNumber}`,
+        pageNumber: currentPageNumber,
+        pageMaster: { ...currentPageMasterForPage, columns: 1 },
+        columnBoxes: [rescueColumn],
+        hasOverflow: blockQueue.length > 0
+      })
+      if (stuck.metadata) stuck.metadata.placementReason = 'rescue-fallback'
+      currentPageNumber++
+      continue
+    }
+
     // Only create regular page if we didn't create a dedicated page
     if (!dedicatedPageCreated) {
       const pageBox: PageBox = {
@@ -727,11 +759,11 @@ export const generateLayout = (section: Section, startPageNumber: number = 1): L
         columnBoxes,
         hasOverflow: blockQueue.length > 0
       }
-      
+
       pages.push(pageBox)
       currentPageNumber++
     }
-    
+
     // Continue if there are remaining blocks or if this is the first page (always show at least one)
   } while (blockQueue.length > 0 || pages.length === 0)
   
