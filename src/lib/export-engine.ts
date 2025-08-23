@@ -124,9 +124,11 @@ export class ExportEngine {
 
       // Step 1: Generate layouts for all sections (always use print view)
       const layoutResults = new Map<string, LayoutResult>()
+      let currentPageNumber = 1
       for (const section of document.sections) {
-        const layout = generateLayout(section)
+        const layout = generateLayout(section, currentPageNumber)
         layoutResults.set(section.id, layout)
+        currentPageNumber += layout.totalPages
       }
       this.updateProgress(jobId, 30)
 

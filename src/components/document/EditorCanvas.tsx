@@ -12,7 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Toggle } from '@/components/ui/toggle'
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { ZoomIn, ZoomOut, Maximize2, Grid3x3, Columns, Square, Ruler, Eye, EyeOff, RotateCcw, HelpCircle } from 'lucide-react'
 import { useAccessibility } from '@/components/accessibility/AccessibilityProvider'
 import { useKeyboardNavigation, useFocusManagement } from '@/hooks/useKeyboardNavigation'
@@ -330,7 +330,23 @@ export const EditorCanvas = ({ section, document, onContentChange, onNewBlock, o
   const { updateFocusableElements, focusNext, focusPrevious } = useFocusManagement()
   const { dragState, updateDrag, endDrag, setContainer } = useDragDropContext()
   const { hitTestDropZone } = useDropZoneDetection()
-  const layoutResult = generateLayout(section)
+  const layoutResult = useMemo(() => {
+    if (!document) {
+      return generateLayout(section)
+    }
+    
+    // Calculate the starting page number based on previous sections
+    const currentSectionIndex = document.sections.findIndex(s => s.id === section.id)
+    let startPageNumber = 1
+    
+    // Calculate total pages from all previous sections
+    for (let i = 0; i < currentSectionIndex; i++) {
+      const prevSectionLayout = generateLayout(document.sections[i])
+      startPageNumber += prevSectionLayout.totalPages
+    }
+    
+    return generateLayout(section, startPageNumber)
+  }, [section, document])
   const isFocused = focusedSection === 'canvas'
 
   // Get all blocks for keyboard navigation

@@ -17,10 +17,12 @@ export const useTOCLayoutResults = (document: SemanticDocument | null) => {
       const results = new Map<string, LayoutResult>()
 
       try {
-        // Generate layout for each section
+        // Generate layout for each section with proper page numbering
+        let currentPageNumber = 1
         for (const section of document.sections) {
-          const layoutResult = generateLayout(section)
+          const layoutResult = generateLayout(section, currentPageNumber)
           results.set(section.id, layoutResult)
+          currentPageNumber += layoutResult.totalPages
         }
 
         setLayoutResults(results)
@@ -44,9 +46,11 @@ export const useTOCLayoutResults = (document: SemanticDocument | null) => {
     const results = new Map<string, LayoutResult>()
 
     try {
+      let currentPageNumber = 1
       for (const section of document.sections) {
-        const layoutResult = generateLayout(section)
+        const layoutResult = generateLayout(section, currentPageNumber)
         results.set(section.id, layoutResult)
+        currentPageNumber += layoutResult.totalPages
       }
 
       setLayoutResults(results)

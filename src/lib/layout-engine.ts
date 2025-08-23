@@ -457,7 +457,7 @@ const estimateFootnoteHeight = (footnotes: { content: string }[]): number => {
   return baseHeight + footnoteHeight
 }
 
-export const generateLayout = (section: Section): LayoutResult => {
+export const generateLayout = (section: Section, startPageNumber: number = 1): LayoutResult => {
   const { pageMaster } = section
   
   // Set context for table width calculations
@@ -543,7 +543,7 @@ export const generateLayout = (section: Section): LayoutResult => {
 
   // Process blocks and split them as needed during layout
   const pages: PageBox[] = []
-  let currentPageNumber = 1
+  let currentPageNumber = startPageNumber
   let blockQueue = [...processedBlocks] // Queue of blocks to be placed
   
   // Recalculate dimensions with potentially updated page master
