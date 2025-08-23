@@ -35,18 +35,25 @@ export const BlockRenderer = ({
   const renderContent = () => {
     switch (block.type) {
       case 'heading':
-        const level = block.metadata?.level || 1
+        // Handle both old and new content structures
+        const headingContent = typeof block.content === 'string' 
+          ? block.content 
+          : block.content?.text || block.content || ''
+        const level = block.content?.level || block.metadata?.level || 1
         const HeadingTag = `h${level}` as keyof JSX.IntrinsicElements
         const headingClass = level === 1 ? 'text-xl font-bold' : level === 2 ? 'text-lg font-semibold' : 'text-base font-medium'
         
         return (
           <HeadingTag className={`${headingClass} text-foreground mb-2`}>
-            {block.content}
+            {headingContent}
           </HeadingTag>
         )
       
       case 'paragraph':
-        const content = typeof block.content === 'string' ? block.content : block.content?.text || ''
+        // Handle both old and new content structures
+        const content = typeof block.content === 'string' 
+          ? block.content 
+          : block.content?.text || block.content || ''
         const footnoteMarkers = block.metadata?.footnoteMarkers || []
         
         return (
