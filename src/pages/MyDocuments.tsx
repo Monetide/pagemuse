@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import { useDocuments } from '@/hooks/useSupabaseData'
 import { supabase } from '@/integrations/supabase/client'
 import { toast } from '@/hooks/use-toast'
@@ -16,7 +17,8 @@ import {
   MoreHorizontal,
   Eye,
   Edit,
-  Trash2
+  Trash2,
+  X
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -27,9 +29,11 @@ import {
 
 export default function MyDocuments() {
   const navigate = useNavigate()
-  const { documents, loading, removeDocument } = useDocuments()
+  const { documents, loading, removeDocument, bulkDeleteDocuments } = useDocuments()
   const [searchQuery, setSearchQuery] = useState('')
   const [deletingDocId, setDeletingDocId] = useState<string | null>(null)
+  const [selectedDocuments, setSelectedDocuments] = useState<Set<string>>(new Set())
+  const [bulkDeleting, setBulkDeleting] = useState(false)
 
   const filteredDocuments = documents.filter(doc =>
     doc.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -78,6 +82,12 @@ export default function MyDocuments() {
 
       // Optimistically remove from local state immediately
       removeDocument(docId)
+      // Remove from selection if it was selected
+      setSelectedDocuments(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(docId)
+        return newSet
+      })
 
       toast({
         title: "Document deleted",
@@ -94,6 +104,79 @@ export default function MyDocuments() {
       setDeletingDocId(null)
     }
   }
+
+  const handleBulkDelete = async () => {
+    const selectedCount = selectedDocuments.size
+    if (selectedCount === 0) return
+
+    const confirmText = selectedCount === 1 
+      ? `Are you sure you want to delete 1 document? This action cannot be undone.`
+      : `Are you sure you want to delete ${selectedCount} documents? This action cannot be undone.`
+    
+    if (!confirm(confirmText)) {
+      return
+    }
+
+    setBulkDeleting(true)
+    
+    try {
+      const result = await bulkDeleteDocuments(Array.from(selectedDocuments))
+      
+      if (result.error) {
+        throw new Error(result.error)
+      }
+
+      setSelectedDocuments(new Set())
+
+      toast({
+        title: `${selectedCount} document${selectedCount > 1 ? 's' : ''} deleted`,
+        description: "Documents have been deleted successfully.",
+      })
+    } catch (error) {
+      console.error('Error deleting documents:', error)
+      toast({
+        title: "Error",
+        description: "Failed to delete documents. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setBulkDeleting(false)
+    }
+  }
+
+  const handleSelectDocument = (docId: string, checked: boolean) => {
+    setSelectedDocuments(prev => {
+      const newSet = new Set(prev)
+      if (checked) {
+        newSet.add(docId)
+      } else {
+        newSet.delete(docId)
+      }
+      return newSet
+    })
+  }
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedDocuments(new Set(filteredDocuments.map(doc => doc.id)))
+    } else {
+      setSelectedDocuments(new Set())
+    }
+  }
+
+  const isAllSelected = filteredDocuments.length > 0 && selectedDocuments.size === filteredDocuments.length
+  const isPartiallySelected = selectedDocuments.size > 0 && selectedDocuments.size < filteredDocuments.length
+  const selectAllRef = useRef<HTMLButtonElement>(null)
+
+  // Handle indeterminate state for select all checkbox
+  useEffect(() => {
+    if (selectAllRef.current) {
+      const inputElement = selectAllRef.current.querySelector('input')
+      if (inputElement) {
+        inputElement.indeterminate = isPartiallySelected
+      }
+    }
+  }, [isPartiallySelected])
 
   return (
     <div className="p-6 space-y-6">
@@ -134,6 +217,38 @@ export default function MyDocuments() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Bulk Actions Bar */}
+      {selectedDocuments.size > 0 && (
+        <Card className="border-0 shadow-soft bg-primary/5 border-primary/20">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium text-foreground">
+                  {selectedDocuments.size} document{selectedDocuments.size > 1 ? 's' : ''} selected
+                </span>
+                <Button
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setSelectedDocuments(new Set())}
+                >
+                  <X className="w-4 h-4 mr-2" />
+                  Clear
+                </Button>
+              </div>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleBulkDelete}
+                disabled={bulkDeleting}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                {bulkDeleting ? 'Deleting...' : 'Delete Selected'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Documents Grid */}
       <div className="space-y-4">
@@ -179,60 +294,87 @@ export default function MyDocuments() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4">
-            {filteredDocuments.map((doc) => (
-              <Card key={doc.id} className="border-0 shadow-soft hover:shadow-medium transition-shadow duration-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-start gap-4 flex-1">
-                      <div className="p-3 rounded-lg bg-primary/10">
-                        <FileText className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-foreground mb-1">{doc.title}</h3>
-                        <p className="text-sm text-muted-foreground mb-2">
-                          {doc.template?.name || 'Custom Document'}
-                        </p>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            Updated {formatDate(doc.updated_at)}
-                          </span>
-                          <Badge variant="secondary" className={getStatusColor(doc)}>
-                            {getStatus(doc)}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => navigate(`/documents/${doc.id}/editor`)}>
-                          <Eye className="w-4 h-4 mr-2" />
-                          View
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate(`/documents/${doc.id}/editor`)}>
-                          <Edit className="w-4 h-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="text-destructive" 
-                          disabled={deletingDocId === doc.id}
-                          onClick={() => handleDeleteDocument(doc.id, doc.title)}
-                        >
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          {deletingDocId === doc.id ? 'Deleting...' : 'Delete'}
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+          <div className="space-y-4">
+            {/* Select All Header */}
+            {filteredDocuments.length > 0 && (
+              <Card className="border-0 shadow-soft">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      checked={isAllSelected}
+                      ref={selectAllRef}
+                      onCheckedChange={handleSelectAll}
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      {isAllSelected ? 'All selected' : isPartiallySelected ? 'Some selected' : 'Select all'}
+                    </span>
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            )}
+
+            <div className="grid gap-4">
+              {filteredDocuments.map((doc) => (
+                <Card key={doc.id} className="border-0 shadow-soft hover:shadow-medium transition-shadow duration-200">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-start gap-4 flex-1">
+                        <div className="flex items-start gap-3">
+                          <Checkbox
+                            checked={selectedDocuments.has(doc.id)}
+                            onCheckedChange={(checked) => handleSelectDocument(doc.id, checked as boolean)}
+                            className="mt-1"
+                          />
+                          <div className="p-3 rounded-lg bg-primary/10">
+                            <FileText className="w-5 h-5 text-primary" />
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-foreground mb-1">{doc.title}</h3>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            {doc.template?.name || 'Custom Document'}
+                          </p>
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              Updated {formatDate(doc.updated_at)}
+                            </span>
+                            <Badge variant="secondary" className={getStatusColor(doc)}>
+                              {getStatus(doc)}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => navigate(`/documents/${doc.id}/editor`)}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            View
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate(`/documents/${doc.id}/editor`)}>
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-destructive" 
+                            disabled={deletingDocId === doc.id}
+                            onClick={() => handleDeleteDocument(doc.id, doc.title)}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            {deletingDocId === doc.id ? 'Deleting...' : 'Delete'}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
         )}
       </div>

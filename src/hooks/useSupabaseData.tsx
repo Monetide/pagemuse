@@ -80,7 +80,32 @@ export const useDocuments = () => {
     setDocuments(prev => prev.filter(doc => doc.id !== docId))
   }
 
-  return { documents, loading, error, refetch, removeDocument }
+  const removeDocuments = (docIds: string[]) => {
+    setDocuments(prev => prev.filter(doc => !docIds.includes(doc.id)))
+  }
+
+  const bulkDeleteDocuments = async (docIds: string[]) => {
+    if (!user || docIds.length === 0) return { error: 'No documents selected' }
+
+    try {
+      const { error } = await supabase
+        .from('documents')
+        .delete()
+        .eq('user_id', user.id)
+        .in('id', docIds)
+
+      if (error) throw error
+
+      // Remove from local state
+      removeDocuments(docIds)
+
+      return { success: true }
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'Failed to delete documents' }
+    }
+  }
+
+  return { documents, loading, error, refetch, removeDocument, removeDocuments, bulkDeleteDocuments }
 }
 
 export const useTemplates = () => {
