@@ -32,6 +32,7 @@ export const FlowRenderer = ({
   if (!flow.blocks || flow.blocks.length === 0) {
     return (
       <div 
+        id={`flow-${flow.id}`}
         className={cn(
           "flow-container empty-flow",
           className
@@ -53,6 +54,7 @@ export const FlowRenderer = ({
 
   return (
     <div 
+      id={`flow-${flow.id}`}
       className={cn(
         "flow-container",
         flow.type === 'grid' && "flow-grid",
