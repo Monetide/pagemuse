@@ -465,94 +465,145 @@ export default function DocumentModelDemo() {
                     }}
                     selectedBlockId={selectedBlockId}
                     focusedBlockId={focusedBlockId}
-                    onJumpToHeading={(blockId) => {
+                    onJumpToHeading={(blockId, blockType = 'heading', sectionId, event) => {
+                      console.log('Jumping to heading:', blockId, 'type:', blockType, 'in section:', sectionId)
                       const targetElement = globalThis.document.getElementById(`block-${blockId}`)
                       if (targetElement) {
-                        const headerHeight = 60
-                        const elementRect = targetElement.getBoundingClientRect()
-                        const absoluteElementTop = elementRect.top + window.pageYOffset
-                        const scrollToY = absoluteElementTop - headerHeight
-                        
-                        window.scrollTo({
-                          top: scrollToY,
-                          behavior: 'smooth'
-                        })
-                        
-                        targetElement.classList.add('ring-2', 'ring-primary', 'ring-offset-2')
-                        setTimeout(() => {
-                          targetElement.classList.remove('ring-2', 'ring-primary', 'ring-offset-2')
-                        }, 2000)
-                        
-                        setSelectedBlockId(blockId)
-                        setFocusedBlockId(blockId)
-                        targetElement.focus()
+                        try {
+                          const headerHeight = 60
+                          const elementRect = targetElement.getBoundingClientRect()
+                          const absoluteElementTop = elementRect.top + window.pageYOffset
+                          const scrollToY = absoluteElementTop - headerHeight
+                          
+                          window.scrollTo({
+                            top: scrollToY,
+                            behavior: 'smooth'
+                          })
+                          
+                          targetElement.classList.add('ring-2', 'ring-primary', 'ring-offset-2')
+                          setTimeout(() => {
+                            targetElement.classList.remove('ring-2', 'ring-primary', 'ring-offset-2')
+                          }, 2000)
+                          
+                          setSelectedBlockId(blockId)
+                          if (sectionId) setSelectedSectionId(sectionId)
+                          setFocusedBlockId(blockId)
+                          
+                          setTimeout(() => {
+                            try {
+                              targetElement.focus()
+                            } catch (focusError) {
+                              console.warn('Could not focus heading element:', focusError)
+                            }
+                          }, 100)
+                        } catch (error) {
+                          console.error('Error scrolling to heading:', error)
+                        }
+                      } else {
+                        console.warn('Heading element not found:', `block-${blockId}`)
                       }
                     }}
                     onJumpToSection={(sectionId) => {
+                      console.log('Jumping to section:', sectionId)
                       const sectionElement = globalThis.document.getElementById(`section-${sectionId}`)
                       if (sectionElement) {
-                        sectionElement.scrollIntoView({
-                          behavior: 'smooth',
-                          block: 'start'
-                        })
-                        
-                        sectionElement.classList.add('ring-2', 'ring-primary', 'ring-offset-2')
-                        setTimeout(() => {
-                          sectionElement.classList.remove('ring-2', 'ring-primary', 'ring-offset-2')
-                        }, 2000)
-                        
-                        setSelectedSectionId(sectionId)
+                        try {
+                          sectionElement.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                          })
+                          
+                          // Add visual feedback
+                          sectionElement.classList.add('ring-2', 'ring-primary', 'ring-offset-2')
+                          setTimeout(() => {
+                            sectionElement.classList.remove('ring-2', 'ring-primary', 'ring-offset-2')
+                          }, 2000)
+                          
+                          setSelectedSectionId(sectionId)
+                        } catch (error) {
+                          console.error('Error scrolling to section:', error)
+                        }
+                      } else {
+                        console.warn('Section element not found:', `section-${sectionId}`)
                       }
                     }}
                     onJumpToFlow={(flowId, sectionId) => {
+                      console.log('Jumping to flow:', flowId, 'in section:', sectionId)
                       const flowElement = globalThis.document.getElementById(`flow-${flowId}`)
                       if (flowElement) {
-                        flowElement.scrollIntoView({
-                          behavior: 'smooth',
-                          block: 'center'
-                        })
-                        
-                        flowElement.classList.add('ring-2', 'ring-primary', 'ring-offset-2')
-                        setTimeout(() => {
-                          flowElement.classList.remove('ring-2', 'ring-primary', 'ring-offset-2')
-                        }, 2000)
-                        
-                        setSelectedSectionId(sectionId)
+                        try {
+                          flowElement.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center'
+                          })
+                          
+                          flowElement.classList.add('ring-2', 'ring-primary', 'ring-offset-2')
+                          setTimeout(() => {
+                            flowElement.classList.remove('ring-2', 'ring-primary', 'ring-offset-2')
+                          }, 2000)
+                          
+                          setSelectedSectionId(sectionId)
+                        } catch (error) {
+                          console.error('Error scrolling to flow:', error)
+                        }
+                      } else {
+                        console.warn('Flow element not found:', `flow-${flowId}`)
                       }
                     }}
                     onJumpToBlock={(blockId, blockType, sectionId) => {
+                      console.log('Jumping to block:', blockId, 'type:', blockType, 'in section:', sectionId)
                       const targetElement = globalThis.document.getElementById(`block-${blockId}`)
                       
                       if (targetElement) {
-                        targetElement.scrollIntoView({
-                          behavior: 'smooth',
-                          block: 'center'
-                        })
-                        
-                        targetElement.classList.add('ring-2', 'ring-primary', 'ring-offset-2')
-                        setTimeout(() => {
-                          targetElement.classList.remove('ring-2', 'ring-primary', 'ring-offset-2')
-                        }, 2000)
-                        
-                        setSelectedBlockId(blockId)
-                        if (sectionId) setSelectedSectionId(sectionId)
-                        setFocusedBlockId(blockId)
-                        
-                        // For text blocks, try to place caret
-                        if (['paragraph', 'list-item', 'caption', 'quote'].includes(blockType)) {
-                          const editableElement = targetElement.querySelector('[contenteditable]') as HTMLElement
-                          if (editableElement) {
-                            editableElement.focus()
-                            const range = globalThis.document.createRange()
-                            const selection = window.getSelection()
-                            range.setStart(editableElement, 0)
-                            range.collapse(true)
-                            selection?.removeAllRanges()
-                            selection?.addRange(range)
+                        try {
+                          targetElement.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center'
+                          })
+                          
+                          targetElement.classList.add('ring-2', 'ring-primary', 'ring-offset-2')
+                          setTimeout(() => {
+                            targetElement.classList.remove('ring-2', 'ring-primary', 'ring-offset-2')
+                          }, 2000)
+                          
+                          setSelectedBlockId(blockId)
+                          if (sectionId) setSelectedSectionId(sectionId)
+                          setFocusedBlockId(blockId)
+                          
+                          // For text blocks, try to place caret
+                          if (['paragraph', 'list-item', 'caption', 'quote'].includes(blockType)) {
+                            const editableElement = targetElement.querySelector('[contenteditable]') as HTMLElement
+                            if (editableElement) {
+                              setTimeout(() => {
+                                try {
+                                  editableElement.focus()
+                                  const range = globalThis.document.createRange()
+                                  const selection = window.getSelection()
+                                  if (selection && range) {
+                                    range.setStart(editableElement, 0)
+                                    range.collapse(true)
+                                    selection.removeAllRanges()
+                                    selection.addRange(range)
+                                  }
+                                } catch (caretError) {
+                                  console.warn('Could not set caret position:', caretError)
+                                }
+                              }, 100)
+                            }
+                          } else {
+                            setTimeout(() => {
+                              try {
+                                targetElement.focus()
+                              } catch (focusError) {
+                                console.warn('Could not focus element:', focusError)
+                              }
+                            }, 100)
                           }
-                        } else {
-                          targetElement.focus()
+                        } catch (error) {
+                          console.error('Error scrolling to block:', error)
                         }
+                      } else {
+                        console.warn('Block element not found:', `block-${blockId}`)
                       }
                     }}
                     onDeleteSections={handleDeleteSectionRequest}

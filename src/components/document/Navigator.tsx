@@ -68,7 +68,7 @@ interface NavigatorProps {
   onAddSection: (name: string) => void
   onAddFlow: (sectionId: string, name: string) => void
   onReorderSections: (sections: Section[]) => void
-  onJumpToHeading?: (blockId: string) => void
+  onJumpToHeading?: (blockId: string, blockType: string, sectionId?: string, event?: React.MouseEvent) => void
   onJumpToSection?: (sectionId: string) => void
   onJumpToFlow?: (flowId: string, sectionId: string) => void
   onJumpToBlock?: (blockId: string, blockType: string, sectionId?: string) => void
@@ -93,7 +93,7 @@ interface SortableSectionProps {
   onSectionClick: (sectionId: string, event: React.MouseEvent) => void
   onFlowClick: (flowId: string, sectionId: string, event: React.MouseEvent) => void
   onAddFlow: (name: string) => void
-  onJumpToHeading?: (blockId: string, event: React.MouseEvent) => void
+  onJumpToHeading?: (blockId: string, blockType: string, sectionId?: string, event?: React.MouseEvent) => void
   onJumpToBlock?: (blockId: string, blockType: string, sectionId?: string, event?: React.MouseEvent) => void
   onDeleteSection?: () => void
   onRenameSection?: (newName: string) => void
@@ -347,13 +347,19 @@ function SortableSection({
                   <div 
                     key={heading.id}
                     className="ml-4 flex items-center gap-2 p-1 text-xs hover:bg-muted/30 rounded cursor-pointer"
-                    onClick={(e) => onJumpToHeading?.(heading.id, e)}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      // Find the section this heading belongs to
+                      const sectionId = section.id
+                      onJumpToHeading?.(heading.id, 'heading', sectionId, e)
+                    }}
                   >
                     <Hash className="w-3 h-3" />
                     <span className="truncate">
                       {typeof heading.content === 'string' 
                         ? heading.content 
-                        : 'Heading'
+                        : heading.content?.text || 'Heading'
                       }
                     </span>
                   </div>

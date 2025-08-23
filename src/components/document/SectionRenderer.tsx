@@ -34,14 +34,15 @@ export const SectionRenderer = ({
 
   if (!section.flows || section.flows.length === 0) {
     return (
-      <section 
-        className={cn(
-          "document-section empty-section",
-          className
-        )}
-        data-section-id={section.id}
-        data-section-name={section.name}
-      >
+    <section 
+      id={`section-${section.id}`}
+      className={cn(
+        "document-section empty-section",
+        className
+      )}
+      data-section-id={section.id}
+      data-section-name={section.name}
+    >
         {isEditing && (
           <div className="text-muted-foreground text-center py-12">
             <p className="text-lg">Empty section: {section.name}</p>
@@ -54,6 +55,7 @@ export const SectionRenderer = ({
 
   return (
     <section 
+      id={`section-${section.id}`}
       className={cn(
         "document-section",
         section.layoutIntent && `layout-${section.layoutIntent}`,
