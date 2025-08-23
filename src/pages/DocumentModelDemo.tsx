@@ -294,20 +294,16 @@ export default function DocumentModelDemo() {
 
   // Auto-load document if documentId is in URL
   useEffect(() => {
-    if (documentId) {
-      if (!document) {
-        console.log('Effect triggered: attempting to load document', documentId)
-        setIsLoadingDoc(true)
-        loadDocument(documentId)
-          .catch(error => {
-            console.error('Failed to load document in effect:', error)
-          })
-          .finally(() => setIsLoadingDoc(false))
-      } else {
-        console.log('Effect skipped: document already loaded for', documentId)
-      }
+    if (documentId && !document) {
+      console.log('Effect triggered: attempting to load document', documentId)
+      setIsLoadingDoc(true)
+      loadDocument(documentId)
+        .catch(error => {
+          console.error('Failed to load document in effect:', error)
+        })
+        .finally(() => setIsLoadingDoc(false))
     }
-  }, [documentId, document, loadDocument])
+  }, [documentId]) // Removed unstable dependencies to prevent infinite loop
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -358,16 +354,28 @@ export default function DocumentModelDemo() {
 
   const { startPages, layoutsById } = useMemo(() => {
     const res = { startPages: new Map<string, number>(), layoutsById: new Map<string, LayoutResult>() }
-    if (!document) return res
+    if (!document || !document.sections) return res
+    
+    // Add safety check for very large documents to prevent memory issues
+    if (document.sections.length > 50) {
+      console.warn('Large document detected, limiting layout generation')
+      return res
+    }
+    
     let current = 1
     for (const sec of document.sections) {
       res.startPages.set(sec.id, current)
-      const layout = generateLayout(sec, current)
-      res.layoutsById.set(sec.id, layout)
-      current += layout.totalPages
+      try {
+        const layout = generateLayout(sec, current)
+        res.layoutsById.set(sec.id, layout)
+        current += layout.totalPages
+      } catch (error) {
+        console.error('Layout generation failed for section:', sec.id, error)
+        // Skip problematic sections to prevent crashes
+      }
     }
     return res
-  }, [document])
+  }, [document?.id, document?.sections?.length]) // More stable dependencies
 
   return (
     <AccessibilityProvider>
