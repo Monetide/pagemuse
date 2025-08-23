@@ -656,7 +656,7 @@ export const createMarketingEBookTemplate = (): Template => {
       },
       {
         name: 'Introduction',
-        layoutIntent: 'intro' as LayoutIntent,
+        layoutIntent: 'executive-summary' as LayoutIntent,
         flows: [
           {
             name: 'Primary',
@@ -736,7 +736,7 @@ export const createMarketingEBookTemplate = (): Template => {
       },
       {
         name: 'Highlights',
-        layoutIntent: 'highlights' as LayoutIntent,
+        layoutIntent: 'executive-summary' as LayoutIntent,
         flows: [
           {
             name: 'Primary',
@@ -753,7 +753,7 @@ export const createMarketingEBookTemplate = (): Template => {
       },
       {
         name: 'About / CTA',
-        layoutIntent: 'about-cta' as LayoutIntent,
+        layoutIntent: 'executive-summary' as LayoutIntent,
         flows: [
           {
             name: 'Primary',
@@ -770,7 +770,7 @@ export const createMarketingEBookTemplate = (): Template => {
       },
       {
         name: 'Appendix / Resources',
-        layoutIntent: 'body' as LayoutIntent,
+        layoutIntent: 'data-appendix' as LayoutIntent,
         flows: [
           {
             name: 'Primary',
