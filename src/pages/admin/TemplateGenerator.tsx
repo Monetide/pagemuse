@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { SeedForm, type SeedFormData } from '@/components/admin/SeedForm'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -24,7 +25,7 @@ interface TemplateGeneratorState {
   currentStep: WizardStep
   seedData: {
     isValid: boolean
-    // Add seed-specific fields later
+    formData?: SeedFormData
   }
   previewData: {
     // Add preview-specific fields later
@@ -110,7 +111,20 @@ export default function TemplateGenerator() {
   }
 
   const handleGenerate = () => {
-    console.log('Generating template...')
+    if (state.seedData.isValid && state.seedData.formData) {
+      console.log('Generating template with data:', state.seedData.formData)
+      // TODO: Implement actual template generation
+    }
+  }
+
+  const handleSeedValidChange = (isValid: boolean, data?: SeedFormData) => {
+    setState(prev => ({
+      ...prev,
+      seedData: {
+        isValid,
+        formData: data
+      }
+    }))
   }
 
   const renderStepContent = () => {
@@ -118,7 +132,7 @@ export default function TemplateGenerator() {
       case 'seed':
         return (
           <div className="space-y-6">
-            <div className="text-center py-12">
+            <div className="text-center py-8">
               <Sparkles className="w-16 h-16 mx-auto text-primary mb-4" />
               <h3 className="text-xl font-semibold mb-2">Configure Template Seed</h3>
               <p className="text-muted-foreground">
@@ -126,15 +140,7 @@ export default function TemplateGenerator() {
               </p>
             </div>
             
-            {/* Seed configuration will go here */}
-            <Card className="border-dashed">
-              <CardContent className="p-8">
-                <div className="text-center text-muted-foreground">
-                  <Settings className="w-8 h-8 mx-auto mb-2" />
-                  <p>Seed configuration interface coming soon...</p>
-                </div>
-              </CardContent>
-            </Card>
+            <SeedForm onValidChange={handleSeedValidChange} />
           </div>
         )
       
@@ -343,17 +349,37 @@ export default function TemplateGenerator() {
                   {/* Template Stats */}
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Components:</span>
-                      <span>-</span>
+                      <span className="text-muted-foreground">Brand:</span>
+                      <span className="truncate ml-2">
+                        {state.seedData.formData?.brandName || '-'}
+                      </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Styles:</span>
-                      <span>-</span>
+                      <span className="text-muted-foreground">Vibes:</span>
+                      <span className="truncate ml-2">
+                        {state.seedData.formData?.vibes.length || 0}
+                      </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Pages:</span>
-                      <span>-</span>
+                      <span className="text-muted-foreground">Usage:</span>
+                      <span className="capitalize truncate ml-2">
+                        {state.seedData.formData?.usage || '-'}
+                      </span>
                     </div>
+                    {state.seedData.formData?.primaryColor && (
+                      <div className="flex justify-between text-sm items-center">
+                        <span className="text-muted-foreground">Color:</span>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-4 h-4 rounded border border-border"
+                            style={{ backgroundColor: state.seedData.formData.primaryColor }}
+                          />
+                          <span className="text-xs font-mono">
+                            {state.seedData.formData.primaryColor}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   
                   <Separator />
