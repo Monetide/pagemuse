@@ -69,6 +69,7 @@ export default function DocumentModelDemo() {
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [debugMode] = useState(new URLSearchParams(window.location.search).get('debug') === '1')
+  const [isLoadingDoc, setIsLoadingDoc] = useState<boolean>(false)
   const [showVersionHistory, setShowVersionHistory] = useState(false)
   const [showCommandPalette, setShowCommandPalette] = useState(false)
   const [focusedSection, setFocusedSection] = useState<'navigator' | 'canvas' | 'inspector'>('canvas')
@@ -293,13 +294,18 @@ export default function DocumentModelDemo() {
 
   // Auto-load document if documentId is in URL
   useEffect(() => {
-    if (documentId && !document) {
-      console.log('Effect triggered: attempting to load document', documentId)
-      loadDocument(documentId).catch(error => {
-        console.error('Failed to load document in effect:', error)
-      })
-    } else if (documentId) {
-      console.log('Effect skipped: documentId:', documentId, 'document exists:', !!document)
+    if (documentId) {
+      if (!document) {
+        console.log('Effect triggered: attempting to load document', documentId)
+        setIsLoadingDoc(true)
+        loadDocument(documentId)
+          .catch(error => {
+            console.error('Failed to load document in effect:', error)
+          })
+          .finally(() => setIsLoadingDoc(false))
+      } else {
+        console.log('Effect skipped: document already loaded for', documentId)
+      }
     }
   }, [documentId, document, loadDocument])
 
@@ -382,44 +388,62 @@ export default function DocumentModelDemo() {
           />
         )}
         
-        {!document ? (
-          // Document Creation Screen
-          <div className="flex-1 flex items-center justify-center">
-            <div className="max-w-md space-y-6 text-center">
-              <div className="space-y-2">
-                <h1 className="text-3xl font-bold">Create Document</h1>
-                <p className="text-muted-foreground">
-                  Start with a new document or demo content
-                </p>
+        {(!document) ? (
+          documentId ? (
+            isLoadingDoc ? (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center space-y-2">
+                  <div className="h-5 w-40 bg-muted rounded animate-pulse mx-auto" />
+                  <p className="text-sm text-muted-foreground">Loading document…</p>
+                </div>
               </div>
-              
-              <div className="space-y-4">
-                <Input
-                  placeholder="Document title"
-                  value={docTitle}
-                  onChange={(e) => setDocTitle(e.target.value)}
-                  className="text-center"
-                />
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={handleCreateDocument} 
-                    disabled={!docTitle.trim()}
-                    className="flex-1"
-                  >
-                    Create Document
-                  </Button>
-                  <Button 
-                    onClick={createDemoDocument} 
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    Create Demo
-                  </Button>
+            ) : (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="max-w-md space-y-4 text-center">
+                  <h2 className="text-xl font-semibold">Document not found or access denied</h2>
+                  <p className="text-muted-foreground">The document could not be loaded. It may have been moved or you may not have access.</p>
+                </div>
+              </div>
+            )
+          ) : (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="max-w-md space-y-6 text-center">
+                <div className="space-y-2">
+                  <h1 className="text-3xl font-bold">Create Document</h1>
+                  <p className="text-muted-foreground">
+                    Start with a new document or demo content
+                  </p>
+                </div>
+                
+                <div className="space-y-4">
+                  <Input
+                    placeholder="Document title"
+                    value={docTitle}
+                    onChange={(e) => setDocTitle(e.target.value)}
+                    className="text-center"
+                  />
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={handleCreateDocument} 
+                      disabled={!docTitle.trim()}
+                      className="flex-1"
+                    >
+                      Create Document
+                    </Button>
+                    <Button 
+                      onClick={createDemoDocument} 
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      Create Demo
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )
         ) : (
+
           // ... keep existing code (3-pane editor layout)
           // 3-Pane Editor Layout
           <div className="flex-1 flex">
