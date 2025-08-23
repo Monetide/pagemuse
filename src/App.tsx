@@ -15,6 +15,7 @@ import TemplateLibrary from "./pages/TemplateLibrary";
 import MediaLibrary from "./pages/MediaLibrary";
 import AdminPanel from "./pages/AdminPanel";
 import AdminTemplates from "./pages/admin/AdminTemplates";
+import AdminTemplateEdit from "./pages/admin/AdminTemplateEdit";
 import { AdminGuard } from "./components/auth/AdminGuard";
 import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
@@ -73,6 +74,11 @@ const App = () => {
                             <Route path="/admin/templates" element={
                               <AdminGuard>
                                 <AdminTemplates />
+                              </AdminGuard>
+                            } />
+                            <Route path="/admin/templates/:id/edit" element={
+                              <AdminGuard>
+                                <AdminTemplateEdit />
                               </AdminGuard>
                             } />
                             <Route path="/settings" element={<div className="p-6">Settings coming soon...</div>} />

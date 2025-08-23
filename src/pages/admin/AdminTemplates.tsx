@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge'
 import { 
   Palette, 
   Plus,
-  Download,
   Edit,
   Copy,
   Eye,
@@ -27,6 +26,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { supabase } from '@/integrations/supabase/client'
 import type { Tables } from '@/integrations/supabase/types'
+import { ImportTemplateDialog } from '@/components/admin/ImportTemplateDialog'
 
 type Template = Tables<'templates'>
 
@@ -135,10 +135,7 @@ export default function AdminTemplates() {
         </div>
         
         <div className="flex items-center gap-3">
-          <Button variant="outline">
-            <Download className="w-4 h-4 mr-2" />
-            Import
-          </Button>
+          <ImportTemplateDialog onImportComplete={fetchTemplates} />
           <Button className="bg-gradient-primary hover:shadow-glow transition-all duration-200">
             <Plus className="w-4 h-4 mr-2" />
             New Template
@@ -202,8 +199,13 @@ export default function AdminTemplates() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem>
-                      <Edit className="w-4 h-4 mr-2" />
-                      Edit
+                      <Link 
+                        to={`/admin/templates/${template.id}/edit`}
+                        className="flex items-center w-full"
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem>
                       <Copy className="w-4 h-4 mr-2" />
@@ -258,10 +260,12 @@ export default function AdminTemplates() {
               
               {/* Quick Actions */}
               <div className="flex gap-2">
-                <Button size="sm" variant="outline" className="flex-1">
-                  <Edit className="w-4 h-4 mr-1" />
-                  Edit
-                </Button>
+                <Link to={`/admin/templates/${template.id}/edit`}>
+                  <Button size="sm" variant="outline" className="flex-1">
+                    <Edit className="w-4 h-4 mr-1" />
+                    Edit
+                  </Button>
+                </Link>
                 <Button 
                   size="sm" 
                   variant={template.is_global ? "default" : "outline"}
