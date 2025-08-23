@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { TypographySelector, type TypographyPairing } from '@/components/admin/TypographySelector'
+import { ColorwaySelector, type Colorway } from '@/components/admin/ColorwaySelector'
 import { 
   Form,
   FormControl,
@@ -49,6 +50,21 @@ const seedFormSchema = z.object({
       name: z.string(), 
       family: z.string(),
     }),
+  }).optional(),
+  colorway: z.object({
+    id: z.string(),
+    name: z.string(),
+    colors: z.object({
+      brand: z.string(),
+      brandSecondary: z.string(),
+      brandAccent: z.string(),
+      textBody: z.string(),
+      textMuted: z.string(),
+      bgPage: z.string(),
+      bgSection: z.string(),
+      borderSubtle: z.string(),
+    }),
+    isCompliant: z.boolean(),
   }).optional(),
   logo: z.any().optional(),
   referenceImage: z.any().optional(),
@@ -105,6 +121,7 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
         sans: { name: 'Inter', family: 'font-inter' },
         serif: { name: 'Source Serif 4', family: 'font-source-serif' }
       },
+      colorway: undefined,
       logo: undefined,
       referenceImage: undefined,
     },
@@ -174,6 +191,15 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
         name: pairing.serif.name,
         family: pairing.serif.family,
       },
+    }, { shouldValidate: true })
+  }
+
+  const handleColorwayChange = (colorway: Colorway) => {
+    setValue('colorway', {
+      id: colorway.id,
+      name: colorway.name,
+      colors: colorway.colors,
+      isCompliant: colorway.isCompliant,
     }, { shouldValidate: true })
   }
 
@@ -402,6 +428,13 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
             />
           </CardContent>
         </Card>
+
+        {/* Colorways */}
+        <ColorwaySelector 
+          brandColor={watch('primaryColor')}
+          selectedColorway={watch('colorway')?.id}
+          onSelectionChange={handleColorwayChange}
+        />
 
         {/* Typography Pairing */}
         <TypographySelector 

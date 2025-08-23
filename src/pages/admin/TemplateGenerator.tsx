@@ -371,6 +371,25 @@ export default function TemplateGenerator() {
                             {state.seedData.formData.primaryColor}
                           </span>
                         </div>
+                       </div>
+                     )}
+                     {state.seedData.formData?.colorway && (
+                      <div className="flex justify-between text-sm items-center">
+                        <span className="text-muted-foreground">Colorway:</span>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-4 h-4 rounded border border-border"
+                            style={{ backgroundColor: state.seedData.formData.colorway.colors.brand }}
+                          />
+                          <span className="text-xs font-medium">
+                            {state.seedData.formData.colorway.name}
+                          </span>
+                          {state.seedData.formData.colorway.isCompliant && (
+                            <Badge className="text-xs px-1 py-0 bg-green-100 text-green-800 border-green-200">
+                              AA
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     )}
                     {state.seedData.formData?.typography && (
