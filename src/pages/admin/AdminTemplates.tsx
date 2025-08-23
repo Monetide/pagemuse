@@ -29,15 +29,11 @@ import { supabase } from '@/integrations/supabase/client'
 import type { Tables } from '@/integrations/supabase/types'
 import { ImportTemplateDialog } from '@/components/admin/ImportTemplateDialog'
 
-type Template = Tables<'templates'> & {
-  status?: 'draft' | 'published' | 'archived'
-}
+type Template = Tables<'templates'>
 
 export default function AdminTemplates() {
-  const { templates: rawTemplates, loading } = useTemplates()
+  const { templates, loading } = useTemplates()
   const [searchTerm, setSearchTerm] = useState('')
-
-  const templates = rawTemplates as Template[]
 
   const refetchTemplates = () => {
     // For now, refresh the page to get updated templates
@@ -46,15 +42,9 @@ export default function AdminTemplates() {
 
   const togglePublish = async (templateId: string, currentStatus: boolean) => {
     try {
-      // Toggle between published and draft status
-      const newStatus = currentStatus ? 'draft' : 'published'
-      
       const { error } = await supabase
         .from('templates')
-        .update({ 
-          is_global: !currentStatus,
-          status: newStatus 
-        })
+        .update({ is_global: !currentStatus })
         .eq('id', templateId)
 
       if (error) throw error
@@ -62,7 +52,7 @@ export default function AdminTemplates() {
       // For database templates, update local state
       const updatedTemplates = templates.map(template => 
         template.id === templateId 
-          ? { ...template, is_global: !currentStatus, status: newStatus }
+          ? { ...template, is_global: !currentStatus }
           : template
       )
       // Note: This won't work for starter templates - page reload needed
@@ -166,37 +156,26 @@ export default function AdminTemplates() {
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
                   <CardTitle className="text-lg line-clamp-1">{template.name}</CardTitle>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="text-xs">
-              {template.category}
-            </Badge>
-            <Badge 
-              variant={template.status === 'published' ? 'default' : 'outline'} 
-              className={`text-xs ${
-                template.status === 'draft' ? 'border-yellow-500 text-yellow-700 bg-yellow-50' :
-                template.status === 'published' ? 'bg-green-100 text-green-800 border-green-200' :
-                'bg-gray-100 text-gray-800'
-              }`}
-            >
-              {template.status === 'draft' ? 'Draft' : 
-               template.status === 'published' ? 'Published' : 'Archived'}
-            </Badge>
-            {template.is_global ? (
-              <Badge className="text-xs bg-green-100 text-green-800">
-                <Eye className="w-3 h-3 mr-1" />
-                Global
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="text-xs">
-                <EyeOff className="w-3 h-3 mr-1" />
-                Private
-              </Badge>
-            )}
-            {template.is_premium && (
-              <Badge className="text-xs bg-yellow-100 text-yellow-800">
-                Premium
-              </Badge>
-            )}
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-xs">
+                      {template.category}
+                    </Badge>
+                    {template.is_global ? (
+                      <Badge className="text-xs bg-green-100 text-green-800">
+                        <Eye className="w-3 h-3 mr-1" />
+                        Published
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-xs">
+                        <EyeOff className="w-3 h-3 mr-1" />
+                        Draft
+                      </Badge>
+                    )}
+                    {template.is_premium && (
+                      <Badge className="text-xs bg-yellow-100 text-yellow-800">
+                        Premium
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 
@@ -221,7 +200,7 @@ export default function AdminTemplates() {
                       Duplicate
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => togglePublish(template.id, template.is_global)}>
-                      {(template.status || 'published') === 'published' ? (
+                      {template.is_global ? (
                         <>
                           <EyeOff className="w-4 h-4 mr-2" />
                           Unpublish
@@ -277,10 +256,10 @@ export default function AdminTemplates() {
                 </Link>
                 <Button 
                   size="sm" 
-                  variant={(template.status || 'published') === 'published' ? "default" : "outline"}
+                  variant={template.is_global ? "default" : "outline"}
                   onClick={() => togglePublish(template.id, template.is_global)}
                 >
-                  {(template.status || 'published') === 'published' ? (
+                  {template.is_global ? (
                     <>
                       <EyeOff className="w-4 h-4 mr-1" />
                       Hide

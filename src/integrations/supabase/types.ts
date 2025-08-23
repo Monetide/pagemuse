@@ -843,8 +843,6 @@ export type Database = {
           metadata: Json | null
           name: string
           preview_image_url: string | null
-          status: string | null
-          tpkg_source: Json | null
           updated_at: string
           usage_count: number
           user_id: string | null
@@ -862,8 +860,6 @@ export type Database = {
           metadata?: Json | null
           name: string
           preview_image_url?: string | null
-          status?: string | null
-          tpkg_source?: Json | null
           updated_at?: string
           usage_count?: number
           user_id?: string | null
@@ -881,8 +877,6 @@ export type Database = {
           metadata?: Json | null
           name?: string
           preview_image_url?: string | null
-          status?: string | null
-          tpkg_source?: Json | null
           updated_at?: string
           usage_count?: number
           user_id?: string | null
