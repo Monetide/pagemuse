@@ -124,10 +124,12 @@ export default function AdminTemplates() {
         
         <div className="flex items-center gap-3">
           <ImportTemplateDialog onImportComplete={refetchTemplates} />
-          <Button className="bg-gradient-primary hover:shadow-glow transition-all duration-200">
-            <Plus className="w-4 h-4 mr-2" />
-            New Template
-          </Button>
+          <Link to="/admin/template-generator">
+            <Button className="bg-gradient-primary hover:shadow-glow transition-all duration-200">
+              <Plus className="w-4 h-4 mr-2" />
+              Generate Template
+            </Button>
+          </Link>
         </div>
       </div>
 

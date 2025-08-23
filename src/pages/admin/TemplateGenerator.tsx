@@ -1,0 +1,384 @@
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { Progress } from '@/components/ui/progress'
+import { 
+  ArrowLeft,
+  ArrowRight,
+  Save,
+  RotateCcw,
+  PlayCircle,
+  Sparkles,
+  Eye,
+  FileText,
+  Palette,
+  Settings
+} from 'lucide-react'
+
+type WizardStep = 'seed' | 'preview' | 'publish'
+
+interface TemplateGeneratorState {
+  currentStep: WizardStep
+  seedData: {
+    isValid: boolean
+    // Add seed-specific fields later
+  }
+  previewData: {
+    // Add preview-specific fields later
+  }
+  publishData: {
+    // Add publish-specific fields later
+  }
+}
+
+export default function TemplateGenerator() {
+  const [state, setState] = useState<TemplateGeneratorState>({
+    currentStep: 'seed',
+    seedData: { isValid: false },
+    previewData: {},
+    publishData: {}
+  })
+
+  const steps = [
+    { id: 'seed', label: 'Seed', icon: Sparkles, description: 'Define template foundation' },
+    { id: 'preview', label: 'Preview', icon: Eye, description: 'Review generated template' },
+    { id: 'publish', label: 'Publish', icon: FileText, description: 'Finalize and publish' }
+  ]
+
+  const currentStepIndex = steps.findIndex(step => step.id === state.currentStep)
+  const progress = ((currentStepIndex + 1) / steps.length) * 100
+
+  const canGoNext = () => {
+    switch (state.currentStep) {
+      case 'seed':
+        return state.seedData.isValid
+      case 'preview':
+        return true
+      case 'publish':
+        return false
+    }
+  }
+
+  const canGoPrevious = () => {
+    return currentStepIndex > 0
+  }
+
+  const handleNext = () => {
+    if (!canGoNext()) return
+    
+    const nextIndex = currentStepIndex + 1
+    if (nextIndex < steps.length) {
+      setState(prev => ({
+        ...prev,
+        currentStep: steps[nextIndex].id as WizardStep
+      }))
+    }
+  }
+
+  const handlePrevious = () => {
+    if (!canGoPrevious()) return
+    
+    const prevIndex = currentStepIndex - 1
+    if (prevIndex >= 0) {
+      setState(prev => ({
+        ...prev,
+        currentStep: steps[prevIndex].id as WizardStep
+      }))
+    }
+  }
+
+  const handleSaveDraft = () => {
+    console.log('Saving draft...')
+  }
+
+  const handleReset = () => {
+    setState({
+      currentStep: 'seed',
+      seedData: { isValid: false },
+      previewData: {},
+      publishData: {}
+    })
+  }
+
+  const handleStartOver = () => {
+    if (confirm('Are you sure you want to start over? All progress will be lost.')) {
+      handleReset()
+    }
+  }
+
+  const handleGenerate = () => {
+    console.log('Generating template...')
+  }
+
+  const renderStepContent = () => {
+    switch (state.currentStep) {
+      case 'seed':
+        return (
+          <div className="space-y-6">
+            <div className="text-center py-12">
+              <Sparkles className="w-16 h-16 mx-auto text-primary mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Configure Template Seed</h3>
+              <p className="text-muted-foreground">
+                Define the foundation and parameters for your template generation.
+              </p>
+            </div>
+            
+            {/* Seed configuration will go here */}
+            <Card className="border-dashed">
+              <CardContent className="p-8">
+                <div className="text-center text-muted-foreground">
+                  <Settings className="w-8 h-8 mx-auto mb-2" />
+                  <p>Seed configuration interface coming soon...</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )
+      
+      case 'preview':
+        return (
+          <div className="space-y-6">
+            <div className="text-center py-12">
+              <Eye className="w-16 h-16 mx-auto text-primary mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Preview Generated Template</h3>
+              <p className="text-muted-foreground">
+                Review the generated template and make final adjustments.
+              </p>
+            </div>
+            
+            {/* Preview interface will go here */}
+            <Card className="border-dashed">
+              <CardContent className="p-8">
+                <div className="text-center text-muted-foreground">
+                  <Palette className="w-8 h-8 mx-auto mb-2" />
+                  <p>Template preview interface coming soon...</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )
+      
+      case 'publish':
+        return (
+          <div className="space-y-6">
+            <div className="text-center py-12">
+              <FileText className="w-16 h-16 mx-auto text-primary mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Publish Template</h3>
+              <p className="text-muted-foreground">
+                Finalize template details and publish to the library.
+              </p>
+            </div>
+            
+            {/* Publish configuration will go here */}
+            <Card className="border-dashed">
+              <CardContent className="p-8">
+                <div className="text-center text-muted-foreground">
+                  <FileText className="w-8 h-8 mx-auto mb-2" />
+                  <p>Template publishing interface coming soon...</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )
+      
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-muted">
+      <div className="p-6 max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <Link to="/admin/templates">
+              <Button variant="ghost" size="icon">
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
+                <Sparkles className="w-8 h-8 text-primary" />
+                Template Generator
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Create intelligent templates with AI-powered generation
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <Button variant="outline" onClick={handleSaveDraft}>
+              <Save className="w-4 h-4 mr-2" />
+              Save Draft
+            </Button>
+            <Button variant="outline" onClick={handleStartOver}>
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Start Over
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex gap-8">
+          {/* Main Content */}
+          <div className="flex-1">
+            {/* Progress Header */}
+            <Card className="mb-6">
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">Generation Progress</h2>
+                    <span className="text-sm text-muted-foreground">
+                      Step {currentStepIndex + 1} of {steps.length}
+                    </span>
+                  </div>
+                  
+                  <Progress value={progress} className="w-full" />
+                  
+                  <div className="flex items-center justify-between">
+                    {steps.map((step, index) => {
+                      const StepIcon = step.icon
+                      const isActive = step.id === state.currentStep
+                      const isCompleted = index < currentStepIndex
+                      
+                      return (
+                        <div key={step.id} className="flex items-center gap-2">
+                          <div className={`
+                            w-8 h-8 rounded-full flex items-center justify-center border-2
+                            ${isActive 
+                              ? 'border-primary bg-primary text-primary-foreground' 
+                              : isCompleted 
+                                ? 'border-green-500 bg-green-500 text-white' 
+                                : 'border-muted-foreground bg-background'
+                            }
+                          `}>
+                            <StepIcon className="w-4 h-4" />
+                          </div>
+                          <div className="text-sm">
+                            <div className={`font-medium ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
+                              {step.label}
+                            </div>
+                            <div className="text-xs text-muted-foreground hidden sm:block">
+                              {step.description}
+                            </div>
+                          </div>
+                          
+                          {index < steps.length - 1 && (
+                            <div className="w-16 h-px bg-border mx-4" />
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Step Content */}
+            <Card>
+              <CardContent className="p-0">
+                {renderStepContent()}
+              </CardContent>
+            </Card>
+
+            {/* Navigation Controls */}
+            <div className="flex items-center justify-between mt-6">
+              <Button 
+                variant="outline" 
+                onClick={handlePrevious} 
+                disabled={!canGoPrevious()}
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Previous
+              </Button>
+              
+              <Button variant="ghost" onClick={handleReset}>
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Reset
+              </Button>
+              
+              <Button 
+                onClick={handleNext} 
+                disabled={!canGoNext()}
+                className="bg-gradient-primary hover:shadow-glow transition-all duration-200"
+              >
+                Next
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Right Panel - Live Preview */}
+          <div className="w-80">
+            <Card className="sticky top-6">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">Live Preview</CardTitle>
+                  <Badge variant="outline">Real-time</Badge>
+                </div>
+                <CardDescription>
+                  See your template as it's being generated
+                </CardDescription>
+              </CardHeader>
+              
+              <Separator />
+              
+              <CardContent className="p-6">
+                {/* Mini Preview Area */}
+                <div className="space-y-4">
+                  <div className="aspect-[4/3] bg-gradient-to-br from-muted/50 to-muted rounded-lg border-2 border-dashed border-muted-foreground/20 flex items-center justify-center">
+                    <div className="text-center">
+                      <Eye className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                      <p className="text-sm text-muted-foreground">Live Preview</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Updates as you configure
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Template Stats */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Components:</span>
+                      <span>-</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Styles:</span>
+                      <span>-</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Pages:</span>
+                      <span>-</span>
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  {/* Generate Button */}
+                  <Button 
+                    className="w-full bg-gradient-primary hover:shadow-glow transition-all duration-200"
+                    disabled={!state.seedData.isValid}
+                    onClick={handleGenerate}
+                  >
+                    <PlayCircle className="w-4 h-4 mr-2" />
+                    Generate
+                  </Button>
+                  
+                  {!state.seedData.isValid && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      Complete the seed configuration to enable generation
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
