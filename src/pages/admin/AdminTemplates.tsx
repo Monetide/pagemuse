@@ -242,7 +242,7 @@ export default function AdminTemplates() {
               )}
               
               <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <span>Used {template.usage_count} times</span>
+                <span>Used {template.usage_count || 0} times</span>
                 <span>{new Date(template.created_at).toLocaleDateString()}</span>
               </div>
               
