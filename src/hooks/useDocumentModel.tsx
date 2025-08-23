@@ -42,7 +42,9 @@ export const useDocumentModel = () => {
   }, [persistence])
 
   const loadDocument = useCallback(async (documentId: string) => {
+    console.log('Loading document with ID:', documentId)
     const doc = await persistence.loadDocument(documentId)
+    console.log('Loaded document:', doc)
     if (doc) {
       // Auto-migrate document to ensure flow ownership compliance
       const migrationResult = autoMigrateDocument(doc)

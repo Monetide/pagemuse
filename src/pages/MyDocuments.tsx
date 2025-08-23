@@ -352,11 +352,18 @@ export default function MyDocuments() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => navigate(`/documents/${doc.id}/editor`)}>
+                          <DropdownMenuItem onClick={() => {
+                            console.log('Navigating to view document:', doc.id, 'URL:', `/documents/${doc.id}/editor`)
+                            navigate(`/documents/${doc.id}/editor`)
+                          }}>
                             <Eye className="w-4 h-4 mr-2" />
                             View
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => navigate(`/documents/${doc.id}/editor`)}>
+                          <DropdownMenuItem onClick={() => {
+                            console.log('Navigating to edit document:', doc.id, 'URL:', `/documents/${doc.id}/editor`)
+                            console.log('Document object:', doc)
+                            navigate(`/documents/${doc.id}/editor`)
+                          }}>
                             <Edit className="w-4 h-4 mr-2" />
                             Edit
                           </DropdownMenuItem>

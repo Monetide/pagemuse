@@ -99,7 +99,11 @@ export const useDocumentPersistence = () => {
 
   // Load document
   const loadDocument = useCallback(async (documentId: string) => {
-    if (!user) return null
+    console.log('Persistence: Loading document with ID:', documentId)
+    if (!user) {
+      console.log('Persistence: No user, returning null')
+      return null
+    }
 
     try {
       const { data, error } = await supabase
@@ -111,6 +115,7 @@ export const useDocumentPersistence = () => {
 
       if (error) throw error
 
+      console.log('Persistence: Document loaded successfully:', data)
       setCurrentDocumentId(documentId)
       setDocumentMetadata({
         title: data.title,

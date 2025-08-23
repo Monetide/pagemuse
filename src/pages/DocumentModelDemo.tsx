@@ -28,7 +28,9 @@ import { generateLayout, LayoutResult } from '@/lib/layout-engine'
 
 export default function DocumentModelDemo() {
   const { id } = useParams()
+  console.log('DocumentModelDemo: Raw ID from params:', id)
   const documentId = id === 'new' ? undefined : id
+  console.log('DocumentModelDemo: Processed documentId:', documentId)
   const { 
     document,
     createNewDocument,
@@ -292,7 +294,12 @@ export default function DocumentModelDemo() {
   // Auto-load document if documentId is in URL
   useEffect(() => {
     if (documentId && !document) {
-      loadDocument(documentId)
+      console.log('Effect triggered: attempting to load document', documentId)
+      loadDocument(documentId).catch(error => {
+        console.error('Failed to load document in effect:', error)
+      })
+    } else if (documentId) {
+      console.log('Effect skipped: documentId:', documentId, 'document exists:', !!document)
     }
   }, [documentId, document, loadDocument])
 
