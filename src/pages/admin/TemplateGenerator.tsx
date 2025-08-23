@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { SeedForm, type SeedFormData } from '@/components/admin/SeedForm'
+import { TemplatePreview } from '@/components/admin/TemplatePreview'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -334,17 +335,9 @@ export default function TemplateGenerator() {
               <Separator />
               
               <CardContent className="p-6">
-                {/* Mini Preview Area */}
                 <div className="space-y-4">
-                  <div className="aspect-[4/3] bg-gradient-to-br from-muted/50 to-muted rounded-lg border-2 border-dashed border-muted-foreground/20 flex items-center justify-center">
-                    <div className="text-center">
-                      <Eye className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                      <p className="text-sm text-muted-foreground">Live Preview</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Updates as you configure
-                      </p>
-                    </div>
-                  </div>
+                  {/* Mini Preview Area */}
+                  <TemplatePreview data={state.seedData.formData} />
                   
                   {/* Template Stats */}
                   <div className="space-y-2">
@@ -376,6 +369,16 @@ export default function TemplateGenerator() {
                           />
                           <span className="text-xs font-mono">
                             {state.seedData.formData.primaryColor}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    {state.seedData.formData?.typography && (
+                      <div className="flex justify-between text-sm items-center">
+                        <span className="text-muted-foreground">Typography:</span>
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className="text-xs font-medium">
+                            {state.seedData.formData.typography.name}
                           </span>
                         </div>
                       </div>

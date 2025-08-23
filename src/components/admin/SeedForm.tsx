@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { TypographySelector, type TypographyPairing } from '@/components/admin/TypographySelector'
 import { 
   Form,
   FormControl,
@@ -37,6 +38,18 @@ const seedFormSchema = z.object({
   usage: z.enum(['ebook', 'whitepaper', 'casestudy'], {
     required_error: 'Please select a usage type',
   }),
+  typography: z.object({
+    id: z.string(),
+    name: z.string(),
+    sans: z.object({
+      name: z.string(),
+      family: z.string(),
+    }),
+    serif: z.object({
+      name: z.string(), 
+      family: z.string(),
+    }),
+  }).optional(),
   logo: z.any().optional(),
   referenceImage: z.any().optional(),
 })
@@ -86,6 +99,12 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
       primaryColor: '#8B5CF6', // Default to our primary purple
       vibes: [],
       usage: 'ebook',
+      typography: {
+        id: 'inter-source',
+        name: 'Inter × Source Serif',
+        sans: { name: 'Inter', family: 'font-inter' },
+        serif: { name: 'Source Serif 4', family: 'font-source-serif' }
+      },
       logo: undefined,
       referenceImage: undefined,
     },
@@ -141,6 +160,21 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
       : [...currentVibes, vibeId].slice(0, 3) // Max 3 vibes
     
     setValue('vibes', newVibes, { shouldValidate: true })
+  }
+
+  const handleTypographyChange = (pairing: TypographyPairing) => {
+    setValue('typography', {
+      id: pairing.id,
+      name: pairing.name,
+      sans: {
+        name: pairing.sans.name,
+        family: pairing.sans.family,
+      },
+      serif: {
+        name: pairing.serif.name,
+        family: pairing.serif.family,
+      },
+    }, { shouldValidate: true })
   }
 
   const removeFile = (type: 'logo' | 'referenceImage') => {
@@ -368,6 +402,12 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
             />
           </CardContent>
         </Card>
+
+        {/* Typography Pairing */}
+        <TypographySelector 
+          selectedPairing={watch('typography')?.id}
+          onSelectionChange={handleTypographyChange}
+        />
 
         {/* Reference Image */}
         <Card>

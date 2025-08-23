@@ -72,6 +72,35 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				}
 			},
+			fontFamily: {
+				// Typography Pairing 1: Inter + Source Serif
+				'inter': ['Inter', 'system-ui', 'sans-serif'],
+				'source-serif': ['Source Serif 4', 'Georgia', 'serif'],
+				// Typography Pairing 2: IBM Plex Sans + Lora  
+				'ibm-plex': ['IBM Plex Sans', 'system-ui', 'sans-serif'],
+				'lora': ['Lora', 'Georgia', 'serif'],
+				// Typography Pairing 3: Libre Franklin + Crimson Pro
+				'libre-franklin': ['Libre Franklin', 'system-ui', 'sans-serif'],
+				'crimson': ['Crimson Pro', 'Georgia', 'serif'],
+			},
+			fontSize: {
+				// Template Typography Scale
+				'template-caption': ['0.75rem', { lineHeight: '1.35' }], // 12px
+				'template-body': ['0.875rem', { lineHeight: '1.5' }],    // 14px  
+				'template-h3': ['1rem', { lineHeight: '1.35' }],         // 16px
+				'template-h2': ['1.375rem', { lineHeight: '1.3' }],      // 22px
+				'template-h1': ['2.25rem', { lineHeight: '1.2' }],       // 36px
+				'template-quote': ['1.125rem', { lineHeight: '1.45' }],  // 18px
+			},
+			spacing: {
+				// Template Spacing Scale - 12pt baseline
+				'template-xs': '0.25rem',   // 4px
+				'template-sm': '0.5rem',    // 8px  
+				'template-base': '0.75rem', // 12px (baseline)
+				'template-md': '1rem',      // 16px
+				'template-lg': '1.5rem',    // 24px
+				'template-xl': '2rem',      // 32px
+			},
 			backgroundImage: {
 				'gradient-primary': 'var(--gradient-primary)',
 				'gradient-muted': 'var(--gradient-muted)'
