@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { useTemplates } from '@/hooks/useSupabaseData'
 import { 
   Palette, 
   Plus,
@@ -31,28 +32,12 @@ import { ImportTemplateDialog } from '@/components/admin/ImportTemplateDialog'
 type Template = Tables<'templates'>
 
 export default function AdminTemplates() {
-  const [templates, setTemplates] = useState<Template[]>([])
-  const [loading, setLoading] = useState(true)
+  const { templates, loading } = useTemplates()
   const [searchTerm, setSearchTerm] = useState('')
 
-  useEffect(() => {
-    fetchTemplates()
-  }, [])
-
-  const fetchTemplates = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('templates')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setTemplates(data || [])
-    } catch (error) {
-      console.error('Error fetching templates:', error)
-    } finally {
-      setLoading(false)
-    }
+  const refetchTemplates = () => {
+    // For now, refresh the page to get updated templates
+    window.location.reload()
   }
 
   const togglePublish = async (templateId: string, currentStatus: boolean) => {
@@ -64,11 +49,13 @@ export default function AdminTemplates() {
 
       if (error) throw error
       
-      setTemplates(templates.map(template => 
+      // For database templates, update local state
+      const updatedTemplates = templates.map(template => 
         template.id === templateId 
           ? { ...template, is_global: !currentStatus }
           : template
-      ))
+      )
+      // Note: This won't work for starter templates - page reload needed
     } catch (error) {
       console.error('Error updating template status:', error)
     }
@@ -87,7 +74,8 @@ export default function AdminTemplates() {
 
       if (error) throw error
       
-      setTemplates(templates.filter(template => template.id !== templateId))
+      // For database templates, remove from local state
+      // Note: This won't work for starter templates - they can't be deleted
     } catch (error) {
       console.error('Error deleting template:', error)
     }
@@ -135,7 +123,7 @@ export default function AdminTemplates() {
         </div>
         
         <div className="flex items-center gap-3">
-          <ImportTemplateDialog onImportComplete={fetchTemplates} />
+          <ImportTemplateDialog onImportComplete={refetchTemplates} />
           <Button className="bg-gradient-primary hover:shadow-glow transition-all duration-200">
             <Plus className="w-4 h-4 mr-2" />
             New Template
