@@ -417,28 +417,36 @@ export async function saveTemplateDraft(
   brandName?: string
 ): Promise<string> {
   try {
-    // In a real implementation, this would:
-    // 1. Upload assets to Supabase storage (template-assets bucket)
-    // 2. Save template manifest to database
-    // 3. Upload preview images
+    const { supabase } = await import('@/integrations/supabase/client')
     
     const templateId = templatePackage['template.json'].id
     
-    // For now, simulate the save operation
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Store in localStorage as a placeholder
-    const drafts = JSON.parse(localStorage.getItem('templateDrafts') || '[]')
-    drafts.push({
-      id: templateId,
-      name: templatePackage['template.json'].name,
-      description: templatePackage['template.json'].description,
-      brandName,
-      manifest: templatePackage['template.json'],
-      createdAt: new Date().toISOString(),
-      status: 'draft'
-    })
-    localStorage.setItem('templateDrafts', JSON.stringify(drafts))
+    // Save template to database
+    const { data: template, error: templateError } = await supabase
+      .from('templates')
+      .insert({
+        id: templateId,
+        name: templatePackage['template.json'].name,
+        description: templatePackage['template.json'].description,
+        status: 'draft',
+        metadata: templatePackage['template.json'] as any,
+        category: 'generated',
+        user_id: (await supabase.auth.getUser()).data.user?.id
+      })
+      .select()
+      .single()
+
+    if (templateError) {
+      console.error('Error saving template:', templateError)
+      throw new Error(`Failed to save template: ${templateError.message}`)
+    }
+
+    // Upload assets to Supabase storage if we have any
+    if (Object.values(templatePackage.assets).some(asset => asset)) {
+      // Upload SVG assets to template-assets bucket
+      // This would be implemented in a real scenario
+      console.log('Assets would be uploaded to storage:', Object.keys(templatePackage.assets))
+    }
     
     return templateId
   } catch (error) {
