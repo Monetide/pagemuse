@@ -396,9 +396,7 @@ export function MappingWizard({
                 irDocument={irDocument}
                 mappedDocument={previewDocument}
                 onComplete={() => {
-                  if (previewDocument) {
-                    onConfirm(config, previewDocument, cleanupAudit)
-                  }
+                  setStepValidation(prev => ({ ...prev, step6: true }))
                 }}
               />
             )}

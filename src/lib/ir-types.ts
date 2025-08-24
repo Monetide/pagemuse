@@ -42,6 +42,8 @@ export type IRBlockType =
   | 'code'
   | 'divider'
   | 'spacer'
+  | 'toc'
+  | 'chart'
 
 export interface IRMark {
   type: 'bold' | 'italic' | 'underline' | 'strikethrough' | 'code' | 'link' | 'highlight'

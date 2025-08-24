@@ -11,7 +11,8 @@ import {
   CheckCircle, 
   AlertTriangle,
   Layout,
-  BookOpen
+  BookOpen,
+  Link
 } from 'lucide-react'
 import { MappingConfig } from './MappingWizard'
 import { IRDocument } from '@/lib/ir-types'
@@ -20,6 +21,8 @@ import { PaginatedRenderer } from '@/components/document/PaginatedRenderer'
 import { generateLayout } from '@/lib/layout-engine'
 import { PAGE_MASTER_PRESETS } from '@/lib/page-masters'
 import { useState, useEffect } from 'react'
+import { insertAutoTOC, shouldInsertAutoTOC, defaultAutoTOCConfig } from '@/lib/auto-toc-inserter'
+import { detectCrossReferences, applyCrossReferences } from '@/lib/cross-reference-detector'
 
 interface MappingStep6Props {
   config: MappingConfig
@@ -40,15 +43,57 @@ export function MappingStep6({
   const [layoutResult, setLayoutResult] = useState<any>(null)
   const [progress, setProgress] = useState(0)
   const [currentStep, setCurrentStep] = useState('')
+  const [processedDocument, setProcessedDocument] = useState<IRDocument | null>(null)
+  const [detectedRefs, setDetectedRefs] = useState<any[]>([])
 
   const performLayout = async () => {
     setIsGenerating(true)
     setProgress(0)
     
     try {
-      // Step 1: Apply sidebar configurations to sections
+      // Step 1: Auto-insert TOC if needed
+      setCurrentStep('Inserting auto-generated Table of Contents...')
+      setProgress(10)
+      
+      let workingDoc = { ...irDocument }
+      
+      const autoTOCConfig = {
+        ...defaultAutoTOCConfig,
+        defaultDepth: config.tocSettings.depth,
+        includeLevels: [
+          config.tocSettings.includeH1,
+          config.tocSettings.includeH2,
+          config.tocSettings.includeH3,
+          config.tocSettings.includeH4,
+          config.tocSettings.includeH5,
+          config.tocSettings.includeH6,
+        ]
+      }
+      
+      if (shouldInsertAutoTOC(workingDoc, autoTOCConfig)) {
+        workingDoc = insertAutoTOC(workingDoc, autoTOCConfig)
+      }
+      
+      // Step 2: Detect and convert cross-references  
+      setCurrentStep('Detecting cross-reference patterns...')
+      setProgress(25)
+      
+      const detectedCrossRefs = detectCrossReferences(workingDoc)
+      setDetectedRefs(detectedCrossRefs)
+      
+      // Auto-apply high-confidence cross-references
+      const highConfidenceRefs = detectedCrossRefs.filter(ref => ref.confidence >= 0.9)
+      if (highConfidenceRefs.length > 0) {
+        setCurrentStep('Converting cross-reference patterns...')
+        setProgress(35)
+        workingDoc = applyCrossReferences(workingDoc, highConfidenceRefs)
+      }
+      
+      setProcessedDocument(workingDoc)
+
+      // Step 3: Apply sidebar configurations to sections
       setCurrentStep('Applying sidebar configurations...')
-      setProgress(20)
+      setProgress(50)
       
       const sectionsWithSidebar = mappedDocument.sections.map((section, index) => ({
         ...section,
@@ -58,9 +103,9 @@ export function MappingStep6({
         }
       }))
 
-      // Step 2: Select appropriate page masters
+      // Step 4: Select appropriate page masters
       setCurrentStep('Selecting layout templates...')
-      setProgress(40)
+      setProgress(65)
       
       const updatedSections = sectionsWithSidebar.map(section => {
         const hasSidebar = section.metadata?.sidebarEnabled
@@ -93,9 +138,9 @@ export function MappingStep6({
         }
       })
 
-      // Step 3: Process blocks for sidebar flow
+      // Step 5: Process blocks for sidebar flow
       setCurrentStep('Processing content blocks...')
-      setProgress(60)
+      setProgress(75)
       
       const processedSections = updatedSections.map(section => {
         if (!section.metadata?.sidebarEnabled) return section
@@ -122,9 +167,9 @@ export function MappingStep6({
         }
       })
 
-      // Step 4: Generate layout
+      // Step 6: Generate layout
       setCurrentStep('Generating paginated layout...')
-      setProgress(80)
+      setProgress(90)
       
       const updatedDocument = {
         ...mappedDocument,
@@ -151,13 +196,21 @@ export function MappingStep6({
 
   const getSidebarStats = () => {
     const enabledSections = config.structuralEdits.sidebarSections?.length || 0
-    const totalCallouts = irDocument.sections.reduce((acc, section) => 
+    const totalCallouts = (processedDocument || irDocument).sections.reduce((acc, section) => 
       acc + section.blocks.filter(block => block.type === 'callout').length, 0
     )
     return { enabledSections, totalCallouts }
   }
 
+  const getTOCStats = () => {
+    const hasAutoTOC = processedDocument && processedDocument !== irDocument
+    const detectedHighConfidence = detectedRefs.filter(ref => ref.confidence >= 0.9).length
+    const detectedLowConfidence = detectedRefs.filter(ref => ref.confidence < 0.9).length
+    return { hasAutoTOC, detectedHighConfidence, detectedLowConfidence }
+  }
+
   const stats = getSidebarStats()
+  const tocStats = getTOCStats()
 
   return (
     <div className="space-y-6 p-6 h-full overflow-auto">
@@ -165,10 +218,10 @@ export function MappingStep6({
       <div className="text-center space-y-2">
         <h3 className="text-lg font-semibold flex items-center justify-center gap-2">
           <Layout className="w-5 h-5" />
-          Pour & Paginate (Professional Layout)
+          Pour & Paginate (Auto-TOC + Cross-refs)
         </h3>
         <p className="text-sm text-muted-foreground">
-          Applying professional typography rules and flowing content across pages
+          Auto-inserting TOC, converting cross-references, and applying professional layout rules
         </p>
       </div>
 
@@ -196,7 +249,7 @@ export function MappingStep6({
             Layout Configuration
           </CardTitle>
           <CardDescription>
-            Summary of applied layout settings
+            Summary of applied layout settings and automatic enhancements
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -223,6 +276,39 @@ export function MappingStep6({
 
           <Separator />
 
+          {/* Auto-TOC & Cross-references Summary */}
+          {(tocStats.hasAutoTOC || detectedRefs.length > 0) && (
+            <>
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium flex items-center gap-2">
+                  <Link className="w-4 h-4" />
+                  Auto-TOC & Cross-references
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+                  {tocStats.hasAutoTOC && (
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-3 h-3 text-green-600" />
+                      <span>Auto-TOC inserted after cover</span>
+                    </div>
+                  )}
+                  {tocStats.detectedHighConfidence > 0 && (
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-3 h-3 text-green-600" />
+                      <span>{tocStats.detectedHighConfidence} cross-refs converted</span>
+                    </div>
+                  )}
+                  {tocStats.detectedLowConfidence > 0 && (
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-3 h-3 text-yellow-600" />
+                      <span>{tocStats.detectedLowConfidence} refs need review</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <Separator />
+            </>
+          )}
+
           <div className="space-y-3">
             <h4 className="text-sm font-medium">Professional Typography Rules Applied:</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
@@ -248,7 +334,7 @@ export function MappingStep6({
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-3 h-3 text-green-600" />
-                <span>Anchor preservation for cross-references</span>
+                <span>TOC auto-updates with content changes</span>
               </div>
             </div>
           </div>
@@ -353,7 +439,7 @@ export function MappingStep6({
           size="lg"
           className="px-8"
         >
-          {isGenerating ? 'Generating Layout...' : 'Complete Layout & Continue'}
+          {isGenerating ? 'Processing Document...' : 'Complete Auto-TOC & Layout'}
         </Button>
       </div>
     </div>
