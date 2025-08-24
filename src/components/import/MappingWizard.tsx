@@ -468,7 +468,7 @@ export function MappingWizard({
                 className="bg-gradient-primary hover:shadow-glow transition-all duration-200 flex items-center gap-2"
               >
                 <CheckCircle className="w-4 h-4" />
-                Import Document
+                Complete Makeover
               </Button>
             )}
           </div>

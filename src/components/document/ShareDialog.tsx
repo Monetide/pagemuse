@@ -1,471 +1,348 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { 
-  Share2, 
-  Mail, 
-  Link, 
-  Settings, 
-  Activity,
-  Calendar as CalendarIcon,
-  Copy,
-  Eye,
-  Edit,
-  MessageSquare,
-  Crown,
-  Trash2,
-  ExternalLink,
-  Download
-} from 'lucide-react';
-import { format } from 'date-fns';
-import { useDocumentSharing, DocumentShare, ShareLink, DocumentActivity, DocumentRole } from '@/hooks/useDocumentSharing';
-import { useToast } from '@/hooks/use-toast';
+  Share, 
+  Users, 
+  Link2, 
+  Copy, 
+  Send, 
+  Eye, 
+  Edit, 
+  MessageSquare, 
+  Shield,
+  Clock,
+  Mail,
+  Trash2
+} from 'lucide-react'
+import { SemanticDocument } from '@/lib/document-model'
+import { useDocumentSharing, DocumentRole } from '@/hooks/useDocumentSharing'
+import { useToast } from '@/hooks/use-toast'
 
 interface ShareDialogProps {
-  documentId: string;
-  documentTitle: string;
-  children: React.ReactNode;
+  document: SemanticDocument
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }
 
-const roleIcons = {
-  owner: Crown,
-  editor: Edit,
-  commenter: MessageSquare,
-  viewer: Eye
-};
-
-const roleColors = {
-  owner: 'bg-purple-500',
-  editor: 'bg-blue-500',
-  commenter: 'bg-green-500',
-  viewer: 'bg-gray-500'
-};
-
-export const ShareDialog = ({ documentId, documentTitle, children }: ShareDialogProps) => {
-  const [open, setOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<DocumentRole>('viewer');
-  const [inviteMessage, setInviteMessage] = useState('');
-  const [shares, setShares] = useState<DocumentShare[]>([]);
-  const [shareLinks, setShareLinks] = useState<ShareLink[]>([]);
-  const [activities, setActivities] = useState<DocumentActivity[]>([]);
-  const [linkRole, setLinkRole] = useState<DocumentRole>('viewer');
-  const [linkExpires, setLinkExpires] = useState<Date>();
-  const [linkPassword, setLinkPassword] = useState('');
-  const [linkMaxViews, setLinkMaxViews] = useState<number>();
-  const [linkAllowDownload, setLinkAllowDownload] = useState(false);
-  const [linkWatermark, setLinkWatermark] = useState('');
-
-  const { 
-    loading,
-    inviteUser,
-    createShareLink,
-    getShares,
-    getShareLinks,
-    getActivities,
-    updateSharePermissions,
-    removeShare,
-    deactivateShareLink,
-    publishDocument
-  } = useDocumentSharing(documentId);
-
-  const { toast } = useToast();
+export const ShareDialog = ({
+  document,
+  open,
+  onOpenChange
+}: ShareDialogProps) => {
+  const [email, setEmail] = useState('')
+  const [role, setRole] = useState<DocumentRole>('viewer')
+  const [message, setMessage] = useState('')
+  const [shares, setShares] = useState<any[]>([])
+  const [shareLinks, setShareLinks] = useState<any[]>([])
+  
+  const { inviteUser, createShareLink, getShares, getShareLinks, updateSharePermissions, removeShare, loading } = useDocumentSharing(document.id)
+  const { toast } = useToast()
 
   useEffect(() => {
     if (open) {
-      loadData();
+      loadShares()
+      loadShareLinks()
     }
-  }, [open]);
+  }, [open])
 
-  const loadData = async () => {
+  const loadShares = async () => {
     try {
-      const [sharesData, linksData, activitiesData] = await Promise.all([
-        getShares(),
-        getShareLinks(),
-        getActivities()
-      ]);
-      setShares(sharesData);
-      setShareLinks(linksData);
-      setActivities(activitiesData);
+      const data = await getShares()
+      setShares(data)
     } catch (error) {
-      console.error('Failed to load sharing data:', error);
+      console.error('Failed to load shares:', error)
     }
-  };
+  }
+
+  const loadShareLinks = async () => {
+    try {
+      const data = await getShareLinks()
+      setShareLinks(data)
+    } catch (error) {
+      console.error('Failed to load share links:', error)
+    }
+  }
 
   const handleInvite = async () => {
-    if (!inviteEmail.trim()) return;
-    
-    try {
-      await inviteUser(inviteEmail, inviteRole, inviteMessage || undefined);
-      setInviteEmail('');
-      setInviteMessage('');
-      loadData();
-    } catch (error) {
-      // Error handled in hook
+    if (!email.trim()) {
+      toast({
+        title: 'Email required',
+        description: 'Please enter an email address',
+        variant: 'destructive'
+      })
+      return
     }
-  };
 
-  const handleCreateShareLink = async () => {
     try {
-      await createShareLink(linkRole, {
-        expiresAt: linkExpires,
-        password: linkPassword || undefined,
-        maxViews: linkMaxViews,
-        allowDownload: linkAllowDownload,
-        watermarkText: linkWatermark || undefined
-      });
-      // Reset form
-      setLinkRole('viewer');
-      setLinkExpires(undefined);
-      setLinkPassword('');
-      setLinkMaxViews(undefined);
-      setLinkAllowDownload(false);
-      setLinkWatermark('');
-      loadData();
+      await inviteUser(email.trim(), role, message.trim() || undefined)
+      setEmail('')
+      setMessage('')
+      loadShares()
     } catch (error) {
-      // Error handled in hook
+      // Error handling done in the hook
     }
-  };
+  }
 
-  const copyShareLink = (token: string) => {
-    const url = `${window.location.origin}/shared/${token}`;
-    navigator.clipboard.writeText(url);
+  const handleCreateLink = async () => {
+    try {
+      await createShareLink(role, {
+        allowDownload: true
+      })
+      loadShareLinks()
+    } catch (error) {
+      // Error handling done in the hook
+    }
+  }
+
+  const copyShareLink = async (token: string) => {
+    const url = `${window.location.origin}/shared/${token}`
+    await navigator.clipboard.writeText(url)
     toast({
       title: 'Link copied',
-      description: 'Share link copied to clipboard.'
-    });
-  };
+      description: 'Share link copied to clipboard'
+    })
+  }
 
-  const handlePublish = async () => {
-    try {
-      const result = await publishDocument();
-      toast({
-        title: 'Document published',
-        description: (
-          <div className="flex items-center gap-2">
-            <span>Public URL copied to clipboard</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => window.open(result.publishedDocument.publicUrl, '_blank')}
-            >
-              <ExternalLink className="w-4 h-4" />
-            </Button>
-          </div>
-        )
-      });
-      navigator.clipboard.writeText(result.publishedDocument.publicUrl);
-    } catch (error) {
-      // Error handled in hook
+  const getRoleIcon = (role: DocumentRole) => {
+    switch (role) {
+      case 'owner': return Shield
+      case 'editor': return Edit
+      case 'commenter': return MessageSquare
+      case 'viewer': return Eye
+      default: return Eye
     }
-  };
+  }
+
+  const getRoleColor = (role: DocumentRole) => {
+    switch (role) {
+      case 'owner': return 'text-red-600'
+      case 'editor': return 'text-blue-600'
+      case 'commenter': return 'text-yellow-600'
+      case 'viewer': return 'text-gray-600'
+      default: return 'text-gray-600'
+    }
+  }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Share2 className="w-5 h-5" />
-            Share "{documentTitle}"
-          </DialogTitle>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+              <Share className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <DialogTitle className="text-xl">Share Document</DialogTitle>
+              <DialogDescription>
+                Invite collaborators or create shareable links for "{document.title}"
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        <Tabs defaultValue="invite" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs defaultValue="invite" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="invite" className="flex items-center gap-2">
               <Mail className="w-4 h-4" />
-              Invite
+              Invite People
             </TabsTrigger>
             <TabsTrigger value="links" className="flex items-center gap-2">
-              <Link className="w-4 h-4" />
-              Links
-            </TabsTrigger>
-            <TabsTrigger value="manage" className="flex items-center gap-2">
-              <Settings className="w-4 h-4" />
-              Manage
-            </TabsTrigger>
-            <TabsTrigger value="activity" className="flex items-center gap-2">
-              <Activity className="w-4 h-4" />
-              Activity
+              <Link2 className="w-4 h-4" />
+              Share Links
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="invite" className="space-y-4">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="email">Email address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="colleague@company.com"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                />
-              </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Send Invitation</CardTitle>
+                <CardDescription>
+                  Invite people to collaborate on this document
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Address</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="colleague@company.com"
+                  />
+                </div>
 
-              <div>
-                <Label htmlFor="role">Role</Label>
-                <Select value={inviteRole} onValueChange={(value) => setInviteRole(value as DocumentRole)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="viewer">Viewer - Can view document</SelectItem>
-                    <SelectItem value="commenter">Commenter - Can view and comment</SelectItem>
-                    <SelectItem value="editor">Editor - Can view, comment, and edit</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="message">Message (optional)</Label>
-                <Textarea
-                  id="message"
-                  placeholder="Add a personal message..."
-                  value={inviteMessage}
-                  onChange={(e) => setInviteMessage(e.target.value)}
-                />
-              </div>
-
-              <Button onClick={handleInvite} disabled={loading || !inviteEmail.trim()}>
-                Send Invitation
-              </Button>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="links" className="space-y-4">
-            <div className="space-y-4 border rounded-lg p-4">
-              <h3 className="font-semibold">Create Share Link</h3>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className="space-y-2">
                   <Label>Role</Label>
-                  <Select value={linkRole} onValueChange={(value) => setLinkRole(value as DocumentRole)}>
+                  <Select value={role} onValueChange={(value: DocumentRole) => setRole(value)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="viewer">Viewer</SelectItem>
-                      <SelectItem value="commenter">Commenter</SelectItem>
-                      <SelectItem value="editor">Editor</SelectItem>
+                      <SelectItem value="viewer">Viewer - Can view only</SelectItem>
+                      <SelectItem value="commenter">Commenter - Can view and comment</SelectItem>
+                      <SelectItem value="editor">Editor - Can view and edit</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div>
-                  <Label>Expires</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start text-left font-normal">
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {linkExpires ? format(linkExpires, "PPP") : "Never"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={linkExpires}
-                        onSelect={setLinkExpires}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                <div>
-                  <Label>Password (optional)</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="message">Message (Optional)</Label>
                   <Input
-                    type="password"
-                    placeholder="Optional password"
-                    value={linkPassword}
-                    onChange={(e) => setLinkPassword(e.target.value)}
+                    id="message"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Add a personal message..."
                   />
                 </div>
 
-                <div>
-                  <Label>Max Views (optional)</Label>
-                  <Input
-                    type="number"
-                    placeholder="Unlimited"
-                    value={linkMaxViews || ''}
-                    onChange={(e) => setLinkMaxViews(e.target.value ? parseInt(e.target.value) : undefined)}
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="allow-download"
-                  checked={linkAllowDownload}
-                  onCheckedChange={setLinkAllowDownload}
-                />
-                <Label htmlFor="allow-download">Allow download</Label>
-              </div>
-
-              <div>
-                <Label>Watermark text (optional)</Label>
-                <Input
-                  placeholder="e.g., CONFIDENTIAL"
-                  value={linkWatermark}
-                  onChange={(e) => setLinkWatermark(e.target.value)}
-                />
-              </div>
-
-              <Button onClick={handleCreateShareLink} disabled={loading}>
-                Create Share Link
-              </Button>
-            </div>
-
-            <div className="space-y-2">
-              <h3 className="font-semibold">Active Share Links</h3>
-              {shareLinks.map((link) => {
-                const RoleIcon = roleIcons[link.role];
-                return (
-                  <div key={link.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-full ${roleColors[link.role]}`}>
-                        <RoleIcon className="w-4 h-4 text-white" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="capitalize">{link.role}</Badge>
-                          {link.watermark_text && (
-                            <Badge variant="secondary">Watermarked</Badge>
-                          )}
-                          {link.max_views && (
-                            <Badge variant="outline">{link.view_count}/{link.max_views} views</Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          {link.expires_at 
-                            ? `Expires ${format(new Date(link.expires_at), "PPP")}`
-                            : "Never expires"
-                          }
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => copyShareLink(link.token)}
-                      >
-                        <Copy className="w-4 h-4 mr-1" />
-                        Copy
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deactivateShareLink(link.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="manage" className="space-y-4">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Document Access</h3>
-                <Button onClick={handlePublish} disabled={loading}>
-                  <Download className="w-4 h-4 mr-2" />
-                  Publish Document
+                <Button 
+                  onClick={handleInvite} 
+                  disabled={loading || !email.trim()}
+                  className="w-full flex items-center gap-2"
+                >
+                  <Send className="w-4 h-4" />
+                  Send Invitation
                 </Button>
-              </div>
+              </CardContent>
+            </Card>
 
-              {shares.map((share) => {
-                const RoleIcon = roleIcons[share.role];
-                return (
-                  <div key={share.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-full ${roleColors[share.role]}`}>
-                        <RoleIcon className="w-4 h-4 text-white" />
-                      </div>
-                      <div>
-                        <p className="font-medium">
-                          {share.profile?.display_name || 'Unknown User'}
-                        </p>
-                        <p className="text-sm text-muted-foreground capitalize">
-                          {share.status} • {share.role}
-                        </p>
-                      </div>
+            {/* Current Collaborators */}
+            {shares.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Collaborators ({shares.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ScrollArea className="h-48">
+                    <div className="space-y-2">
+                      {shares.map((share) => {
+                        const RoleIcon = getRoleIcon(share.role)
+                        return (
+                          <div key={share.id} className="flex items-center justify-between p-2 rounded-lg border">
+                            <div className="flex items-center gap-3">
+                              <RoleIcon className={`w-4 h-4 ${getRoleColor(share.role)}`} />
+                              <div>
+                                <p className="font-medium">{share.profile?.display_name || 'Unknown User'}</p>
+                                <p className="text-xs text-muted-foreground capitalize">
+                                  {share.role} • {share.status}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary" className="text-xs">
+                                {share.role}
+                              </Badge>
+                              {share.role !== 'owner' && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => removeShare(share.id)}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Select
-                        value={share.role}
-                        onValueChange={(value) => updateSharePermissions(share.id, value as DocumentRole)}
-                      >
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="viewer">Viewer</SelectItem>
-                          <SelectItem value="commenter">Commenter</SelectItem>
-                          <SelectItem value="editor">Editor</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeShare(share.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
-          <TabsContent value="activity" className="space-y-4 max-h-96 overflow-y-auto">
-            {activities.map((activity) => (
-              <div key={activity.id} className="flex items-start gap-3 p-3 border rounded-lg">
-                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2" />
-                <div className="flex-1">
-                  <p className="text-sm">
-                    <span className="font-medium">
-                      {activity.profile?.display_name || 'System'}
-                    </span>{' '}
-                    {activity.description}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {format(new Date(activity.created_at), "PPP 'at' p")}
-                  </p>
+          <TabsContent value="links" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Create Share Link</CardTitle>
+                <CardDescription>
+                  Generate a link that anyone can use to access this document
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Access Level</Label>
+                  <Select value={role} onValueChange={(value: DocumentRole) => setRole(value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="viewer">Viewer - Can view only</SelectItem>
+                      <SelectItem value="commenter">Commenter - Can view and comment</SelectItem>
+                      <SelectItem value="editor">Editor - Can view and edit</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
-            ))}
+
+                <Button 
+                  onClick={handleCreateLink}
+                  disabled={loading}
+                  className="w-full flex items-center gap-2"
+                >
+                  <Link2 className="w-4 h-4" />
+                  Create Share Link
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Active Share Links */}
+            {shareLinks.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Link2 className="w-4 h-4" />
+                    Active Links ({shareLinks.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {shareLinks.map((link) => (
+                      <div key={link.id} className="p-3 rounded-lg border bg-muted/30">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="text-xs">
+                              {link.role}
+                            </Badge>
+                            <span className="text-sm text-muted-foreground">
+                              {link.view_count} views
+                            </span>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => copyShareLink(link.token)}
+                          >
+                            <Copy className="w-3 h-3 mr-1" />
+                            Copy
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          Created {new Date(link.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </DialogContent>
     </Dialog>
-  );
-};
+  )
+}
