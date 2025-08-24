@@ -86,10 +86,9 @@ export const PasteAutoStructureOverlay: React.FC<PasteAutoStructureOverlayProps>
       
       // Skip callout mapping for now - too complex with type system
       
-      // Convert to legacy format and map to PageMuse blocks
-      const legacyIR = convertToLegacyIR(irDocument)
+      // IRDocument is already in the correct legacy format
       const mapper = new IRMapper()
-      const document = mapper.mapDocument(legacyIR)
+      const document = mapper.mapDocument(irDocument)
       const blocks = document.sections.flatMap(section => 
         section.flows.flatMap(flow => flow.blocks)
       )

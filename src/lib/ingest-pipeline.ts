@@ -54,7 +54,7 @@ export function ingestToIR(
   content: string, 
   format: 'paste' | 'txt' | 'markdown' | 'html',
   options: IngestOptions = DEFAULT_INGEST_OPTIONS
-): DocumentIR {
+): LegacyIRDocument {
   // Normalize options (support legacy alias)
   const effectiveOptions: IngestOptions = {
     ...DEFAULT_INGEST_OPTIONS,
@@ -87,7 +87,7 @@ export function ingestToIR(
   // Organize into sections
   const sections = organizeSections(blocks);
 
-  return {
+  const newIR: DocumentIR = {
     title: 'Imported Document',
     sections,
     metadata: {
@@ -95,6 +95,8 @@ export function ingestToIR(
       wordCount: calculateWordCount(blocks)
     }
   };
+
+  return convertToLegacyIR(newIR);
 }
 
 // Plain text parser
@@ -662,7 +664,7 @@ This is a paragraph with some **bold** and *italic* text.
 3. Third ordered item`;
 
 // Test the parser
-export function testMarkdownParser(): DocumentIR {
+export function testMarkdownParser(): LegacyIRDocument {
   return ingestToIR(MARKDOWN_WITH_TABLE_AND_IMAGE, 'markdown');
 }
 
@@ -673,8 +675,7 @@ export class IngestPipeline {
     format: 'paste' | 'txt' | 'markdown' | 'html' = 'txt',
     options?: IngestOptions
   ): Promise<LegacyIRDocument> {
-    const newIR = ingestToIR(content, format, options)
-    return convertToLegacyIR(newIR)
+    return ingestToIR(content, format, options)
   }
   
   static async processFile(file: File, options?: IngestOptions): Promise<LegacyIRDocument> {
@@ -695,8 +696,7 @@ export async function ingestFile(file: File, options?: IngestOptions): Promise<L
     return await ingestDocx(file, options);
   }
   
-  const newIR = ingestToIR(text, format, options);
-  return convertToLegacyIR(newIR);
+  return ingestToIR(text, format, options);
 }
 
 // Legacy types for backward compatibility - remove duplicate definitions

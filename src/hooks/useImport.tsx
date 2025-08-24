@@ -94,14 +94,15 @@ export const useImport = () => {
       // Extract assets from IR blocks if needed  
       for (const section of irDocument.sections) {
         for (const block of section.blocks) {
-          if (block.type === 'figure' && block.src) {
+          if (block.type === 'figure' && block.content) {
+            const figureContent = block.content as any;
             processedAssets.push({
               id: `asset-${Date.now()}`,
               filename: 'image',
               mimeType: 'image/jpeg',
-              url: block.src,
-              alt: block.alt,
-              caption: block.caption || '',
+              url: figureContent.image?.url || '',
+              alt: figureContent.alt || '',
+              caption: figureContent.caption || '',
               sourceFilename: file.name,
               documentId: undefined
             })
@@ -117,12 +118,11 @@ export const useImport = () => {
       
       const defaultCleanupOptions = getDefaultCleanupOptions(sourceType)
 
-      // Convert to legacy format for compatibility
-      const legacyIR = convertToLegacyIR(irDocument)
+      // IRDocument is already in the correct legacy format for ir-mapper
       
       setState(prev => ({ 
         ...prev, 
-        irDocument: legacyIR,
+        irDocument,
         assets: processedAssets,
         config: {
           ...prev.config,
