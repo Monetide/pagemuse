@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -14,13 +14,19 @@ import {
   FileText,
   Users,
   Link2,
-  Wand2
+  Wand2,
+  Sparkles,
+  Loader2,
+  AlertCircle
 } from 'lucide-react'
 import { SemanticDocument } from '@/lib/document-model'
 import { ShareDialog } from './ShareDialog'
 import { ExportModal } from './ExportModal'
 import { TemplateChooser } from './TemplateChooser'
 import { TemplateSaver } from './TemplateSaver'
+import { PolishReportDialog } from './PolishReportDialog'
+import { polishEngine, PolishReport } from '@/lib/polish-engine'
+import { validationEngine } from '@/lib/validation-engine'
 
 interface FinishScreenProps {
   isOpen: boolean
@@ -38,6 +44,60 @@ export const FinishScreen = ({
   onTemplateSaved
 }: FinishScreenProps) => {
   const [activeAction, setActiveAction] = useState<'share' | 'export' | 'template' | 'save' | null>(null)
+  const [isPolishing, setIsPolishing] = useState(false)
+  const [showReport, setShowReport] = useState(false)
+  const [lastReport, setLastReport] = useState<PolishReport | null>(null)
+  const [polishStatus, setPolishStatus] = useState<'idle' | 'checking' | 'ready' | 'complete'>('idle')
+  const [autoFixableCount, setAutoFixableCount] = useState(0)
+
+  // Check for issues when dialog opens
+  useEffect(() => {
+    if (isOpen && document && polishStatus === 'idle') {
+      setPolishStatus('checking')
+      
+      setTimeout(async () => {
+        try {
+          const issues = validationEngine.validate(document)
+          const fixableIssues = issues.filter(issue => 
+            issue.canFix && 
+            ['table-without-header', 'stranded-heading', 'figure-without-caption', 'min-font-size', 'low-contrast-auto', 'excessive-hyphenation'].includes(issue.ruleId)
+          )
+          setAutoFixableCount(fixableIssues.length)
+          setPolishStatus('ready')
+        } catch (error) {
+          console.error('Failed to check issues:', error)
+          setPolishStatus('ready')
+        }
+      }, 500)
+    }
+  }, [isOpen, document, polishStatus])
+
+  const handlePolish = async () => {
+    if (!document) return
+
+    // If polish is complete, show report instead of re-running
+    if (polishStatus === 'complete' && lastReport) {
+      setShowReport(true)
+      return
+    }
+
+    if (isPolishing) return
+
+    setIsPolishing(true)
+    
+    try {
+      const { document: polishedDocument, report } = await polishEngine.runOneClickPolish(document)
+      
+      setLastReport(report)
+      setShowReport(true)
+      setPolishStatus('complete')
+      setAutoFixableCount(0)
+    } catch (error) {
+      console.error('Polish failed:', error)
+    } finally {
+      setIsPolishing(false)
+    }
+  }
 
   const actions = [
     {
@@ -123,6 +183,113 @@ export const FinishScreen = ({
                   </div>
                 </div>
               </CardContent>
+            </Card>
+
+            {/* One-click Polish Card */}
+            <Card className={`border-l-4 transition-all duration-300 ${
+              polishStatus === 'complete' 
+                ? 'border-l-green-500 bg-green-50/50' 
+                : autoFixableCount > 0 
+                  ? 'border-l-amber-500 bg-amber-50/50' 
+                  : 'border-l-primary'
+            }`}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                      polishStatus === 'complete' 
+                        ? 'bg-green-100 text-green-600' 
+                        : autoFixableCount > 0 
+                          ? 'bg-amber-100 text-amber-600' 
+                          : 'bg-primary/10 text-primary'
+                    }`}>
+                      {polishStatus === 'checking' ? (
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                      ) : polishStatus === 'complete' ? (
+                        <CheckCircle className="w-5 h-5" />
+                      ) : autoFixableCount > 0 ? (
+                        <AlertCircle className="w-5 h-5" />
+                      ) : (
+                        <Sparkles className="w-5 h-5" />
+                      )}
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">
+                        {polishStatus === 'complete' 
+                          ? 'Document Polished!' 
+                          : 'One-click Polish'
+                        }
+                      </CardTitle>
+                      <CardDescription>
+                        {polishStatus === 'checking' 
+                          ? 'Checking for quality issues...'
+                          : polishStatus === 'complete'
+                            ? 'All auto-fixable issues have been resolved'
+                            : autoFixableCount > 0
+                              ? `${autoFixableCount} issue${autoFixableCount !== 1 ? 's' : ''} can be fixed automatically`
+                              : 'Run final quality check and apply safe fixes'
+                        }
+                      </CardDescription>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {autoFixableCount > 0 && polishStatus !== 'complete' && (
+                      <Badge variant="secondary" className="bg-amber-100 text-amber-800">
+                        {autoFixableCount} fixes
+                      </Badge>
+                    )}
+                    <Button
+                      onClick={handlePolish}
+                      disabled={isPolishing || polishStatus === 'checking'}
+                      size="sm"
+                      variant={polishStatus === 'complete' ? 'outline' : 'default'}
+                    >
+                      {isPolishing ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Polishing...
+                        </>
+                      ) : polishStatus === 'complete' ? (
+                        <>
+                          <Sparkles className="w-4 h-4 mr-2" />
+                          View Report
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-4 h-4 mr-2" />
+                          Polish Document
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              
+              {polishStatus === 'complete' && lastReport && (
+                <CardContent className="pt-0">
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex gap-4">
+                      <span className="text-green-600 font-medium">
+                        ✓ {lastReport.fixedIssues} fixes applied
+                      </span>
+                      {lastReport.manualActions.length > 0 && (
+                        <span className="text-amber-600">
+                          ⚠ {lastReport.manualActions.length} need manual attention
+                        </span>
+                      )}
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => setShowReport(true)}
+                      className="text-primary hover:text-primary/80"
+                    >
+                      View Details →
+                    </Button>
+                  </div>
+                </CardContent>
+              )}
             </Card>
 
             {/* Action Cards Grid */}
@@ -215,6 +382,22 @@ export const FinishScreen = ({
           onTemplateSaved={(templateId) => {
             onTemplateSaved?.(templateId)
             handleActionClose()
+          }}
+        />
+      )}
+
+      {/* Polish Report Dialog */}
+      {lastReport && (
+        <PolishReportDialog
+          open={showReport}
+          onClose={() => setShowReport(false)}
+          report={lastReport}
+          document={document}
+          onUndo={(action) => {
+            // Note: In the finish screen context, we don't update the document
+            // since this is after the makeover is complete. The user would need
+            // to go back to editing mode to make further changes.
+            console.log('Undo would be applied in edit mode:', action)
           }}
         />
       )}
