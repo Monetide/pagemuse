@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useWorkspaceNavigation } from '@/hooks/useWorkspaceNavigation'
+import { usePermissions } from '@/hooks/usePermissions'
 import {
   Sidebar,
   SidebarContent,
@@ -27,11 +28,11 @@ import { useKeyboardNavigation, useFocusManagement } from '@/hooks/useKeyboardNa
 import { useAdminRole } from '@/hooks/useAdminRole'
 import { useEffect, useRef } from 'react'
 
-const mainItems = [
+const getMainItems = (canManageTemplates: boolean, canUploadMedia: boolean) => [
   { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
   { title: 'My Documents', url: '/documents', icon: FileText },
-  { title: 'Template Library', url: '/templates', icon: Palette },
-  { title: 'Media Library', url: '/media', icon: Image },
+  ...(canManageTemplates ? [{ title: 'Template Library', url: '/templates', icon: Palette }] : []),
+  ...(canUploadMedia ? [{ title: 'Media Library', url: '/media', icon: Image }] : []),
 ]
 
 const adminItems = [
@@ -49,10 +50,12 @@ export function AppSidebar() {
   const { updateFocusableElements, focusNext, focusPrevious } = useFocusManagement()
   const { isAdmin } = useAdminRole()
   const { currentWorkspaceId, getCurrentWorkspacePath } = useWorkspaceNavigation()
+  const { canManageTemplates, canUploadMedia } = usePermissions()
   const sidebarRef = useRef<HTMLDivElement>(null)
   const currentPath = getCurrentWorkspacePath()
   const isCollapsed = state === 'collapsed'
   const isFocused = focusedSection === 'sidebar'
+  const mainItems = getMainItems(canManageTemplates, canUploadMedia)
 
   useEffect(() => {
     if (sidebarRef.current) {
