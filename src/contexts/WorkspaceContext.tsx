@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useWorkspaces, WorkspaceWithRole } from '@/hooks/useWorkspaces';
+import { useWorkspacePreferences } from '@/hooks/useWorkspacePreferences';
 import { useAuth } from '@/hooks/useAuth';
 
 interface WorkspaceContextType {
@@ -29,6 +30,7 @@ interface WorkspaceProviderProps {
 export const WorkspaceProvider = ({ children }: WorkspaceProviderProps) => {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const { workspaces, loading, error, refetch } = useWorkspaces();
+  const { preferences, setLastWorkspace } = useWorkspacePreferences();
   const [currentWorkspace, setCurrentWorkspace] = useState<WorkspaceWithRole | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -40,14 +42,22 @@ export const WorkspaceProvider = ({ children }: WorkspaceProviderProps) => {
       const workspace = workspaces.find(w => w.id === workspaceId);
       setCurrentWorkspace(workspace || null);
       
-      // If workspace not found and we have workspaces, redirect to first available
+      // Save as last used workspace
+      if (workspace) {
+        setLastWorkspace(workspace.id);
+      }
+      
+      // If workspace not found and we have workspaces, redirect to preferred or first available
       if (!workspace && workspaces.length > 0) {
-        const firstWorkspace = workspaces.find(w => w.name === 'Personal') || workspaces[0];
+        const preferredWorkspace = preferences.lastWorkspaceId 
+          ? workspaces.find(w => w.id === preferences.lastWorkspaceId)
+          : null;
+        const targetWorkspace = preferredWorkspace || workspaces.find(w => w.name === 'Personal') || workspaces[0];
         const currentPath = location.pathname.replace(`/w/${workspaceId}`, '');
-        navigate(`/w/${firstWorkspace.id}${currentPath}`, { replace: true });
+        navigate(`/w/${targetWorkspace.id}${currentPath}`, { replace: true });
       }
     }
-  }, [workspaceId, workspaces, navigate, location.pathname]);
+  }, [workspaceId, workspaces, navigate, location.pathname, preferences.lastWorkspaceId, setLastWorkspace]);
 
   // Auto-redirect to workspace route if on old route format
   useEffect(() => {
@@ -60,14 +70,19 @@ export const WorkspaceProvider = ({ children }: WorkspaceProviderProps) => {
         return;
       }
 
-      const firstWorkspace = workspaces.find(w => w.name === 'Personal') || workspaces[0];
-      const newPath = `/w/${firstWorkspace.id}${location.pathname}`;
+      // Use preferred workspace if available, otherwise fall back to Personal or first
+      const preferredWorkspace = preferences.lastWorkspaceId 
+        ? workspaces.find(w => w.id === preferences.lastWorkspaceId)
+        : null;
+      const targetWorkspace = preferredWorkspace || workspaces.find(w => w.name === 'Personal') || workspaces[0];
+      const newPath = `/w/${targetWorkspace.id}${location.pathname}`;
       navigate(newPath, { replace: true });
     }
-  }, [user, workspaces, location.pathname, navigate]);
+  }, [user, workspaces, location.pathname, navigate, preferences.lastWorkspaceId]);
 
   const switchWorkspace = (newWorkspaceId: string) => {
     const currentPath = location.pathname.replace(`/w/${workspaceId}`, '');
+    setLastWorkspace(newWorkspaceId); // Persist the selection
     navigate(`/w/${newWorkspaceId}${currentPath}`);
   };
 

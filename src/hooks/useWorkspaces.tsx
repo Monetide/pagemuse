@@ -72,12 +72,15 @@ export const useWorkspaces = () => {
     }
 
     try {
+      // Generate slug if not provided
+      const workspaceSlug = slug || name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
+      
       // First create the workspace
       const { data: workspace, error: workspaceError } = await supabase
         .from('workspaces')
         .insert({
           name,
-          slug: slug || name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+          slug: workspaceSlug,
           created_by: user.id
         })
         .select()
