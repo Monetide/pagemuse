@@ -389,6 +389,7 @@ export type Database = {
           title: string
           updated_at: string
           user_id: string
+          workspace_id: string | null
         }
         Insert: {
           archived?: boolean | null
@@ -404,6 +405,7 @@ export type Database = {
           title: string
           updated_at?: string
           user_id: string
+          workspace_id?: string | null
         }
         Update: {
           archived?: boolean | null
@@ -419,6 +421,7 @@ export type Database = {
           title?: string
           updated_at?: string
           user_id?: string
+          workspace_id?: string | null
         }
         Relationships: [
           {
@@ -426,6 +429,13 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -487,6 +497,7 @@ export type Database = {
           usage_count: number | null
           user_id: string
           width: number | null
+          workspace_id: string | null
         }
         Insert: {
           alt_text?: string | null
@@ -506,6 +517,7 @@ export type Database = {
           usage_count?: number | null
           user_id: string
           width?: number | null
+          workspace_id?: string | null
         }
         Update: {
           alt_text?: string | null
@@ -525,8 +537,17 @@ export type Database = {
           usage_count?: number | null
           user_id?: string
           width?: number | null
+          workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "media_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       media_collection_items: {
         Row: {
@@ -848,6 +869,7 @@ export type Database = {
           updated_at: string
           usage_count: number
           user_id: string | null
+          workspace_id: string | null
         }
         Insert: {
           category: string
@@ -867,6 +889,7 @@ export type Database = {
           updated_at?: string
           usage_count?: number
           user_id?: string | null
+          workspace_id?: string | null
         }
         Update: {
           category?: string
@@ -886,8 +909,17 @@ export type Database = {
           updated_at?: string
           usage_count?: number
           user_id?: string | null
+          workspace_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "templates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -913,6 +945,65 @@ export type Database = {
         }
         Relationships: []
       }
+      workspace_members: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["workspace_role"]
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["workspace_role"]
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["workspace_role"]
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_members_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workspaces: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -926,6 +1017,10 @@ export type Database = {
           p_title: string
           p_version_type?: string
         }
+        Returns: string
+      }
+      generate_workspace_slug: {
+        Args: { base_name: string }
         Returns: string
       }
       get_folder_hierarchy: {
@@ -985,6 +1080,7 @@ export type Database = {
       app_role: "user" | "admin"
       document_role: "owner" | "editor" | "commenter" | "viewer"
       share_status: "pending" | "accepted" | "declined"
+      workspace_role: "owner" | "admin" | "member"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1115,6 +1211,7 @@ export const Constants = {
       app_role: ["user", "admin"],
       document_role: ["owner", "editor", "commenter", "viewer"],
       share_status: ["pending", "accepted", "declined"],
+      workspace_role: ["owner", "admin", "member"],
     },
   },
 } as const

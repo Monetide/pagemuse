@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from './useAuth'
+import { useWorkspaceContext } from '@/contexts/WorkspaceContext'
 
 export interface Template {
   id: string
@@ -36,12 +37,13 @@ export interface Document {
 
 export const useDocuments = () => {
   const { user } = useAuth()
+  const { currentWorkspace } = useWorkspaceContext()
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const fetchDocuments = async () => {
-    if (!user) {
+    if (!user || !currentWorkspace) {
       setDocuments([])
       setLoading(false)
       return
@@ -56,6 +58,7 @@ export const useDocuments = () => {
           template:templates(name)
         `)
         .eq('user_id', user.id)
+        .eq('workspace_id', currentWorkspace.id)
         .order('updated_at', { ascending: false })
         .limit(10)
 
@@ -70,7 +73,7 @@ export const useDocuments = () => {
 
   useEffect(() => {
     fetchDocuments()
-  }, [user])
+  }, [user, currentWorkspace])
 
   const refetch = () => {
     fetchDocuments()

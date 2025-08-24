@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
+import { useWorkspaceContext } from '@/contexts/WorkspaceContext'
 import { SemanticDocument } from '@/lib/document-model'
 import { useToast } from '@/hooks/use-toast'
 import { useDocumentVersions } from '@/hooks/useDocumentVersions'
@@ -21,13 +22,14 @@ export const useDocumentPersistence = () => {
   const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null)
   const [documentMetadata, setDocumentMetadata] = useState<DocumentMetadata | null>(null)
   const { user } = useAuth()
+  const { currentWorkspace } = useWorkspaceContext()
   const { toast } = useToast()
   const navigate = useNavigate()
   const { createVersion, createSafetySnapshot } = useDocumentVersions(currentDocumentId || undefined)
 
   // Auto-save with debouncing
   const saveDocument = useCallback(async (document: SemanticDocument) => {
-    if (!user || !document) return null
+    if (!user || !document || !currentWorkspace) return null
 
     setSaveStatus('saving')
     
@@ -36,6 +38,7 @@ export const useDocumentPersistence = () => {
         title: document.title,
         content: document as any, // Store as JSON
         user_id: user.id,
+        workspace_id: currentWorkspace.id,
         updated_at: new Date().toISOString()
       }
 
@@ -95,7 +98,7 @@ export const useDocumentPersistence = () => {
       setTimeout(() => setSaveStatus('idle'), 3000)
       return null
     }
-  }, [user, currentDocumentId, toast, createVersion])
+  }, [user, currentWorkspace, currentDocumentId, toast, createVersion])
 
   // Load document
   const loadDocument = useCallback(async (documentId: string) => {
@@ -139,7 +142,7 @@ export const useDocumentPersistence = () => {
 
   // Save As (duplicate document)
   const saveAs = useCallback(async (document: SemanticDocument, newTitle: string) => {
-    if (!user || !document) return null
+    if (!user || !document || !currentWorkspace) return null
 
     setSaveStatus('saving')
 
@@ -148,6 +151,7 @@ export const useDocumentPersistence = () => {
         title: newTitle,
         content: { ...document, title: newTitle, id: crypto.randomUUID() } as any, // Store as JSON
         user_id: user.id,
+        workspace_id: currentWorkspace.id,
         updated_at: new Date().toISOString()
       }
 
@@ -177,7 +181,7 @@ export const useDocumentPersistence = () => {
       })
       return null
     }
-  }, [user, toast])
+  }, [user, currentWorkspace, toast])
 
   // Rename document
   const renameDocument = useCallback(async (newTitle: string) => {

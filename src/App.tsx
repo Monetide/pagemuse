@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { AuthGate } from "@/components/auth/AuthGate";
+import { WorkspaceProvider } from "@/contexts/WorkspaceContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { ValidationIntegratedLayout } from "@/components/layout/ValidationIntegratedLayout";
 import Index from "./pages/Index";
@@ -56,8 +57,9 @@ const App = () => {
                   {/* Protected routes - require authentication */}
                   <Route path="/*" element={
                     <AuthGate>
-                      <ValidationIntegratedLayout>
-                        <AppLayout>
+                      <WorkspaceProvider>
+                        <ValidationIntegratedLayout>
+                          <AppLayout>
                           <Routes>
                             <Route path="/" element={<Index />} />
                             <Route path="/dashboard" element={<Dashboard />} />
@@ -96,8 +98,9 @@ const App = () => {
                           </Routes>
                         </AppLayout>
                       </ValidationIntegratedLayout>
-                    </AuthGate>
-                  } />
+                    </WorkspaceProvider>
+                  </AuthGate>
+                } />
                 </Routes>
               </ErrorBoundary>
             </BrowserRouter>
