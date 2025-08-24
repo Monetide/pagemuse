@@ -1,0 +1,448 @@
+import { toast } from 'sonner'
+import type { SeedFormData } from '@/components/admin/SeedForm'
+import { exportPageAsPNG } from '@/lib/page-composer'
+
+export interface TemplatePackage {
+  'template.json': TemplateManifest
+  assets: {
+    'body-bg.svg': string
+    'divider.svg': string
+    'cover-shape.svg': string
+  }
+  previews: {
+    'cover.png': Blob
+    'body-2col.png': Blob
+    'data.png': Blob
+  }
+}
+
+export interface TemplateManifest {
+  id: string
+  name: string
+  version: string
+  description?: string
+  author?: string
+  created: string
+  
+  // Core template data
+  colorways: {
+    primary: any
+    warm?: any
+    cool?: any
+  }
+  
+  themeTokens: {
+    typography: {
+      fontPairings: any
+      sizes: {
+        h1: string
+        h2: string
+        h3: string
+        body: string
+        caption: string
+        quote: string
+      }
+      lineHeights: {
+        h1: number
+        h2: number
+        h3: number
+        body: number
+        caption: number
+        quote: number
+      }
+    }
+    spacing: {
+      scale: number[]
+      baseline: number
+    }
+    colors: any
+  }
+  
+  pageMasters: {
+    letter: {
+      'cover-fullbleed': any
+      'body-1col': any
+      'body-2col': any
+    }
+    a4: {
+      'cover-fullbleed': any
+      'body-1col': any
+      'body-2col': any
+    }
+  }
+  
+  objectStyles: {
+    figure: any
+    table: any
+    callout: any
+    tocItem: any
+  }
+  
+  layoutIntents: {
+    cover: {
+      name: string
+      description: string
+      pageMaster: string
+      allowedBlocks: string[]
+    }
+    executiveSummary: {
+      name: string
+      description: string
+      pageMaster: string
+      allowedBlocks: string[]
+    }
+    body: {
+      name: string
+      description: string
+      pageMaster: string
+      allowedBlocks: string[]
+    }
+    dataAppendix: {
+      name: string
+      description: string
+      pageMaster: string
+      allowedBlocks: string[]
+    }
+  }
+  
+  behaviors: {
+    pagination: {
+      keepWithNextOnHeadings: number
+      widowsOrphans: number
+      hyphenation: 'conservative' | 'balanced' | 'aggressive'
+    }
+    layout: {
+      baselineGrid: boolean
+      snapToGrid: boolean
+      columnBalance: 'auto' | 'manual'
+    }
+  }
+  
+  tocDefaults: {
+    includeLevels: string[]
+    styling: {
+      h1: any
+      h2: any
+      h3: any
+    }
+    pageNumbers: boolean
+    dotLeaders: boolean
+  }
+  
+  exportDefaults: {
+    pdf: {
+      dpi: number
+      embedFonts: boolean
+      colorSpace: 'RGB' | 'CMYK'
+      compression: 'auto' | 'high' | 'medium' | 'low'
+    }
+    docx: {
+      embedFonts: boolean
+      preserveLayout: boolean
+    }
+  }
+}
+
+export async function packageTemplate(
+  seedData: SeedFormData,
+  templateName: string,
+  templateDescription?: string
+): Promise<TemplatePackage> {
+  const templateId = crypto.randomUUID()
+  
+  // Create template manifest
+  const manifest: TemplateManifest = {
+    id: templateId,
+    name: templateName,
+    version: '1.0.0',
+    description: templateDescription,
+    author: 'Template Generator',
+    created: new Date().toISOString(),
+    
+    colorways: {
+      primary: seedData.colorway || {
+        id: 'generated',
+        name: 'Generated',
+        colors: {
+          brand: seedData.primaryColor || '#8B5CF6',
+          brandSecondary: seedData.primaryColor || '#8B5CF6',
+          textBody: '#1a1a1a',
+          textMuted: '#666666',
+          bgPage: '#ffffff',
+          bgSection: '#f8f9fa',
+          borderSubtle: '#e5e5e5'
+        },
+        isCompliant: true
+      }
+    },
+    
+    themeTokens: {
+      typography: {
+        fontPairings: seedData.typography || {
+          id: 'inter-source-serif',
+          name: 'Inter × Source Serif',
+          sans: { name: 'Inter', family: 'font-inter' },
+          serif: { name: 'Source Serif Pro', family: 'font-source-serif' }
+        },
+        sizes: {
+          h1: '32pt',
+          h2: '22pt', 
+          h3: '16pt',
+          body: '11pt',
+          caption: '9.5pt',
+          quote: '13pt'
+        },
+        lineHeights: {
+          h1: 1.2,
+          h2: 1.3,
+          h3: 1.4,
+          body: 1.5,
+          caption: 1.35,
+          quote: 1.4
+        }
+      },
+      spacing: {
+        scale: [4, 8, 12, 16, 24, 32],
+        baseline: 12
+      },
+      colors: seedData.colorway?.colors || {}
+    },
+    
+    pageMasters: {
+      letter: {
+        'cover-fullbleed': {
+          pageSize: 'Letter',
+          orientation: 'portrait',
+          margins: { top: 72, right: 72, bottom: 72, left: 72 },
+          columns: 1,
+          columnGap: 0,
+          hasHeader: false,
+          hasFooter: false,
+          baselineGrid: true,
+          gridSpacing: 12
+        },
+        'body-1col': {
+          pageSize: 'Letter',
+          orientation: 'portrait',
+          margins: { top: 72, right: 72, bottom: 72, left: 72 },
+          columns: 1,
+          columnGap: 0,
+          hasHeader: true,
+          hasFooter: true,
+          baselineGrid: true,
+          gridSpacing: 12
+        },
+        'body-2col': {
+          pageSize: 'Letter',
+          orientation: 'portrait',
+          margins: { top: 72, right: 72, bottom: 72, left: 72 },
+          columns: 2,
+          columnGap: 18,
+          hasHeader: true,
+          hasFooter: true,
+          baselineGrid: true,
+          gridSpacing: 12
+        }
+      },
+      a4: {
+        'cover-fullbleed': {
+          pageSize: 'A4',
+          orientation: 'portrait',
+          margins: { top: 72, right: 72, bottom: 72, left: 72 },
+          columns: 1,
+          columnGap: 0,
+          hasHeader: false,
+          hasFooter: false,
+          baselineGrid: true,
+          gridSpacing: 12
+        },
+        'body-1col': {
+          pageSize: 'A4',
+          orientation: 'portrait',
+          margins: { top: 72, right: 72, bottom: 72, left: 72 },
+          columns: 1,
+          columnGap: 0,
+          hasHeader: true,
+          hasFooter: true,
+          baselineGrid: true,
+          gridSpacing: 12
+        },
+        'body-2col': {
+          pageSize: 'A4',
+          orientation: 'portrait',
+          margins: { top: 72, right: 72, bottom: 72, left: 72 },
+          columns: 2,
+          columnGap: 18,
+          hasHeader: true,
+          hasFooter: true,
+          baselineGrid: true,
+          gridSpacing: 12
+        }
+      }
+    },
+    
+    objectStyles: {
+      figure: seedData.objectStyles?.styles?.['figure-default'] || {
+        captionStyle: 'caption',
+        spacing: { top: 16, bottom: 16 },
+        widthPresets: ['column', 'full'],
+        defaultWidth: 'column'
+      },
+      table: seedData.objectStyles?.styles?.['table-default'] || {
+        headerStyle: 'caption-bold',
+        cellPadding: 8,
+        gridColor: 'border-subtle',
+        alternateRows: true,
+        repeatHeader: true
+      },
+      callout: seedData.objectStyles?.styles?.['callout-default'] || {
+        keepTogether: true,
+        accentWidth: 4,
+        padding: { top: 16, right: 16, bottom: 16, left: 20 },
+        variants: {
+          info: { accentColor: 'brand', backgroundColor: 'bg-section' },
+          tip: { accentColor: 'brand-secondary', backgroundColor: 'bg-section' },
+          warning: { accentColor: 'warning', backgroundColor: 'warning-light' }
+        }
+      },
+      tocItem: seedData.objectStyles?.styles?.['toc-item-default'] || {
+        textStyle: 'body',
+        dotLeader: true,
+        pageNumberAlign: 'right',
+        spacing: { top: 4, bottom: 4 },
+        indentUnit: 16
+      }
+    },
+    
+    layoutIntents: {
+      cover: {
+        name: 'Cover Page',
+        description: 'Full-page layout for document covers and title pages',
+        pageMaster: 'cover-fullbleed',
+        allowedBlocks: ['heading', 'paragraph', 'spacer', 'figure']
+      },
+      executiveSummary: {
+        name: 'Executive Summary',
+        description: 'Single-column layout for executive summaries',
+        pageMaster: 'body-1col',
+        allowedBlocks: ['heading', 'paragraph', 'quote', 'callout', 'figure']
+      },
+      body: {
+        name: 'Body Content',
+        description: 'Two-column layout for main document content',
+        pageMaster: 'body-2col',
+        allowedBlocks: ['heading', 'paragraph', 'ordered-list', 'unordered-list', 'quote', 'callout', 'figure', 'table']
+      },
+      dataAppendix: {
+        name: 'Data Appendix',
+        description: 'Single-column layout optimized for tables and data',
+        pageMaster: 'body-1col',
+        allowedBlocks: ['heading', 'paragraph', 'table', 'figure', 'chart']
+      }
+    },
+    
+    behaviors: {
+      pagination: {
+        keepWithNextOnHeadings: 1,
+        widowsOrphans: 2,
+        hyphenation: 'conservative'
+      },
+      layout: {
+        baselineGrid: true,
+        snapToGrid: true,
+        columnBalance: 'auto'
+      }
+    },
+    
+    tocDefaults: {
+      includeLevels: ['H1', 'H2', 'H3'],
+      styling: {
+        h1: { indent: 0, style: 'body-bold' },
+        h2: { indent: 16, style: 'body' },
+        h3: { indent: 32, style: 'body' }
+      },
+      pageNumbers: true,
+      dotLeaders: true
+    },
+    
+    exportDefaults: {
+      pdf: {
+        dpi: 300,
+        embedFonts: true,
+        colorSpace: 'RGB',
+        compression: 'auto'
+      },
+      docx: {
+        embedFonts: true,
+        preserveLayout: true
+      }
+    }
+  }
+
+  // Extract assets from motifs
+  const assets = {
+    'body-bg.svg': '',
+    'divider.svg': '', 
+    'cover-shape.svg': ''
+  }
+
+  if (seedData.motifs?.assets) {
+    for (const asset of seedData.motifs.assets) {
+      const variant = asset.variants?.[0]
+      if (variant?.svg) {
+        const fileName = `${asset.type}.svg` as keyof typeof assets
+        if (fileName in assets) {
+          assets[fileName] = variant.svg
+        }
+      }
+    }
+  }
+
+  // Generate preview images (placeholder - would need actual page renders)
+  const previews = {
+    'cover.png': new Blob(['placeholder'], { type: 'image/png' }),
+    'body-2col.png': new Blob(['placeholder'], { type: 'image/png' }),
+    'data.png': new Blob(['placeholder'], { type: 'image/png' })
+  }
+
+  return {
+    'template.json': manifest,
+    assets,
+    previews
+  }
+}
+
+export async function saveTemplateDraft(
+  templatePackage: TemplatePackage,
+  brandName?: string
+): Promise<string> {
+  try {
+    // In a real implementation, this would:
+    // 1. Upload assets to Supabase storage (template-assets bucket)
+    // 2. Save template manifest to database
+    // 3. Upload preview images
+    
+    const templateId = templatePackage['template.json'].id
+    
+    // For now, simulate the save operation
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    // Store in localStorage as a placeholder
+    const drafts = JSON.parse(localStorage.getItem('templateDrafts') || '[]')
+    drafts.push({
+      id: templateId,
+      name: templatePackage['template.json'].name,
+      description: templatePackage['template.json'].description,
+      brandName,
+      manifest: templatePackage['template.json'],
+      createdAt: new Date().toISOString(),
+      status: 'draft'
+    })
+    localStorage.setItem('templateDrafts', JSON.stringify(drafts))
+    
+    return templateId
+  } catch (error) {
+    console.error('Error saving template draft:', error)
+    throw new Error('Failed to save template draft')
+  }
+}

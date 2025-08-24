@@ -16,6 +16,7 @@ import { PageMasterSelector, type PageMasterSelection } from '@/components/admin
 import { ObjectStyleSelector, type ObjectStyleSelection } from '@/components/admin/ObjectStyleSelector'
 import AutoComposePreview from '@/components/admin/AutoComposePreview'
 import QualityChecker from '@/components/admin/QualityChecker'
+import MakeTemplate from '@/components/admin/MakeTemplate'
 import { 
   Form,
   FormControl,
@@ -249,6 +250,11 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
     Object.entries(updatedData).forEach(([key, value]) => {
       setValue(key as keyof SeedFormData, value, { shouldValidate: true })
     })
+  }
+
+  const handleTemplateSaved = (templateId: string) => {
+    // Could navigate to the template or show success message
+    console.log('Template saved with ID:', templateId)
   }
 
   const removeFile = (type: 'logo' | 'referenceImage') => {
@@ -524,6 +530,12 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
         <QualityChecker 
           seedData={formState.isValid ? watchedValues : undefined}
           onFixesApplied={handleQualityFixes}
+        />
+
+        {/* Make Template */}
+        <MakeTemplate 
+          seedData={formState.isValid ? watchedValues : undefined}
+          onTemplateSaved={handleTemplateSaved}
         />
 
         {/* Reference Image */}
