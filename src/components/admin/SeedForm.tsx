@@ -17,6 +17,7 @@ import { ObjectStyleSelector, type ObjectStyleSelection } from '@/components/adm
 import AutoComposePreview from '@/components/admin/AutoComposePreview'
 import QualityChecker from '@/components/admin/QualityChecker'
 import MakeTemplate from '@/components/admin/MakeTemplate'
+import { FigmaExporter } from '@/components/admin/FigmaExporter'
 import { 
   Form,
   FormControl,
@@ -536,6 +537,11 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
         <MakeTemplate 
           seedData={formState.isValid ? watchedValues : undefined}
           onTemplateSaved={handleTemplateSaved}
+        />
+
+        {/* Figma Export */}
+        <FigmaExporter 
+          seedData={formState.isValid ? watchedValues : {}}
         />
 
         {/* Reference Image */}
