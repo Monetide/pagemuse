@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
-import { AlertTriangle, Info, ShieldAlert, MapPin, Wrench, Eye, EyeOff, RefreshCw } from 'lucide-react'
+import { AlertTriangle, Info, ShieldAlert, MapPin, Wrench, Eye, EyeOff, RefreshCw, Palette } from 'lucide-react'
 import { useValidation } from '@/contexts/ValidationContext'
 import { useDocumentModel } from '@/hooks/useDocumentModel'
 import { ValidationIssue } from '@/lib/validation-engine'
@@ -25,7 +25,9 @@ export const ValidationPanel = () => {
     runValidation,
     fixIssue,
     ignoreIssue,
-    ignoreRule
+    ignoreRule,
+    brandKitId,
+    logoSettings
   } = useValidation()
   
   const { document } = useDocumentModel()
@@ -79,6 +81,10 @@ export const ValidationPanel = () => {
   const errorCount = issues.filter(i => i.severity === 'error').length
   const warningCount = issues.filter(i => i.severity === 'warning').length
   const infoCount = issues.filter(i => i.severity === 'info').length
+  
+  // Separate brand-specific issues
+  const brandIssues = issues.filter(i => ['non-token-color', 'low-contrast-brand', 'missing-alt-logo'].includes(i.ruleId))
+  const otherIssues = issues.filter(i => !['non-token-color', 'low-contrast-brand', 'missing-alt-logo'].includes(i.ruleId))
 
   return (
     <Sheet open={isValidationPanelOpen} onOpenChange={setValidationPanelOpen}>
@@ -89,7 +95,7 @@ export const ValidationPanel = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => document && runValidation(document)}
+              onClick={() => document && runValidation(document, brandKitId, logoSettings)}
               disabled={isValidating}
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${isValidating ? 'animate-spin' : ''}`} />
@@ -118,18 +124,22 @@ export const ValidationPanel = () => {
 
           <ScrollArea className="flex-1">
             <div className="space-y-6">
-              {Object.values(groupedIssues).map(group => (
-                <div key={group.rule} className="space-y-2">
+              {/* Brand Issues Section */}
+              {brandIssues.length > 0 && (
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <h3 className="font-medium text-sm">{group.name}</h3>
-                    <Badge variant="outline">{group.issues.length}</Badge>
+                    <h3 className="font-medium text-sm flex items-center gap-2">
+                      <Palette className="w-4 h-4" />
+                      Brand Compliance
+                    </h3>
+                    <Badge variant="outline">{brandIssues.length}</Badge>
                   </div>
                   
                   <div className="space-y-2">
-                    {group.issues.map(issue => (
+                    {brandIssues.map(issue => (
                       <div
                         key={issue.id}
-                        className={`border rounded-lg p-3 space-y-2 ${
+                        className={`border rounded-lg p-3 space-y-2 bg-orange-50 border-orange-200 ${
                           selectedIssue?.id === issue.id ? 'ring-2 ring-primary' : ''
                         }`}
                       >
@@ -138,6 +148,7 @@ export const ValidationPanel = () => {
                             {getSeverityIcon(issue.severity)}
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium">{issue.message}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{issue.description}</p>
                               {issue.snippet && (
                                 <p className="text-xs text-muted-foreground mt-1 truncate">
                                   {issue.snippet}
@@ -159,9 +170,10 @@ export const ValidationPanel = () => {
                           
                           {issue.canFix && (
                             <Button
-                              variant="outline"
+                              variant="default"
                               size="sm"
                               onClick={() => handleFix(issue)}
+                              className="bg-orange-600 hover:bg-orange-700"
                             >
                               <Wrench className="w-3 h-3 mr-1" />
                               {issue.fixLabel || 'Fix'}
@@ -181,7 +193,79 @@ export const ValidationPanel = () => {
                     ))}
                   </div>
                 </div>
-              ))}
+              )}
+
+              {/* Other Issues by Rule */}
+              {Object.values(groupedIssues).map(group => {
+                // Filter out brand issues from grouped issues
+                const nonBrandIssues = group.issues.filter(i => !brandIssues.includes(i))
+                if (nonBrandIssues.length === 0) return null
+                
+                return (
+                  <div key={group.rule} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium text-sm">{group.name}</h3>
+                      <Badge variant="outline">{nonBrandIssues.length}</Badge>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {nonBrandIssues.map(issue => (
+                        <div
+                          key={issue.id}
+                          className={`border rounded-lg p-3 space-y-2 ${
+                            selectedIssue?.id === issue.id ? 'ring-2 ring-primary' : ''
+                          }`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-2 flex-1">
+                              {getSeverityIcon(issue.severity)}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium">{issue.message}</p>
+                                {issue.snippet && (
+                                  <p className="text-xs text-muted-foreground mt-1 truncate">
+                                    {issue.snippet}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleGoTo(issue)}
+                            >
+                              <MapPin className="w-3 h-3 mr-1" />
+                              Go to
+                            </Button>
+                            
+                            {issue.canFix && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleFix(issue)}
+                              >
+                                <Wrench className="w-3 h-3 mr-1" />
+                                {issue.fixLabel || 'Fix'}
+                              </Button>
+                            )}
+                            
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => ignoreIssue(issue.id)}
+                            >
+                              <EyeOff className="w-3 h-3 mr-1" />
+                              Ignore
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
               
               {filteredIssues.length === 0 && !isValidating && (
                 <div className="text-center py-8 text-muted-foreground">

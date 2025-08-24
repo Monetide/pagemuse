@@ -22,8 +22,8 @@ export interface ValidationRule {
   name: string
   severity: ValidationSeverity
   enabled: boolean
-  validate: (document: SemanticDocument, layoutResults?: Map<string, any>) => ValidationIssue[]
-  fix?: (document: SemanticDocument, issue: ValidationIssue) => SemanticDocument
+  validate: (document: SemanticDocument, layoutResults?: Map<string, any>, brandKit?: any, logoSettings?: any) => ValidationIssue[]
+  fix?: (document: SemanticDocument, issue: ValidationIssue, brandKit?: any, logoSettings?: any) => SemanticDocument
 }
 
 export interface ValidationConfig {
@@ -50,7 +50,10 @@ export const defaultValidationConfig: ValidationConfig = {
     'broken-cross-reference': { enabled: true, severity: 'error' },
     'overflowing-text': { enabled: true, severity: 'error' },
     'long-heading': { enabled: true, severity: 'info' },
-    'block-outside-flow': { enabled: true, severity: 'error' }
+    'block-outside-flow': { enabled: true, severity: 'error' },
+    'non-token-color': { enabled: true, severity: 'warning' },
+    'low-contrast-brand': { enabled: true, severity: 'warning' },
+    'missing-alt-logo': { enabled: true, severity: 'warning' }
   },
   thresholds: {
     longHeadingLength: 85,
@@ -561,6 +564,8 @@ const blockOutsideFlowRule: ValidationRule = {
   }
 }
 
+import { brandValidationRules } from './brand-validation'
+
 export const validationRules: ValidationRule[] = [
   strandedHeadingRule,
   figureWithoutCaptionRule,
@@ -569,7 +574,8 @@ export const validationRules: ValidationRule[] = [
   orphanedCalloutRule,
   brokenCrossReferenceRule,
   blockOutsideFlowRule,
-  longHeadingRule
+  longHeadingRule,
+  ...brandValidationRules
 ]
 
 export class ValidationEngine {
@@ -583,13 +589,13 @@ export class ValidationEngine {
     return this.config
   }
 
-  validate(document: SemanticDocument, layoutResults?: Map<string, any>): ValidationIssue[] {
+  validate(document: SemanticDocument, layoutResults?: Map<string, any>, brandKit?: any, logoSettings?: any): ValidationIssue[] {
     const allIssues: ValidationIssue[] = []
     
     validationRules.forEach(rule => {
       const ruleConfig = this.config.rules[rule.id]
       if (ruleConfig?.enabled) {
-        const issues = rule.validate(document, layoutResults)
+        const issues = rule.validate(document, layoutResults, brandKit, logoSettings)
         // Apply configured severity
         const adjustedIssues = issues.map(issue => ({
           ...issue,
@@ -603,10 +609,10 @@ export class ValidationEngine {
     return allIssues.filter(issue => !issue.ignored)
   }
 
-  fixIssue(document: SemanticDocument, issue: ValidationIssue): SemanticDocument | null {
+  fixIssue(document: SemanticDocument, issue: ValidationIssue, brandKit?: any, logoSettings?: any): SemanticDocument | null {
     const rule = validationRules.find(r => r.id === issue.ruleId)
     if (rule?.fix) {
-      return rule.fix(document, issue)
+      return rule.fix(document, issue, brandKit, logoSettings)
     }
     return null
   }
