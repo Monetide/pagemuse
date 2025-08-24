@@ -69,23 +69,22 @@ export const WorkspaceSettings = () => {
             </PermissionGuard>
 
             {/* Brand Kits Management */}
-            <Card className="opacity-60">
+            <Card>
               <CardHeader>
                 <div className="flex items-center space-x-2">
                   <Palette className="h-5 w-5" />
                   <CardTitle>Brand</CardTitle>
                 </div>
                 <CardDescription>
-                  No Brand Kits yet. Add one after workspace setup.
+                  Manage workspace brand guidelines and assets.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Button 
-                  className="w-full" 
-                  disabled
-                  variant="outline"
+                  className="w-full"
+                  onClick={() => window.location.href = `/w/${window.location.pathname.split('/')[2]}/settings/brand`}
                 >
-                  Manage Brand Kits (Coming Soon)
+                  Manage Brand Kits
                 </Button>
               </CardContent>
             </Card>
