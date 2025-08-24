@@ -3,9 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
+import { testDocxIngestion, validateDocxResult } from '@/lib/__tests__/docx-simple';
 import { 
   ingestToIR, 
   testMarkdownParser, 
@@ -13,7 +11,9 @@ import {
   IngestOptions,
   DEFAULT_INGEST_OPTIONS
 } from '@/lib/ingest-pipeline';
-import { DocumentIR, BlockIR } from '@/lib/ir-schema';
+import { DocumentIR, BlockIR, validateDocumentIR, validateBlockIR } from '@/lib/ir-schema';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   FileText, 
   Code2, 
@@ -36,6 +36,7 @@ export const IngestTestPanel = () => {
   const [result, setResult] = useState<DocumentIR | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [testResults, setTestResults] = useState<string[]>([]);
 
   const handleTest = async () => {
     if (!inputContent.trim()) return;
@@ -67,6 +68,61 @@ export const IngestTestPanel = () => {
     } finally {
       setIsProcessing(false);
     }
+  };
+
+  const runDocxTest = async () => {
+    setIsProcessing(true);
+    setTestResults([]);
+    
+    try {
+      const result = await testDocxIngestion();
+      
+      // Validate the result
+      const isValid = validateDocumentIR(result);
+      const blockValidations = result.sections.flatMap(section => 
+        section.blocks.map(block => validateBlockIR(block))
+      );
+      const allBlocksValid = blockValidations.every(Boolean);
+      
+      // Additional DOCX validation
+      const docxValid = validateDocxResult(result);
+      
+      setTestResults([
+        `✅ DOCX Parser Test completed successfully`,
+        `📄 Document Title: ${result.title}`,
+        `📝 Sections: ${result.sections.length}`,
+        `🧱 Total Blocks: ${result.sections.reduce((acc, section) => acc + section.blocks.length, 0)}`,
+        `✅ Document Structure Valid: ${isValid}`,
+        `✅ All Blocks Valid: ${allBlocksValid}`,
+        `✅ DOCX-specific Validation: ${docxValid}`,
+        `📊 Word Count: ${result.metadata?.wordCount || 'Unknown'}`,
+        '',
+        '📋 Block Types Found:',
+        ...getBlockTypeCounts(result)
+      ]);
+      
+      setResult(result);
+      
+    } catch (error) {
+      setTestResults([
+        `❌ DOCX test failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        '',
+        '🔍 This might indicate an issue with the DOCX ingest pipeline.',
+        'Check the console for more details.'
+      ]);
+      console.error('DOCX test error:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const getBlockTypeCounts = (doc: DocumentIR): string[] => {
+    const counts = doc.sections.flatMap(s => s.blocks).reduce((acc, block) => {
+      acc[block.type] = (acc[block.type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    return Object.entries(counts).map(([type, count]) => `   ${type}: ${count}`);
   };
 
   const getBlockIcon = (blockType: string) => {
@@ -180,14 +236,15 @@ export const IngestTestPanel = () => {
         <div>
           <h1 className="text-2xl font-bold">Ingest Pipeline Tester</h1>
           <p className="text-muted-foreground">
-            Test parsing of paste/txt, Markdown, and HTML into IR format
+            Test parsing of paste/txt, Markdown, HTML, and DOCX into IR format
           </p>
         </div>
       </div>
 
       <Tabs defaultValue="test" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="test">Test Parser</TabsTrigger>
+          <TabsTrigger value="docx">DOCX Test</TabsTrigger>
           <TabsTrigger value="result">IR Result</TabsTrigger>
           <TabsTrigger value="examples">Examples</TabsTrigger>
         </TabsList>
@@ -320,6 +377,50 @@ export const IngestTestPanel = () => {
           </div>
         </TabsContent>
 
+        <TabsContent value="docx" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                DOCX Parser Test
+              </CardTitle>
+              <CardDescription>
+                Test DOCX document parsing capabilities
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground mb-4">
+                  This test validates DOCX parsing by processing a simulated document with headings, paragraphs, lists, and tables.
+                </p>
+                <Button 
+                  onClick={runDocxTest} 
+                  disabled={isProcessing}
+                  className="w-full"
+                >
+                  <TestTube className="w-4 h-4 mr-2" />
+                  {isProcessing ? 'Testing DOCX Parser...' : 'Run DOCX Test'}
+                </Button>
+              </div>
+              
+              {testResults.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Test Results</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[300px] w-full">
+                      <pre className="text-xs font-mono whitespace-pre-wrap">
+                        {testResults.join('\n')}
+                      </pre>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="result" className="space-y-4">
           {result ? (
             <div className="space-y-6">
@@ -400,7 +501,7 @@ export const IngestTestPanel = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <h4 className="font-medium mb-2">Markdown Features</h4>
                     <ul className="text-sm space-y-1">
@@ -425,6 +526,19 @@ export const IngestTestPanel = () => {
                       <li>✅ Blockquotes</li>
                       <li>✅ Horizontal rules (hr)</li>
                       <li>✅ Styling strip with link preservation</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-2">DOCX Features</h4>
+                    <ul className="text-sm space-y-1">
+                      <li>✅ Heading styles (Heading 1-6)</li>
+                      <li>✅ Normal paragraphs</li>
+                      <li>✅ Ordered & unordered lists</li>
+                      <li>✅ Tables with headers</li>
+                      <li>✅ Images and figures</li>
+                      <li>✅ Footnotes and endnotes</li>
+                      <li>✅ Document metadata</li>
+                      <li>✅ Style preservation</li>
                     </ul>
                   </div>
                 </div>

@@ -11,6 +11,7 @@ import {
   DividerBlock,
   ListItem
 } from './ir-schema';
+import * as mammoth from 'mammoth';
 
 import { 
   IRDocument as LegacyIRDocument,
@@ -677,41 +678,25 @@ export class IngestPipeline {
 
 export async function ingestFile(file: File, options?: IngestOptions): Promise<DocumentIR> {
   const text = await file.text();
-  const extension = file.name.split('.').pop()?.toLowerCase();
+  let format: 'paste' | 'txt' | 'markdown' | 'html' | 'docx' = 'txt';
   
-  let format: 'paste' | 'txt' | 'markdown' | 'html' = 'txt';
+  const extension = file.name.split('.').pop()?.toLowerCase();
   if (extension === 'md') format = 'markdown';
   if (extension === 'html' || extension === 'htm') format = 'html';
+  if (extension === 'docx') format = 'docx';
+  
+  if (format === 'docx') {
+    return await ingestDocx(file, options);
+  }
   
   return ingestToIR(text, format, options);
 }
 
-// Legacy types for backward compatibility (IRDocument)
-export interface IRDocument {
-  title?: string;
-  sections: IRSection[];
-  [key: string]: any;
-}
-
-export interface IRSection {
-  id: string;
-  title?: string;
-  blocks: IRBlock[];
-  notes?: any[];
-  order?: number;
-  [key: string]: any;
-}
-
-export interface IRBlock {
-  type: string;
-  content?: string | null;
-  attrs?: any;
-  order?: number;
-  [key: string]: any;
-}
+// Legacy types for backward compatibility - remove duplicate definitions
+export type { IRDocument, IRSection, IRBlock } from './ir-types';
 
 // Convert new IR to legacy format
-export function convertToLegacyIR(documentIR: DocumentIR): IRDocument {
+export function convertToLegacyIR(documentIR: DocumentIR): LegacyIRDocument {
   return {
     title: documentIR.title || documentIR.metadata?.title || 'Untitled',
     sections: documentIR.sections.map((section, index) => ({
@@ -719,35 +704,32 @@ export function convertToLegacyIR(documentIR: DocumentIR): IRDocument {
       title: section.title,
       order: section.order || index,
       blocks: section.blocks.map((block, blockIndex) => {
-        const legacyBlock: IRBlock = {
-          type: block.type,
+        const legacyBlock: LegacyIRBlock = {
+          id: `block-${blockIndex}`,
+          type: block.type as any,
+          content: '',
           order: blockIndex
         };
         
         switch (block.type) {
           case 'heading':
-            legacyBlock.content = block.content;
-            legacyBlock.attrs = { level: block.level };
+            legacyBlock.content = { level: block.level, text: block.content, anchor: block.content.toLowerCase().replace(/[^a-z0-9]+/g, '-') };
             break;
           case 'paragraph':
           case 'quote':
             legacyBlock.content = block.content;
             break;
           case 'list':
-            legacyBlock.content = block.items.map(item => item.content).join('\n');
-            legacyBlock.attrs = { listType: block.listType };
+            legacyBlock.content = { type: block.listType === 'ol' ? 'ordered' : 'unordered', items: block.items.map(item => ({ content: item.content })), tight: true };
             break;
           case 'table':
-            legacyBlock.content = block.header.join('|') + '\n' + 
-              block.rows.map(row => row.join('|')).join('\n');
+            legacyBlock.content = { headers: block.header, rows: block.rows, caption: block.caption, headerRow: true, alignment: block.header.map(() => 'left' as const) };
             break;
           case 'figure':
-            legacyBlock.content = block.alt || '';
-            legacyBlock.attrs = { src: block.src, alt: block.alt };
+            legacyBlock.content = { image: { id: 'img-1', url: block.src, filename: 'image', mimeType: 'image/jpeg' }, caption: block.caption, alt: block.alt, size: 'medium' as const, alignment: 'center' as const };
             break;
           case 'callout':
-            legacyBlock.content = block.content;
-            legacyBlock.attrs = { calloutType: block.calloutType, title: block.title };
+            legacyBlock.content = { type: block.calloutType as any, title: block.title, content: block.content };
             break;
           case 'footnote':
             legacyBlock.content = block.text;
@@ -762,7 +744,46 @@ export function convertToLegacyIR(documentIR: DocumentIR): IRDocument {
         
         return legacyBlock;
       }),
-      notes: section.notes || []
-    }))
+      notes: section.notes?.map((note, idx) => ({ id: `note-${idx}`, number: idx + 1, content: note.text || '', backlinks: [] })) || []
+    })),
+    metadata: {
+      author: documentIR.metadata?.author,
+      created: new Date(),
+      modified: new Date(),
+      language: 'en'
+    },
+    assets: []
   };
+}
+
+// DOCX ingestion function
+export async function ingestDocx(file: File, options: IngestOptions = DEFAULT_INGEST_OPTIONS): Promise<DocumentIR> {
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.convertToHtml({ arrayBuffer });
+    
+    // Convert HTML result to IR using existing HTML parser
+    const blocks = parseHTML(result.value, options);
+    
+    // Process any conversion messages/warnings
+    if (result.messages.length > 0) {
+      console.warn('DOCX conversion warnings:', result.messages);
+    }
+    
+    // Organize into sections
+    const sections = organizeSections(blocks);
+    
+    return {
+      title: file.name.replace(/\.docx$/i, '') || 'Imported Document',
+      sections,
+      metadata: {
+        createdAt: new Date().toISOString(),
+        wordCount: calculateWordCount(blocks),
+        author: 'Unknown'
+      }
+    };
+  } catch (error) {
+    console.error('Error processing DOCX file:', error);
+    throw new Error(`Failed to process DOCX file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 }
