@@ -55,6 +55,80 @@ export type Database = {
           },
         ]
       }
+      brand_kit_maps: {
+        Row: {
+          brand_kit_id: string
+          created_at: string
+          hex: string
+          id: string
+          token_name: string
+        }
+        Insert: {
+          brand_kit_id: string
+          created_at?: string
+          hex: string
+          id?: string
+          token_name: string
+        }
+        Update: {
+          brand_kit_id?: string
+          created_at?: string
+          hex?: string
+          id?: string
+          token_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_kit_maps_brand_kit_id_fkey"
+            columns: ["brand_kit_id"]
+            isOneToOne: false
+            referencedRelation: "brand_kits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brand_kits: {
+        Row: {
+          created_at: string
+          created_by: string
+          fonts: Json | null
+          id: string
+          logo_alt_url: string | null
+          logo_primary_url: string | null
+          name: string
+          neutrals: Json
+          palette: Json
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          fonts?: Json | null
+          id?: string
+          logo_alt_url?: string | null
+          logo_primary_url?: string | null
+          name: string
+          neutrals?: Json
+          palette?: Json
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          fonts?: Json | null
+          id?: string
+          logo_alt_url?: string | null
+          logo_primary_url?: string | null
+          name?: string
+          neutrals?: Json
+          palette?: Json
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
@@ -474,6 +548,47 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kit_applications: {
+        Row: {
+          applied_at: string
+          applied_by: string
+          brand_kit_id: string
+          follow_updates: boolean
+          id: string
+          snapshot: Json
+          target_id: string
+          target_type: string
+        }
+        Insert: {
+          applied_at?: string
+          applied_by: string
+          brand_kit_id: string
+          follow_updates?: boolean
+          id?: string
+          snapshot?: Json
+          target_id: string
+          target_type: string
+        }
+        Update: {
+          applied_at?: string
+          applied_by?: string
+          brand_kit_id?: string
+          follow_updates?: boolean
+          id?: string
+          snapshot?: Json
+          target_id?: string
+          target_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kit_applications_brand_kit_id_fkey"
+            columns: ["brand_kit_id"]
+            isOneToOne: false
+            referencedRelation: "brand_kits"
             referencedColumns: ["id"]
           },
         ]
