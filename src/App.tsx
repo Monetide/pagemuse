@@ -32,7 +32,7 @@ import { HealthCheck } from "@/components/HealthCheck";
 import { InvitationAcceptance } from "@/pages/InvitationAcceptance";
 import { WorkspaceMembers } from "@/components/workspace/WorkspaceMembers";
 import { WorkspaceSettings } from "@/components/workspace/WorkspaceSettings";
-import { WorkspaceBrandKits } from "@/components/workspace/WorkspaceBrandKits";
+import { WorkspaceBrandSettings } from "@/components/workspace/WorkspaceBrandSettings";
 import { SharedDocumentViewer } from "@/components/document/SharedDocumentViewer";
 import { PublishedDocumentViewer } from "@/components/document/PublishedDocumentViewer";
 
@@ -116,7 +116,7 @@ const App = () => {
                                 } />
                                  <Route path="/members" element={<WorkspaceMembers />} />
                                  <Route path="/settings" element={<WorkspaceSettings />} />
-                                 <Route path="/settings/brand" element={<WorkspaceBrandKits />} />
+                                 <Route path="/settings/brand" element={<WorkspaceBrandSettings />} />
                                 {/* Redirects from old paths */}
                                 <Route path="/document-model" element={<DocumentModelRedirect />} />
                                 <Route path="/document-model/:documentId" element={<DocumentModelRedirect />} />

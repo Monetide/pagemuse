@@ -76,7 +76,7 @@ export const WorkspaceSettings = () => {
                   <CardTitle>Brand</CardTitle>
                 </div>
                 <CardDescription>
-                  Manage workspace brand guidelines and assets.
+                  Manage brand kits, set workspace defaults, and configure automatic styling.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -84,7 +84,7 @@ export const WorkspaceSettings = () => {
                   className="w-full"
                   onClick={() => window.location.href = `/w/${window.location.pathname.split('/')[2]}/settings/brand`}
                 >
-                  Manage Brand Kits
+                  Manage Brand Settings
                 </Button>
               </CardContent>
             </Card>

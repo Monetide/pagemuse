@@ -340,25 +340,42 @@ export const BrandKitApplicationDialog = ({
             <Separator />
 
             {/* Options */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="follow-updates"
-                  checked={followUpdates}
-                  onCheckedChange={setFollowUpdates}
-                />
-                <Label htmlFor="follow-updates" className="text-sm">
-                  Follow future brand kit updates
-                </Label>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="follow-updates"
+                    checked={followUpdates}
+                    onCheckedChange={setFollowUpdates}
+                  />
+                  <Label htmlFor="follow-updates" className="text-sm">
+                    Follow future brand kit updates
+                  </Label>
+                </div>
+                <Badge variant="outline" className="text-xs">
+                  Atomic update
+                </Badge>
               </div>
-              <Badge variant="outline" className="text-xs">
-                Atomic update
-              </Badge>
-            </div>
 
-            <div className="text-xs text-muted-foreground">
-              This will atomically update theme tokens, recolor SVGs, and regenerate previews. 
-              A snapshot will be created for one-click rollback.
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <div className={`w-2 h-2 rounded-full ${followUpdates ? 'bg-green-500' : 'bg-orange-500'}`} />
+                  <span className="font-medium">
+                    {followUpdates ? 'Follow Updates' : 'Detached'}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {followUpdates 
+                    ? 'This document will automatically receive brand kit updates when they\'re modified. You can preview changes before applying.'
+                    : 'This document will use a snapshot of the current brand kit and won\'t receive automatic updates. You can manually reapply updates later.'
+                  }
+                </p>
+              </div>
+
+              <div className="text-xs text-muted-foreground border-t pt-3">
+                This will atomically update theme tokens, recolor SVGs, and regenerate previews. 
+                A snapshot will be created for one-click rollback.
+              </div>
             </div>
           </div>
         )}
