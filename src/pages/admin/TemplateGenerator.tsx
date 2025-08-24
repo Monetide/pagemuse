@@ -457,6 +457,15 @@ export default function TemplateGenerator() {
                         </div>
                       </div>
                     )}
+                    {state.seedData.formData && (
+                      <div className="flex justify-between text-sm items-center">
+                        <span className="text-muted-foreground">Preview Pages:</span>
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className="text-xs font-medium">3 Composed</span>
+                          <span className="text-xs text-muted-foreground">Ready to Export</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   
                   <Separator />

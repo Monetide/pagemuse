@@ -14,6 +14,7 @@ import { ColorwaySelector, type Colorway } from '@/components/admin/ColorwaySele
 import { MotifSelector, type MotifSelection, type MotifAsset } from '@/components/admin/MotifSelector'
 import { PageMasterSelector, type PageMasterSelection } from '@/components/admin/PageMasterSelector'
 import { ObjectStyleSelector, type ObjectStyleSelection } from '@/components/admin/ObjectStyleSelector'
+import AutoComposePreview from '@/components/admin/AutoComposePreview'
 import { 
   Form,
   FormControl,
@@ -236,6 +237,10 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
 
   const handleObjectStyleChange = (selection: ObjectStyleSelection) => {
     setValue('objectStyles', selection, { shouldValidate: true })
+  }
+
+  const handleMotifShuffle = (newMotifs: any) => {
+    setValue('motifs', newMotifs, { shouldValidate: true })
   }
 
   const removeFile = (type: 'logo' | 'referenceImage') => {
@@ -499,6 +504,12 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
         <ObjectStyleSelector 
           selection={watch('objectStyles')}
           onSelectionChange={handleObjectStyleChange}
+        />
+
+        {/* Auto-Compose Preview */}
+        <AutoComposePreview 
+          seedData={formState.isValid ? watchedValues : undefined}
+          onMotifShuffle={handleMotifShuffle}
         />
 
         {/* Reference Image */}
