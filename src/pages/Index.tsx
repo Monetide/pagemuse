@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { DesignFromContentDialog } from '@/components/document/DesignFromContentDialog';
 import { 
   FileText, 
   Share2, 
@@ -9,12 +11,20 @@ import {
   Download, 
   Users,
   ArrowRight,
-  CheckCircle
+  CheckCircle,
+  Sparkles
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
   const navigate = useNavigate();
+  const [designFromContentOpen, setDesignFromContentOpen] = useState(false);
+  
+  const handleDesignFromContent = (content: string, type: 'paste' | 'upload' | 'url') => {
+    console.log('Design from content:', { content, type });
+    // TODO: Implement the actual design from content flow
+    navigate('/document-model');
+  };
 
   const features = [
     {
@@ -80,10 +90,18 @@ const Index = () => {
             and collaborative editing features.
           </p>
           <div className="flex flex-wrap gap-3 justify-center">
-            <Button onClick={() => navigate('/documents')} size="lg" className="gap-2">
+            <Button 
+              onClick={() => setDesignFromContentOpen(true)} 
+              size="lg" 
+              className="bg-gradient-primary hover:shadow-glow transition-all duration-200 gap-2"
+            >
+              <Sparkles className="w-5 h-5" />
+              Design from content
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+            <Button onClick={() => navigate('/documents')} variant="outline" size="lg" className="gap-2">
               <FileText className="w-5 h-5" />
               My Documents
-              <ArrowRight className="w-4 h-4" />
             </Button>
             <Button 
               onClick={() => navigate('/documents/new/editor')} 
@@ -217,6 +235,13 @@ const Index = () => {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Design from Content Dialog */}
+      <DesignFromContentDialog
+        open={designFromContentOpen}
+        onOpenChange={setDesignFromContentOpen}
+        onConfirm={handleDesignFromContent}
+      />
     </div>
   );
 };

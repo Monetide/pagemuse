@@ -8,6 +8,7 @@ import { useImport } from '@/hooks/useImport'
 import { ImportDialog, ImportMode } from '@/components/import/ImportDialog'
 import { ImportDropZone } from '@/components/import/ImportDropZone'
 import { TemplateGalleryDialog } from '@/components/template/TemplateGalleryDialog'
+import { DesignFromContentDialog } from '@/components/document/DesignFromContentDialog'
 import { DocumentActions } from '@/components/document/DocumentActions'
 import { useImportHistory } from '@/hooks/useImportHistory'
 import { ImportCommit } from '@/lib/import-history'
@@ -22,7 +23,8 @@ import {
   Star,
   Users,
   BarChart3,
-  Upload
+  Upload,
+  Sparkles
 } from 'lucide-react'
 
 export default function Dashboard() {
@@ -37,6 +39,7 @@ export default function Dashboard() {
   
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false)
+  const [designFromContentOpen, setDesignFromContentOpen] = useState(false)
   
   const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'User'
 
@@ -113,6 +116,12 @@ export default function Dashboard() {
       setImportDialogOpen(true)
     }
   }
+  
+  const handleDesignFromContent = (content: string, type: 'paste' | 'upload' | 'url') => {
+    console.log('Design from content:', { content, type });
+    // TODO: Implement the actual design from content flow
+    navigate('/document-model');
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -126,13 +135,22 @@ export default function Dashboard() {
             Let's create something amazing today
           </p>
         </div>
-        <Button 
-          className="bg-gradient-primary hover:shadow-glow transition-all duration-200"
-          onClick={() => navigate('/document-model')}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          New Document
-        </Button>
+        <div className="flex gap-3">
+          <Button 
+            className="bg-gradient-primary hover:shadow-glow transition-all duration-200"
+            onClick={() => setDesignFromContentOpen(true)}
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            Design from content
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={() => navigate('/document-model')}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            New Document
+          </Button>
+        </div>
       </div>
 
       {/* Stats Overview */}
@@ -305,6 +323,14 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Button 
               variant="outline" 
+              className="h-24 flex-col gap-2 hover:shadow-soft transition-all border-primary/20 hover:border-primary/40"
+              onClick={() => setDesignFromContentOpen(true)}
+            >
+              <Sparkles className="w-6 h-6 text-primary" />
+              <span>Design from content</span>
+            </Button>
+            <Button 
+              variant="outline" 
               className="h-24 flex-col gap-2 hover:shadow-soft transition-all"
               onClick={() => navigate('/document-model')}
             >
@@ -326,14 +352,6 @@ export default function Dashboard() {
             >
               <Palette className="w-6 h-6 text-primary" />
               <span>New from Template</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-24 flex-col gap-2 hover:shadow-soft transition-all"
-              onClick={() => navigate('/documents')}
-            >
-              <BarChart3 className="w-6 h-6 text-primary" />
-              <span>View Analytics</span>
             </Button>
           </div>
         </CardContent>
@@ -369,6 +387,13 @@ export default function Dashboard() {
         onOpenChange={setTemplateGalleryOpen}
         mode="new"
         title="New Document"
+      />
+      
+      {/* Design from Content Dialog */}
+      <DesignFromContentDialog
+        open={designFromContentOpen}
+        onOpenChange={setDesignFromContentOpen}
+        onConfirm={handleDesignFromContent}
       />
     </div>
   )

@@ -3,18 +3,20 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { DesignFromContentDialog } from '@/components/document/DesignFromContentDialog'
 import { useTemplates } from '@/hooks/useSupabaseData'
 import { useTemplateApplication } from '@/hooks/useTemplateApplication'
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext'
 import { TemplateGallery } from '@/components/template/TemplateGallery'
 import { Template } from '@/hooks/useSupabaseData'
-import { Plus, Palette, Building2, Search, Filter } from 'lucide-react'
+import { Plus, Palette, Building2, Search, Filter, Sparkles } from 'lucide-react'
 
 export default function TemplateLibrary() {
   const { currentWorkspace } = useWorkspaceContext()
   const { templates, loading } = useTemplates()
   const { createFromTemplate } = useTemplateApplication()
   const [searchQuery, setSearchQuery] = useState('')
+  const [designFromContentOpen, setDesignFromContentOpen] = useState(false)
 
   // Separate workspace and global templates
   const workspaceTemplates = templates.filter(template => 
@@ -44,6 +46,11 @@ export default function TemplateLibrary() {
     // TODO: Implement template duplication to workspace
     console.log('Duplicating template to workspace:', template.name)
   }
+  
+  const handleDesignFromContent = (content: string, type: 'paste' | 'upload' | 'url') => {
+    console.log('Design from content:', { content, type });
+    // TODO: Implement the actual design from content flow
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -55,10 +62,19 @@ export default function TemplateLibrary() {
             {filteredWorkspaceTemplates.length + filteredGlobalTemplates.length} template{filteredWorkspaceTemplates.length + filteredGlobalTemplates.length !== 1 ? 's' : ''} available for {currentWorkspace?.name}
           </p>
         </div>
-        <Button className="bg-gradient-primary hover:shadow-glow transition-all duration-200">
-          <Plus className="w-4 h-4 mr-2" />
-          Create Template
-        </Button>
+        <div className="flex gap-3">
+          <Button 
+            onClick={() => setDesignFromContentOpen(true)}
+            className="bg-gradient-primary hover:shadow-glow transition-all duration-200"
+          >
+            <Sparkles className="w-4 h-4 mr-2" />
+            Design from content
+          </Button>
+          <Button variant="outline">
+            <Plus className="w-4 h-4 mr-2" />
+            Create Template
+          </Button>
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -125,6 +141,13 @@ export default function TemplateLibrary() {
           />
         </div>
       )}
+      
+      {/* Design from Content Dialog */}
+      <DesignFromContentDialog
+        open={designFromContentOpen}
+        onOpenChange={setDesignFromContentOpen}
+        onConfirm={handleDesignFromContent}
+      />
     </div>
   )
 }
