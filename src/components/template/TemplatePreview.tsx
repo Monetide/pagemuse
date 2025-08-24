@@ -22,6 +22,7 @@ import {
   Shield
 } from 'lucide-react'
 import { Template } from '@/hooks/useSupabaseData'
+import { TemplateApplyBrandKitButton } from './TemplateApplyBrandKitButton'
 
 interface TemplatePreviewProps {
   template: Template
@@ -113,6 +114,7 @@ export function TemplatePreview({
                 onColorwayChange={handleColorwayChange}
                 variant="compact"
               />
+              <TemplateApplyBrandKitButton template={template} />
               <Button onClick={onUseTemplate}>
                 {mode === 'apply' ? 'Apply Template' : 'Use This Template'}
               </Button>
