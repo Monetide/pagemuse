@@ -28,6 +28,7 @@ import { Label } from "@/components/ui/label";
 import { useWorkspaceContext } from "@/contexts/WorkspaceContext";
 import { useWorkspaceNavigation } from "@/hooks/useWorkspaceNavigation";
 import { useWorkspaces } from "@/hooks/useWorkspaces";
+import { useWorkspaceBootstrap } from "@/hooks/useWorkspaceBootstrap";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -159,8 +160,9 @@ const JoinWorkspaceDialog = ({ children }: { children: React.ReactNode }) => {
 
 export const WorkspaceSwitcher = () => {
   const [open, setOpen] = useState(false);
-  const { currentWorkspace, workspaces } = useWorkspaceContext();
+  const { currentWorkspace, workspaces, refetchWorkspaces } = useWorkspaceContext();
   const { switchToWorkspace } = useWorkspaceNavigation();
+  const { bootstrapWorkspace } = useWorkspaceBootstrap();
 
   if (!currentWorkspace) {
     return (
@@ -239,6 +241,22 @@ export const WorkspaceSwitcher = () => {
                   <span className="text-sm">Create Workspace</span>
                 </CommandItem>
               </CreateWorkspaceDialog>
+              <CommandItem
+                onSelect={async () => {
+                  const workspaceId = await bootstrapWorkspace();
+                  if (workspaceId) {
+                    await refetchWorkspaces();
+                    switchToWorkspace(workspaceId);
+                  }
+                  setOpen(false);
+                }}
+                className="flex items-center space-x-2 p-2 cursor-pointer"
+              >
+                <div className="flex h-6 w-6 items-center justify-center rounded border bg-muted">
+                  <Building2 className="h-3 w-3" />
+                </div>
+                <span className="text-sm">Create Personal Workspace</span>
+              </CommandItem>
               <JoinWorkspaceDialog>
                 <CommandItem
                   onSelect={() => setOpen(false)}

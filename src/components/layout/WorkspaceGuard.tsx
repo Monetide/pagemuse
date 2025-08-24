@@ -3,6 +3,7 @@ import { useParams, Navigate, useLocation } from 'react-router-dom';
 import { useWorkspaces } from '@/hooks/useWorkspaces';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyWorkspaceState } from '@/components/workspace/EmptyWorkspaceState';
 
 interface WorkspaceGuardProps {
   children: React.ReactNode;
@@ -28,18 +29,9 @@ export const WorkspaceGuard = ({ children }: WorkspaceGuardProps) => {
     );
   }
 
-  // If no workspaces exist, something went wrong with migration
+  // If no workspaces exist, show bootstrap UI
   if (workspaces.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-center">
-          <h2 className="text-lg font-semibold mb-2">No Workspaces Found</h2>
-          <p className="text-muted-foreground">
-            It looks like your account doesn't have any workspaces. Please contact support.
-          </p>
-        </div>
-      </div>
-    );
+    return <EmptyWorkspaceState />;
   }
 
   // If workspaceId is provided but doesn't exist, redirect to first workspace

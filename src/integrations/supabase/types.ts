@@ -1019,6 +1019,10 @@ export type Database = {
         }
         Returns: string
       }
+      ensure_personal_workspace: {
+        Args: { target_user_id: string }
+        Returns: string
+      }
       generate_workspace_slug: {
         Args: { base_name: string }
         Returns: string
