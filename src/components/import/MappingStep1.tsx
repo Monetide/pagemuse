@@ -1,14 +1,28 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { FileText, Plus, RefreshCw, Replace, MousePointer } from 'lucide-react'
+import { Separator } from '@/components/ui/separator'
+import { 
+  FileText, 
+  Plus, 
+  RefreshCw, 
+  Replace, 
+  BookOpen,
+  FileCheck,
+  Briefcase,
+  Sidebar,
+  Building2,
+  AlertCircle
+} from 'lucide-react'
 import { MappingConfig } from './MappingWizard'
 import { IRDocument } from '@/lib/ir-types'
 import { SemanticDocument } from '@/lib/document-model'
 import { useTemplates } from '@/hooks/useSupabaseData'
 import { Template } from '@/hooks/useSupabaseData'
+import { useWorkspaces } from '@/hooks/useWorkspaces'
 
 interface MappingStep1Props {
   config: MappingConfig
@@ -19,35 +33,66 @@ interface MappingStep1Props {
 
 export function MappingStep1({ config, updateConfig, currentDocument, irDocument }: MappingStep1Props) {
   const { templates, loading } = useTemplates()
+  const { workspaces } = useWorkspaces()
+  
+  // Get current workspace from URL params or use first available
+  const currentWorkspace = workspaces[0] // This should be improved to get actual current workspace
 
   const modeOptions = [
     {
       value: 'new-document' as const,
-      label: 'New Document',
-      description: 'Create a new document from the imported content',
+      label: 'Create New Document',
+      description: 'Start fresh with a new document in the current workspace',
       icon: FileText,
-      available: true
+      available: true,
+      showDocTitle: false
     },
     {
-      value: 'append-section' as const,
-      label: 'Append Section',
-      description: 'Add imported content as new sections to the current document',
+      value: 'insert-current' as const,
+      label: 'Insert into Current',
+      description: 'Add content to the currently open document',
       icon: Plus,
-      available: !!currentDocument
+      available: !!currentDocument,
+      showDocTitle: true
     },
     {
-      value: 'insert-at-cursor' as const,
-      label: 'Insert at Cursor',
-      description: 'Insert content at the current cursor position',
-      icon: MousePointer,
-      available: !!currentDocument
-    },
-    {
-      value: 'replace-selection' as const,
-      label: 'Replace Selection',
-      description: 'Replace currently selected content with imported content',
+      value: 'replace-current' as const,
+      label: 'Replace Current',
+      description: 'Replace all content in the currently open document',
       icon: Replace,
-      available: !!currentDocument
+      available: !!currentDocument,
+      showDocTitle: true
+    }
+  ]
+
+  const useCaseOptions = [
+    {
+      value: 'ebook' as const,
+      label: 'eBook',
+      description: 'Long-form content with chapters and sections',
+      icon: BookOpen,
+      color: 'text-blue-600'
+    },
+    {
+      value: 'whitepaper' as const,
+      label: 'White Paper',
+      description: 'Research document or technical report',
+      icon: FileCheck,
+      color: 'text-green-600'
+    },
+    {
+      value: 'case-study' as const,
+      label: 'Case Study',
+      description: 'Business analysis or success story',
+      icon: Briefcase,
+      color: 'text-purple-600'
+    },
+    {
+      value: 'other' as const,
+      label: 'Other',
+      description: 'General document type',
+      icon: FileText,
+      color: 'text-gray-600'
     }
   ]
 
@@ -55,6 +100,27 @@ export function MappingStep1({ config, updateConfig, currentDocument, irDocument
 
   return (
     <div className="space-y-6 p-6 h-full overflow-auto">
+      {/* Workspace Context */}
+      <Card className="border-0 shadow-soft border-l-4 border-l-primary bg-primary/5">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Building2 className="w-5 h-5" />
+            Target Workspace
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Building2 className="w-4 h-4 text-primary" />
+            </div>
+            <div>
+              <p className="font-medium text-primary">{currentWorkspace?.name || 'Current Workspace'}</p>
+              <p className="text-sm text-muted-foreground">Content will be imported here</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Content Summary */}
       <Card className="border-0 shadow-soft">
         <CardHeader>
@@ -130,7 +196,7 @@ export function MappingStep1({ config, updateConfig, currentDocument, irDocument
                         isSelected ? 'text-primary' : 'text-muted-foreground'
                       }`} />
                       <div className="flex-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 mb-1">
                           <Label className={`font-medium ${
                             isSelected ? 'text-primary' : 'text-foreground'
                           }`}>
@@ -142,8 +208,72 @@ export function MappingStep1({ config, updateConfig, currentDocument, irDocument
                             </Badge>
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground mt-1">
+                        <p className="text-sm text-muted-foreground">
                           {mode.description}
+                        </p>
+                        {mode.showDocTitle && currentDocument && (
+                          <div className="mt-2 p-2 rounded bg-muted/50 border-l-2 border-l-orange-400">
+                            <div className="flex items-center gap-2 text-sm">
+                              <AlertCircle className="w-4 h-4 text-orange-500" />
+                              <span className="font-medium">Current Document:</span>
+                              <span className="text-muted-foreground">{currentDocument.title}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Use Case Selection */}
+      <Card className="border-0 shadow-soft">
+        <CardHeader>
+          <CardTitle>Document Use Case</CardTitle>
+          <CardDescription>
+            Select the type of document you're importing to optimize structure and formatting
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-3">
+            {useCaseOptions.map((useCase) => {
+              const Icon = useCase.icon
+              const isSelected = config.useCase === useCase.value
+              
+              return (
+                <Card 
+                  key={useCase.value}
+                  className={`cursor-pointer transition-all duration-200 ${
+                    isSelected 
+                      ? 'border-primary shadow-glow bg-primary/5' 
+                      : 'border-muted hover:border-accent hover:shadow-soft'
+                  }`}
+                  onClick={() => updateConfig({ useCase: useCase.value })}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <Icon className={`w-5 h-5 ${
+                        isSelected ? 'text-primary' : useCase.color
+                      }`} />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <Label className={`font-medium ${
+                            isSelected ? 'text-primary' : 'text-foreground'
+                          }`}>
+                            {useCase.label}
+                          </Label>
+                          {isSelected && (
+                            <Badge variant="secondary" className="bg-primary/10 text-primary text-xs">
+                              Selected
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {useCase.description}
                         </p>
                       </div>
                     </div>
@@ -154,6 +284,44 @@ export function MappingStep1({ config, updateConfig, currentDocument, irDocument
           </div>
         </CardContent>
       </Card>
+
+      {/* Flow Settings */}
+      <Card className="border-0 shadow-soft">
+        <CardHeader>
+          <CardTitle>Flow Settings</CardTitle>
+          <CardDescription>
+            Configure how content flows and is displayed in the document
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Sidebar className="w-4 h-4" />
+                Sidebar Flow
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Enable sidebar navigation and content flow management
+              </p>
+            </div>
+            <Switch
+              checked={config.sidebarFlow}
+              onCheckedChange={(checked) => updateConfig({ sidebarFlow: checked })}
+            />
+          </div>
+          
+          {config.sidebarFlow && (
+            <div className="p-3 rounded-lg bg-muted/30 border-l-2 border-l-blue-400">
+              <p className="text-sm text-muted-foreground">
+                <strong>Sidebar flow enabled:</strong> Content will be optimized for navigation with 
+                table of contents, cross-references, and section jumping.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Separator className="my-6" />
 
       {/* Template Selection */}
       <Card className="border-0 shadow-soft">

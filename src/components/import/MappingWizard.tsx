@@ -16,7 +16,9 @@ import { Template } from '@/hooks/useSupabaseData'
 
 export interface MappingConfig {
   // Step 1: Scope & Intent
-  mode: 'new-document' | 'append-section' | 'insert-at-cursor' | 'replace-selection'
+  mode: 'new-document' | 'insert-current' | 'replace-current'
+  useCase: 'ebook' | 'whitepaper' | 'case-study' | 'other'
+  sidebarFlow: boolean
   template?: Template
   themeOverride?: string
   
@@ -79,6 +81,8 @@ export function MappingWizard({
   })
   const [config, setConfig] = useState<MappingConfig>({
     mode: 'new-document',
+    useCase: 'other',
+    sidebarFlow: true,
     sectionization: {
       newSectionAtH1: true,
       newSectionAtH2: false,
@@ -148,6 +152,8 @@ export function MappingWizard({
     // Reset config to defaults
     setConfig({
       mode: 'new-document',
+      useCase: 'other',
+      sidebarFlow: true,
       sectionization: {
         newSectionAtH1: true,
         newSectionAtH2: false,
