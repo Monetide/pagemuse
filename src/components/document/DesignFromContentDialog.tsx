@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -7,22 +7,45 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
-import { FileText, Upload, Link, AlertCircle, Sparkles } from 'lucide-react';
+import { FileText, Upload, Link, AlertCircle, Sparkles, Loader2, Globe, X } from 'lucide-react';
 
 interface DesignFromContentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm?: (content: string, type: 'paste' | 'upload' | 'url') => void;
+  onConfirm?: (payload: IngestPayload) => void;
+}
+
+interface IngestPayload {
+  type: 'paste' | 'upload' | 'url';
+  content: string;
+  metadata?: {
+    fileName?: string;
+    fileSize?: number;
+    fileType?: string;
+    domain?: string;
+    additionalFiles?: File[];
+  };
 }
 
 export const DesignFromContentDialog = ({ open, onOpenChange, onConfirm }: DesignFromContentDialogProps) => {
   const { currentWorkspace } = useWorkspaceContext();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<'paste' | 'upload' | 'url'>('paste');
   const [pastedContent, setPastedContent] = useState('');
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [urlInput, setUrlInput] = useState('');
+  const [fetchedContent, setFetchedContent] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const supportedFormats = ['.docx', '.pdf', '.txt', '.md', '.html'];
+  const supportedMimeTypes = [
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/pdf',
+    'text/plain',
+    'text/markdown',
+    'text/html'
+  ];
   const maxFileSize = 10; // MB
   
   const hasContent = () => {
@@ -32,7 +55,7 @@ export const DesignFromContentDialog = ({ open, onOpenChange, onConfirm }: Desig
       case 'upload':
         return uploadedFiles.length > 0;
       case 'url':
-        return urlInput.trim().length > 0 && isValidUrl(urlInput);
+        return urlInput.trim().length > 0 && isValidUrl(urlInput) && fetchedContent.length > 0;
       default:
         return false;
     }
@@ -40,42 +63,131 @@ export const DesignFromContentDialog = ({ open, onOpenChange, onConfirm }: Desig
   
   const isValidUrl = (url: string) => {
     try {
-      new URL(url);
-      return true;
+      const urlObj = new URL(url);
+      return ['http:', 'https:'].includes(urlObj.protocol);
     } catch {
       return false;
     }
   };
   
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const getDomainFromUrl = (url: string) => {
+    try {
+      return new URL(url).hostname;
+    } catch {
+      return '';
+    }
+  };
+  
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    setError(null);
+    
+    if (files.length === 0) return;
+    
     const validFiles = files.filter(file => {
       const extension = '.' + file.name.split('.').pop()?.toLowerCase();
-      const isValidFormat = supportedFormats.includes(extension);
+      const isValidFormat = supportedFormats.includes(extension) || 
+                           supportedMimeTypes.includes(file.type);
       const isValidSize = file.size <= maxFileSize * 1024 * 1024;
-      return isValidFormat && isValidSize;
+      
+      if (!isValidFormat) {
+        setError(`File "${file.name}" is not a supported format. Please use: ${supportedFormats.join(', ')}`);
+        return false;
+      }
+      
+      if (!isValidSize) {
+        setError(`File "${file.name}" is too large. Maximum size is ${maxFileSize}MB.`);
+        return false;
+      }
+      
+      return true;
     });
+    
+    if (validFiles.length === 0) return;
+    
     setUploadedFiles(validFiles);
+  };
+  
+  const handleUrlFetch = async () => {
+    if (!isValidUrl(urlInput)) {
+      setError('Please enter a valid HTTP or HTTPS URL');
+      return;
+    }
+    
+    setIsLoading(true);
+    setError(null);
+    setFetchedContent('');
+    
+    try {
+      // Note: In a real implementation, this would need to be done through a backend
+      // due to CORS restrictions. For now, we'll simulate the fetch.
+      const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(urlInput)}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      const htmlContent = data.contents;
+      
+      if (!htmlContent) {
+        throw new Error('No content found at this URL');
+      }
+      
+      setFetchedContent(htmlContent);
+    } catch (err) {
+      console.error('URL fetch error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to fetch content from URL. Try a different source.');
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   const handleContinue = () => {
     if (!hasContent()) return;
     
-    let content = '';
+    let payload: IngestPayload;
+    
     switch (activeTab) {
       case 'paste':
-        content = pastedContent;
+        payload = {
+          type: 'paste',
+          content: pastedContent,
+        };
         break;
-      case 'upload':
-        content = uploadedFiles[0]?.name || '';
+        
+      case 'upload': {
+        const primaryFile = uploadedFiles[0];
+        const additionalFiles = uploadedFiles.slice(1);
+        payload = {
+          type: 'upload',
+          content: '', // Will be populated by file reading
+          metadata: {
+            fileName: primaryFile.name,
+            fileSize: primaryFile.size,
+            fileType: primaryFile.type,
+            additionalFiles: additionalFiles.length > 0 ? additionalFiles : undefined,
+          },
+        };
         break;
+      }
+        
       case 'url':
-        content = urlInput;
+        payload = {
+          type: 'url',
+          content: fetchedContent,
+          metadata: {
+            domain: getDomainFromUrl(urlInput),
+          },
+        };
         break;
+        
+      default:
+        return;
     }
     
-    onConfirm?.(content, activeTab);
-    onOpenChange(false);
+    onConfirm?.(payload);
+    handleClose();
   };
   
   const handleClose = () => {
@@ -83,8 +195,18 @@ export const DesignFromContentDialog = ({ open, onOpenChange, onConfirm }: Desig
     setPastedContent('');
     setUploadedFiles([]);
     setUrlInput('');
+    setFetchedContent('');
+    setError(null);
+    setIsLoading(false);
     setActiveTab('paste');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
     onOpenChange(false);
+  };
+  
+  const clearError = () => {
+    setError(null);
   };
 
   return (
@@ -98,6 +220,36 @@ export const DesignFromContentDialog = ({ open, onOpenChange, onConfirm }: Desig
         </DialogHeader>
         
         <div className="flex-1 overflow-hidden">
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm text-destructive font-medium">{error}</p>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="h-auto p-0 text-xs text-destructive/80 hover:text-destructive"
+                      onClick={clearError}
+                    >
+                      Try a different source
+                    </Button>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto w-auto p-1"
+                  onClick={clearError}
+                >
+                  <X className="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+          )}
+          
           {/* Workspace Info */}
           <div className="mb-6">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
@@ -138,10 +290,11 @@ export const DesignFromContentDialog = ({ open, onOpenChange, onConfirm }: Desig
                     value={pastedContent}
                     onChange={(e) => setPastedContent(e.target.value)}
                     className="min-h-[200px] resize-none"
+                    onFocus={clearError}
                   />
                   {pastedContent.length > 0 && (
                     <p className="text-xs text-muted-foreground mt-2">
-                      {pastedContent.length} characters
+                      {pastedContent.length.toLocaleString()} characters
                     </p>
                   )}
                 </div>
@@ -155,6 +308,7 @@ export const DesignFromContentDialog = ({ open, onOpenChange, onConfirm }: Desig
                   <Card className="border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 transition-colors">
                     <CardContent className="p-6">
                       <input
+                        ref={fileInputRef}
                         type="file"
                         id="file-upload"
                         multiple
@@ -179,12 +333,24 @@ export const DesignFromContentDialog = ({ open, onOpenChange, onConfirm }: Desig
                   
                   {uploadedFiles.length > 0 && (
                     <div className="space-y-2">
-                      <p className="text-sm font-medium">Selected files:</p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium">Selected files:</p>
+                        {uploadedFiles.length > 1 && (
+                          <Badge variant="secondary" className="text-xs">
+                            Using first file, {uploadedFiles.length - 1} stored for later
+                          </Badge>
+                        )}
+                      </div>
                       {uploadedFiles.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between p-2 bg-muted rounded-md">
+                        <div key={index} className={`flex items-center justify-between p-2 rounded-md ${
+                          index === 0 ? 'bg-primary/10 border border-primary/20' : 'bg-muted'
+                        }`}>
                           <div className="flex items-center gap-2">
                             <FileText className="w-4 h-4 text-primary" />
                             <span className="text-sm">{file.name}</span>
+                            {index === 0 && (
+                              <Badge variant="secondary" className="text-xs">Primary</Badge>
+                            )}
                           </div>
                           <Badge variant="outline" className="text-xs">
                             {(file.size / (1024 * 1024)).toFixed(1)}MB
@@ -201,18 +367,54 @@ export const DesignFromContentDialog = ({ open, onOpenChange, onConfirm }: Desig
                   <label className="text-sm font-medium text-foreground mb-2 block">
                     Website URL
                   </label>
-                  <Input
-                    type="url"
-                    placeholder="https://example.com/article"
-                    value={urlInput}
-                    onChange={(e) => setUrlInput(e.target.value)}
-                  />
-                  {urlInput.length > 0 && !isValidUrl(urlInput) && (
-                    <div className="flex items-center gap-2 mt-2 text-destructive text-sm">
-                      <AlertCircle className="w-4 h-4" />
-                      Please enter a valid URL
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      <Input
+                        type="url"
+                        placeholder="https://example.com/article"
+                        value={urlInput}
+                        onChange={(e) => setUrlInput(e.target.value)}
+                        onFocus={clearError}
+                        className="flex-1"
+                      />
+                      <Button
+                        onClick={handleUrlFetch}
+                        disabled={!isValidUrl(urlInput) || isLoading}
+                        variant="outline"
+                        className="px-3"
+                      >
+                        {isLoading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          'Fetch'
+                        )}
+                      </Button>
                     </div>
-                  )}
+                    
+                    {urlInput.length > 0 && isValidUrl(urlInput) && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Globe className="w-4 h-4" />
+                        <span>Domain: {getDomainFromUrl(urlInput)}</span>
+                      </div>
+                    )}
+                    
+                    {urlInput.length > 0 && !isValidUrl(urlInput) && (
+                      <div className="flex items-center gap-2 text-sm text-destructive">
+                        <AlertCircle className="w-4 h-4" />
+                        Please enter a valid HTTP or HTTPS URL
+                      </div>
+                    )}
+                    
+                    {fetchedContent && (
+                      <div className="p-3 bg-success/10 border border-success/20 rounded-lg">
+                        <div className="flex items-center gap-2 text-sm text-success">
+                          <Sparkles className="w-4 h-4" />
+                          Content fetched successfully ({fetchedContent.length.toLocaleString()} characters)
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
                   <p className="text-xs text-muted-foreground mt-2">
                     We'll extract and format the content from the webpage
                   </p>
@@ -241,11 +443,20 @@ export const DesignFromContentDialog = ({ open, onOpenChange, onConfirm }: Desig
           </Button>
           <Button 
             onClick={handleContinue}
-            disabled={!hasContent()}
+            disabled={!hasContent() || isLoading}
             className="bg-gradient-primary hover:shadow-glow transition-all duration-200"
           >
-            <Sparkles className="w-4 h-4 mr-2" />
-            Continue
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4 mr-2" />
+                Continue
+              </>
+            )}
           </Button>
         </div>
       </DialogContent>

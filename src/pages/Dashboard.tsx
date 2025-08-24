@@ -117,8 +117,8 @@ export default function Dashboard() {
     }
   }
   
-  const handleDesignFromContent = (content: string, type: 'paste' | 'upload' | 'url') => {
-    console.log('Design from content:', { content, type });
+  const handleDesignFromContent = (payload: any) => {
+    console.log('Design from content payload:', payload);
     // TODO: Implement the actual design from content flow
     navigate('/document-model');
   }
