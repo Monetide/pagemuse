@@ -2,13 +2,14 @@ import { useState, useCallback } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { CheckCircle, ArrowLeft, ArrowRight } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { CheckCircle, ArrowLeft, ArrowRight, RotateCcw, AlertTriangle } from 'lucide-react'
 import { MappingStep1 } from './MappingStep1'
 import { MappingStep2 } from './MappingStep2'
 import { MappingStep3 } from './MappingStep3'
 import { CleanupResultsPanel } from './CleanupResultsPanel'
-import { PostImportCleaner, getDefaultCleanupOptions, CleanupOptions, CleanupResult } from '@/lib/post-import-cleaner'
-import { IRMapper } from '@/lib/ir-mapper'
+import { CleanupAuditEntry } from '@/lib/ir-cleanup'
 import { IRDocument } from '@/lib/ir-types'
 import { SemanticDocument } from '@/lib/document-model'
 import { Template } from '@/hooks/useSupabaseData'
@@ -38,7 +39,6 @@ export interface MappingConfig {
     blockquoteHandling: 'quote' | 'callout' | 'auto'
     defaultCalloutType: 'info' | 'note' | 'warning' | 'error' | 'success'
   }
-  cleanupOptions: CleanupOptions
   
   // Step 3: Preview Fixups
   structuralEdits: {
@@ -56,9 +56,10 @@ interface MappingWizardProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   irDocument: IRDocument
-  onConfirm: (config: MappingConfig, mappedDocument: SemanticDocument, cleanupResult?: CleanupResult) => void
+  onConfirm: (config: MappingConfig, mappedDocument: SemanticDocument, cleanupAudit?: CleanupAuditEntry[]) => void
   currentDocument?: SemanticDocument
   fileName?: string
+  cleanupAudit?: CleanupAuditEntry[]
 }
 
 export function MappingWizard({
@@ -67,9 +68,15 @@ export function MappingWizard({
   irDocument,
   onConfirm,
   currentDocument,
-  fileName
+  fileName,
+  cleanupAudit
 }: MappingWizardProps) {
   const [currentStep, setCurrentStep] = useState(1)
+  const [stepValidation, setStepValidation] = useState({
+    step1: true,  // Always valid once visited
+    step2: true,  // Always valid once visited
+    step3: false  // Valid when preview is generated
+  })
   const [config, setConfig] = useState<MappingConfig>({
     mode: 'new-document',
     sectionization: {
@@ -90,7 +97,6 @@ export function MappingWizard({
       blockquoteHandling: 'auto',
       defaultCalloutType: 'note'
     },
-    cleanupOptions: getDefaultCleanupOptions('text'), // Will be updated based on file type
     structuralEdits: {
       headingPromotions: {},
       headingDemotions: {},
@@ -103,15 +109,22 @@ export function MappingWizard({
   })
   
   const [previewDocument, setPreviewDocument] = useState<SemanticDocument | null>(null)
-  const [cleanupResult, setCleanupResult] = useState<CleanupResult | null>(null)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
   const updateConfig = useCallback((updates: Partial<MappingConfig>) => {
     setConfig(prev => ({ ...prev, ...updates }))
+    setHasUnsavedChanges(true)
   }, [])
 
   const handleNext = useCallback(() => {
-    if (currentStep < 3) {
+    if (currentStep < 3 && canProceedToStep(currentStep + 1)) {
       setCurrentStep(prev => prev + 1)
+      
+      // Mark current step as visited/valid
+      setStepValidation(prev => ({
+        ...prev,
+        [`step${currentStep}`]: true
+      }))
     }
   }, [currentStep])
 
@@ -121,88 +134,184 @@ export function MappingWizard({
     }
   }, [currentStep])
 
+  const handleStepClick = useCallback((step: number) => {
+    if (canProceedToStep(step)) {
+      setCurrentStep(step)
+    }
+  }, [])
+
+  const handleStartOver = useCallback(() => {
+    setCurrentStep(1)
+    setStepValidation({ step1: true, step2: true, step3: false })
+    setPreviewDocument(null)
+    setHasUnsavedChanges(false)
+    // Reset config to defaults
+    setConfig({
+      mode: 'new-document',
+      sectionization: {
+        newSectionAtH1: true,
+        newSectionAtH2: false,
+        minHeadingLevel: 1
+      },
+      tocSettings: {
+        depth: 3,
+        includeH1: true,
+        includeH2: true,
+        includeH3: true,
+        includeH4: false,
+        includeH5: false,
+        includeH6: false
+      },
+      calloutMapping: {
+        blockquoteHandling: 'auto',
+        defaultCalloutType: 'note'
+      },
+      structuralEdits: {
+        headingPromotions: {},
+        headingDemotions: {},
+        captionMarks: [],
+        decorativeImages: [],
+        tableHeaderRows: {},
+        sectionMerges: [],
+        sectionSplits: []
+      }
+    })
+  }, [])
+
   const handleConfirm = useCallback(async () => {
     if (!previewDocument) return
     
     try {
-      // Apply post-import cleanups
-      const cleaner = new PostImportCleaner(config.cleanupOptions)
-      const cleanupResult = cleaner.cleanDocument(previewDocument)
-      
-      setCleanupResult(cleanupResult)
-      onConfirm(config, cleanupResult.document, cleanupResult)
+      onConfirm(config, previewDocument, cleanupAudit)
       onOpenChange(false)
+      setHasUnsavedChanges(false)
     } catch (error) {
-      console.error('Failed to apply cleanups:', error)
-      // Fallback to original document if cleanup fails
-      onConfirm(config, previewDocument)
-      onOpenChange(false)
+      console.error('Failed to confirm mapping:', error)
     }
-  }, [config, previewDocument, onConfirm, onOpenChange])
+  }, [config, previewDocument, cleanupAudit, onConfirm, onOpenChange])
+
+  const canProceedToStep = (step: number): boolean => {
+    switch (step) {
+      case 1: return true
+      case 2: return stepValidation.step1
+      case 3: return stepValidation.step1 && stepValidation.step2
+      default: return false
+    }
+  }
+
+  const handlePreviewUpdate = useCallback((document: SemanticDocument) => {
+    setPreviewDocument(document)
+    setStepValidation(prev => ({ ...prev, step3: true }))
+  }, [])
 
   const getStepTitle = (step: number) => {
     switch (step) {
       case 1: return 'Scope & Intent'
-      case 2: return 'Structure Rules'
+      case 2: return 'Sectionization'
       case 3: return 'Preview & Fixups'
+      default: return ''
+    }
+  }
+
+  const getStepDescription = (step: number) => {
+    switch (step) {
+      case 1: return 'Choose import mode and template'
+      case 2: return 'Configure document structure'
+      case 3: return 'Review and make final adjustments'
       default: return ''
     }
   }
 
   const isStepComplete = (step: number) => {
     switch (step) {
-      case 1: return true // Always complete once visited
-      case 2: return true // Always complete once visited  
-      case 3: return previewDocument !== null
+      case 1: return stepValidation.step1
+      case 2: return stepValidation.step2
+      case 3: return stepValidation.step3
       default: return false
     }
   }
 
+  const isStepAccessible = (step: number) => canProceedToStep(step)
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl h-[90vh] flex flex-col">
+      <DialogContent className="max-w-7xl h-[90vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
-          <DialogTitle className="flex items-center gap-3">
-            <span>Import Mapping Wizard</span>
-            {fileName && (
-              <span className="text-sm font-normal text-muted-foreground">
-                • {fileName}
-              </span>
-            )}
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle className="flex items-center gap-3">
+                <span>Import Mapping Wizard</span>
+                {fileName && (
+                  <Badge variant="outline" className="text-sm font-normal">
+                    {fileName}
+                  </Badge>
+                )}
+                {hasUnsavedChanges && (
+                  <Badge variant="outline" className="text-sm font-normal border-warning text-warning">
+                    <AlertTriangle className="w-3 h-3 mr-1" />
+                    Unsaved
+                  </Badge>
+                )}
+              </DialogTitle>
+            </div>
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleStartOver}
+              className="text-muted-foreground hover:text-destructive"
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Start Over
+            </Button>
+          </div>
           
           {/* Progress Steps */}
-          <div className="flex items-center gap-4 mt-4">
+          <div className="flex items-center gap-6 mt-6">
             {[1, 2, 3].map((step) => (
-              <div key={step} className="flex items-center gap-2">
-                <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
-                  currentStep === step 
-                    ? 'border-primary bg-primary text-primary-foreground' 
-                    : isStepComplete(step)
-                    ? 'border-success bg-success text-success-foreground'
-                    : 'border-muted-foreground bg-background text-muted-foreground'
-                }`}>
+              <div key={step} className="flex items-center gap-3">
+                <div 
+                  className={`flex items-center justify-center w-10 h-10 rounded-full border-2 cursor-pointer transition-all duration-200 ${
+                    currentStep === step 
+                      ? 'border-primary bg-primary text-primary-foreground shadow-glow' 
+                      : isStepComplete(step)
+                      ? 'border-success bg-success text-success-foreground'
+                      : isStepAccessible(step)
+                      ? 'border-muted-foreground bg-background text-muted-foreground hover:border-primary hover:text-primary'
+                      : 'border-muted bg-muted/30 text-muted-foreground cursor-not-allowed'
+                  }`}
+                  onClick={() => handleStepClick(step)}
+                >
                   {isStepComplete(step) && currentStep !== step ? (
-                    <CheckCircle className="w-4 h-4" />
+                    <CheckCircle className="w-5 h-5" />
                   ) : (
                     <span className="text-sm font-semibold">{step}</span>
                   )}
                 </div>
-                <span className={`text-sm font-medium ${
+                <div className={`transition-colors ${
                   currentStep === step ? 'text-foreground' : 'text-muted-foreground'
                 }`}>
-                  {getStepTitle(step)}
-                </span>
+                  <div className="text-sm font-medium">{getStepTitle(step)}</div>
+                  <div className="text-xs text-muted-foreground">{getStepDescription(step)}</div>
+                </div>
                 {step < 3 && (
-                  <div className="w-8 h-px bg-border ml-2" />
+                  <div className="w-12 h-px bg-border ml-3" />
                 )}
               </div>
             ))}
           </div>
           
           {/* Progress Bar */}
-          <Progress value={(currentStep / 3) * 100} className="mt-4" />
+          <div className="mt-4">
+            <Progress value={(currentStep / 3) * 100} className="h-2" />
+            <div className="flex justify-between text-xs text-muted-foreground mt-1">
+              <span>Step {currentStep} of 3</span>
+              <span>{Math.round((currentStep / 3) * 100)}% Complete</span>
+            </div>
+          </div>
         </DialogHeader>
+
+        <Separator className="my-4" />
 
         {/* Step Content */}
         <div className="flex-1 overflow-hidden flex">
@@ -227,23 +336,48 @@ export function MappingWizard({
                 config={config}
                 updateConfig={updateConfig}
                 irDocument={irDocument}
-                onPreviewUpdate={setPreviewDocument}
+                onPreviewUpdate={handlePreviewUpdate}
               />
             )}
           </div>
           
           {/* Right sidebar for cleanup results */}
-          {cleanupResult && (
-            <div className="w-80 border-l border-border">
-              <CleanupResultsPanel cleanupResult={cleanupResult} />
+          {cleanupAudit && cleanupAudit.length > 0 && (
+            <div className="w-80 border-l border-border pl-4">
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium">Cleanup Applied</h3>
+                <div className="space-y-2">
+                  {cleanupAudit.map((entry, index) => (
+                    <div key={index} className="p-3 rounded-lg border bg-muted/30">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="secondary" className="text-xs">
+                          {entry.count} changes
+                        </Badge>
+                      </div>
+                      <p className="text-sm">{entry.description}</p>
+                      {entry.details && (
+                        <p className="text-xs text-muted-foreground mt-1">{entry.details}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>
 
         {/* Navigation */}
-        <div className="flex-shrink-0 flex justify-between items-center pt-4 border-t">
-          <div className="text-sm text-muted-foreground">
-            Step {currentStep} of 3
+        <div className="flex-shrink-0 flex justify-between items-center pt-6 border-t">
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-muted-foreground">
+              Step {currentStep} of 3 • {getStepTitle(currentStep)}
+            </div>
+            {hasUnsavedChanges && (
+              <Badge variant="outline" className="text-xs border-warning text-warning">
+                <AlertTriangle className="w-3 h-3 mr-1" />
+                Unsaved changes
+              </Badge>
+            )}
           </div>
           
           <div className="flex gap-3">
@@ -251,22 +385,28 @@ export function MappingWizard({
               variant="outline"
               onClick={handlePrevious}
               disabled={currentStep === 1}
+              className="flex items-center gap-2"
             >
-              <ArrowLeft className="w-4 h-4 mr-2" />
+              <ArrowLeft className="w-4 h-4" />
               Previous
             </Button>
             
             {currentStep < 3 ? (
-              <Button onClick={handleNext}>
+              <Button 
+                onClick={handleNext}
+                disabled={!canProceedToStep(currentStep + 1)}
+                className="flex items-center gap-2"
+              >
                 Next
-                <ArrowRight className="w-4 h-4 ml-2" />
+                <ArrowRight className="w-4 h-4" />
               </Button>
             ) : (
               <Button 
                 onClick={handleConfirm}
-                disabled={!previewDocument}
-                className="bg-gradient-primary hover:shadow-glow transition-all duration-200"
+                disabled={!stepValidation.step3 || !previewDocument}
+                className="bg-gradient-primary hover:shadow-glow transition-all duration-200 flex items-center gap-2"
               >
+                <CheckCircle className="w-4 h-4" />
                 Import Document
               </Button>
             )}
