@@ -178,16 +178,12 @@ export function DraftTemplatesView() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold">Draft Templates</h2>
-          <p className="text-muted-foreground">
-            Manage your template packages and create test documents
-          </p>
-        </div>
-        <Button onClick={() => navigate('/admin/templates/generator')}>
-          <Plus className="w-4 h-4 mr-2" />
-          Create Template
-        </Button>
+      <div>
+        <h2 className="text-2xl font-bold">Draft Templates</h2>
+        <p className="text-muted-foreground">
+          Manage your template packages and create test documents
+        </p>
+      </div>
       </div>
 
       {/* Search */}
