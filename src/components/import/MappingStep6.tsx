@@ -19,14 +19,16 @@ import { SemanticDocument } from '@/lib/document-model'
 import { PaginatedRenderer } from '@/components/document/PaginatedRenderer'
 import { generateLayout } from '@/lib/layout-engine'
 import { PAGE_MASTER_PRESETS } from '@/lib/page-masters'
-import { useState, useEffect } from 'react'
+import { insertAutoTOC, hasTOCBlock } from '@/lib/auto-toc-inserter'
+import { detectCrossReferences, convertCrossReferences } from '@/lib/cross-reference-detector'
+import { useState, useEffect, useCallback } from 'react'
 
 interface MappingStep6Props {
   config: MappingConfig
   updateConfig: (updates: Partial<MappingConfig>) => void
   irDocument: IRDocument
   mappedDocument: SemanticDocument
-  onComplete: () => void
+  onComplete: (processedDocument?: SemanticDocument) => void
 }
 
 export function MappingStep6({ 
@@ -148,6 +150,16 @@ export function MappingStep6({
   useEffect(() => {
     performLayout()
   }, [])
+
+  const handleComplete = useCallback(() => {
+    if (mappedDocument) {
+      // Apply auto-TOC and cross-reference processing
+      const processedDocument = processDocumentForCompletion(mappedDocument, config)
+      onComplete(processedDocument)
+    } else {
+      onComplete()
+    }
+  }, [onComplete, mappedDocument, config])
 
   const getSidebarStats = () => {
     const enabledSections = config.structuralEdits.sidebarSections?.length || 0
@@ -348,7 +360,7 @@ export function MappingStep6({
       {/* Action Button */}
       <div className="flex justify-center pt-4">
         <Button 
-          onClick={onComplete}
+          onClick={handleComplete}
           disabled={isGenerating || !layoutResult}
           size="lg"
           className="px-8"
@@ -358,4 +370,27 @@ export function MappingStep6({
       </div>
     </div>
   )
+}
+
+/**
+ * Process document for completion by adding auto-TOC and converting cross-references
+ */
+const processDocumentForCompletion = (
+  document: SemanticDocument,
+  config: MappingConfig
+): SemanticDocument => {
+  let processedDocument = document
+
+  // Step 1: Insert auto-TOC if enabled and not already present
+  if (config.tocSettings && !hasTOCBlock(processedDocument)) {
+    processedDocument = insertAutoTOC(processedDocument)
+  }
+
+  // Step 2: Detect and convert cross-references
+  const detectedRefs = detectCrossReferences(processedDocument)
+  if (detectedRefs.length > 0) {
+    processedDocument = convertCrossReferences(processedDocument, detectedRefs)
+  }
+
+  return processedDocument
 }
