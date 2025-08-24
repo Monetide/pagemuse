@@ -10,6 +10,7 @@ export interface Workspace {
   created_by: string;
   created_at: string;
   updated_at: string;
+  default_brand_kit_id?: string | null;
 }
 
 export interface WorkspaceMember {
@@ -109,7 +110,7 @@ export const useWorkspaces = () => {
     }
   };
 
-  const updateWorkspace = async (workspaceId: string, updates: Partial<Pick<Workspace, 'name' | 'slug'>>) => {
+  const updateWorkspace = async (workspaceId: string, updates: Partial<Pick<Workspace, 'name' | 'slug' | 'default_brand_kit_id'>>) => {
     try {
       const { error } = await supabase
         .from('workspaces')

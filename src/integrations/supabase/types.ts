@@ -945,6 +945,53 @@ export type Database = {
         }
         Relationships: []
       }
+      workspace_invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by_user_id: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by_user_id: string
+          role: Database["public"]["Enums"]["workspace_role"]
+          token: string
+          workspace_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by_user_id?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by_user_id: string
+          role?: Database["public"]["Enums"]["workspace_role"]
+          token?: string
+          workspace_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by_user_id?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by_user_id?: string
+          role?: Database["public"]["Enums"]["workspace_role"]
+          token?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_invitations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_members: {
         Row: {
           created_at: string
@@ -981,6 +1028,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string
+          default_brand_kit_id: string | null
           id: string
           name: string
           slug: string
@@ -989,6 +1037,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by: string
+          default_brand_kit_id?: string | null
           id?: string
           name: string
           slug: string
@@ -997,6 +1046,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string
+          default_brand_kit_id?: string | null
           id?: string
           name?: string
           slug?: string
@@ -1009,6 +1059,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_workspace_invitation: {
+        Args: { invitation_token: string }
+        Returns: Json
+      }
       create_document_version: {
         Args: {
           p_content: Json

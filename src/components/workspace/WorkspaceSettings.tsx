@@ -4,7 +4,7 @@ import { PermissionButton } from '@/components/auth/PermissionButton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Settings, Users, Crown, Shield } from 'lucide-react';
+import { Settings, Users, Crown, Shield, Palette } from 'lucide-react';
 
 export const WorkspaceSettings = () => {
   const { 
@@ -57,24 +57,26 @@ export const WorkspaceSettings = () => {
         </PermissionGuard>
 
         {/* Brand Kits Management */}
-        <PermissionGuard action="manage_brand_kits">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center space-x-2">
-                <Shield className="h-5 w-5" />
-                <CardTitle>Brand Kits</CardTitle>
-              </div>
-              <CardDescription>
-                Manage workspace brand guidelines and assets.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <PermissionButton action="manage_brand_kits" className="w-full">
-                Manage Brand Kits
-              </PermissionButton>
-            </CardContent>
-          </Card>
-        </PermissionGuard>
+        <Card className="opacity-60">
+          <CardHeader>
+            <div className="flex items-center space-x-2">
+              <Palette className="h-5 w-5" />
+              <CardTitle>Brand</CardTitle>
+            </div>
+            <CardDescription>
+              No Brand Kits yet. Add one after workspace setup.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button 
+              className="w-full" 
+              disabled
+              variant="outline"
+            >
+              Manage Brand Kits (Coming Soon)
+            </Button>
+          </CardContent>
+        </Card>
 
         {/* Template Management */}
         <PermissionGuard action="manage_templates">
