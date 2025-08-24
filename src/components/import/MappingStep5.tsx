@@ -12,6 +12,9 @@ import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { MappingConfig } from './MappingWizard'
 import { IRDocument } from '@/lib/ir-types'
+import { SemanticDocument } from '@/lib/document-model'
+import { HighlightsPanel } from './HighlightsPanel'
+import { HighlightCandidate } from '@/lib/highlight-detector'
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext'
 import { useAuth } from '@/hooks/useAuth'
 import { cn } from '@/lib/utils'
@@ -29,21 +32,22 @@ interface MappingStep5Props {
   config: MappingConfig
   updateConfig: (updates: Partial<MappingConfig>) => void
   irDocument: IRDocument
-  fileName?: string
-  onComplete: (metadata: DocumentMetadata) => void
-  onValidationChange?: (isValid: boolean) => void
+  mappedDocument?: SemanticDocument | null
+  onComplete: () => void
 }
 
 export function MappingStep5({ 
   config, 
   updateConfig, 
   irDocument,
-  fileName,
-  onComplete,
-  onValidationChange 
+  mappedDocument,
+  onComplete
 }: MappingStep5Props) {
   const { currentWorkspace } = useWorkspaceContext()
   const { user } = useAuth()
+  
+  const [selectedHighlights, setSelectedHighlights] = useState<HighlightCandidate[]>([])
+  const [showHighlights, setShowHighlights] = useState(false)
   
   const [metadata, setMetadata] = useState<DocumentMetadata>({
     title: '',
@@ -63,36 +67,26 @@ export function MappingStep5({
   const [isGeneratingCover, setIsGeneratingCover] = useState(false)
   const [coverPreview, setCoverPreview] = useState<any>(null)
 
-  // Extract suggestions from IR document and filename
+  // Extract suggestions from IR document
   const generateSuggestions = useCallback(() => {
     const allBlocks = irDocument.sections?.flatMap(section => section.blocks) || []
     const headings = allBlocks.filter(b => b.type === 'heading')
-    const figures = allBlocks.filter(b => b.type === 'figure')
     
     // Title suggestions
     const titleSuggestions: string[] = []
     
-    // 1. Use filename as fallback
-    if (fileName) {
-      const cleanFileName = fileName
-        .replace(/\.[^/.]+$/, '') // Remove extension
-        .replace(/[-_]/g, ' ') // Replace dashes and underscores with spaces
-        .replace(/\b\w/g, l => l.toUpperCase()) // Title case
-      titleSuggestions.push(cleanFileName)
-    }
-    
-    // 2. Use document title if available
+    // Use document title if available
     if (irDocument.title) {
       titleSuggestions.push(irDocument.title)
     }
     
-    // 3. Use first H1 heading
+    // Use first H1 heading
     const firstH1 = headings.find(h => h.content?.level === 1)
     if (firstH1 && typeof firstH1.content?.text === 'string') {
       titleSuggestions.push(firstH1.content.text)
     }
     
-    // Subtitle suggestions (H2s, or subtitle-like patterns)
+    // Subtitle suggestions (H2s)
     const subtitleSuggestions: string[] = []
     const h2Headings = headings.filter(h => h.content?.level === 2)
     h2Headings.slice(0, 3).forEach(h => {
@@ -110,7 +104,7 @@ export function MappingStep5({
       subtitleSuggestions.push('Success Story and Lessons Learned', 'Implementation Case Study')
     }
     
-    // Keyword suggestions based on headings and content
+    // Keyword suggestions based on headings
     const keywordSuggestions: string[] = []
     headings.forEach(h => {
       if (typeof h.content?.text === 'string') {
@@ -123,15 +117,6 @@ export function MappingStep5({
       }
     })
     
-    // Add use case specific keywords
-    if (config.useCase === 'ebook') {
-      keywordSuggestions.push('guide', 'tutorial', 'comprehensive', 'learning')
-    } else if (config.useCase === 'whitepaper') {
-      keywordSuggestions.push('research', 'analysis', 'insights', 'industry', 'report')
-    } else if (config.useCase === 'case-study') {
-      keywordSuggestions.push('case study', 'success', 'implementation', 'results')
-    }
-    
     setSuggestions({
       titles: [...new Set(titleSuggestions)].slice(0, 3),
       subtitles: [...new Set(subtitleSuggestions)].slice(0, 3),
@@ -142,60 +127,40 @@ export function MappingStep5({
     if (!metadata.title && titleSuggestions.length > 0) {
       setMetadata(prev => ({ ...prev, title: titleSuggestions[0] }))
     }
-  }, [irDocument, fileName, config.useCase, metadata.title])
+  }, [irDocument, config.useCase, metadata.title])
 
   // Generate cover preview
   const generateCoverPreview = useCallback(() => {
-    if (!metadata.title || !config.template) return
+    if (!metadata.title) return
     
     setIsGeneratingCover(true)
     
-    // Simulate cover generation
     setTimeout(() => {
       const allBlocks = irDocument.sections?.flatMap(section => section.blocks) || []
       const figures = allBlocks.filter(b => b.type === 'figure')
-      
-      // Determine cover image
-      let coverImageAlt = metadata.title
-      if (figures.length > 0) {
-        const firstFigure = figures[0]
-        if (firstFigure.content?.alt) {
-          coverImageAlt = firstFigure.content.alt
-        }
-      }
       
       const coverData = {
         title: metadata.title,
         subtitle: metadata.subtitle,
         author: metadata.author,
         date: format(metadata.date, 'MMMM yyyy'),
-        imageAlt: coverImageAlt,
-        hasImage: figures.length > 0,
-        template: config.template
+        hasImage: figures.length > 0
       }
       
       setCoverPreview(coverData)
       setIsGeneratingCover(false)
-    }, 800)
-  }, [metadata, config.template, irDocument])
+    }, 500)
+  }, [metadata, irDocument])
 
-  // Initialize suggestions
   useEffect(() => {
     generateSuggestions()
   }, [generateSuggestions])
 
-  // Generate cover preview when metadata changes
   useEffect(() => {
     if (metadata.title) {
       generateCoverPreview()
     }
   }, [generateCoverPreview])
-
-  // Validate form
-  useEffect(() => {
-    const isValid = Boolean(metadata.title.trim() && metadata.author.trim())
-    onValidationChange?.(isValid)
-  }, [metadata, onValidationChange])
 
   const handleMetadataChange = (field: keyof DocumentMetadata, value: any) => {
     setMetadata(prev => ({ ...prev, [field]: value }))
@@ -229,8 +194,23 @@ export function MappingStep5({
     }
   }
 
-  const handleComplete = () => {
-    onComplete(metadata)
+  const handleGenerateAndContinue = () => {
+    // Apply highlights to document here if needed
+    if (selectedHighlights.length > 0) {
+      console.log('Applying highlights:', selectedHighlights)
+      // TODO: Insert highlights into the document structure
+    }
+    
+    onComplete()
+  }
+
+  const handleHighlightsConfirm = (highlights: HighlightCandidate[]) => {
+    setSelectedHighlights(highlights)
+    setShowHighlights(false)
+  }
+
+  const toggleHighlightsPanel = () => {
+    setShowHighlights(!showHighlights)
   }
 
   const renderSuggestions = (
@@ -283,20 +263,14 @@ export function MappingStep5({
     
     return (
       <div className="relative h-64 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-lg p-6 overflow-hidden">
-        {/* Cover shape background (faint) */}
+        {/* Cover shape background */}
         <div className="absolute inset-0 opacity-10">
           <svg className="w-full h-full" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
             <path fill="currentColor" d="M40,-45C50,-35,55,-20,60,-5C65,10,70,25,65,35C60,45,45,50,30,55C15,60,0,65,-15,60C-30,55,-60,40,-70,20C-80,0,-70,-25,-55,-40C-40,-55,-20,-60,0,-60C20,-60,40,-55,40,-45Z" transform="translate(100 100)" />
           </svg>
         </div>
         
-        {/* Body background pattern (very faint) */}
-        <div className="absolute inset-0 opacity-5" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-        }} />
-        
         <div className="relative z-10 h-full flex flex-col justify-between">
-          {/* Title and Subtitle */}
           <div className="space-y-2">
             <h1 className="text-xl font-bold text-foreground leading-tight">
               {coverPreview.title}
@@ -308,7 +282,6 @@ export function MappingStep5({
             )}
           </div>
           
-          {/* Center space for potential image */}
           {coverPreview.hasImage && (
             <div className="flex-1 flex items-center justify-center">
               <div className="w-16 h-16 bg-primary/20 rounded-lg flex items-center justify-center">
@@ -317,7 +290,6 @@ export function MappingStep5({
             </div>
           )}
           
-          {/* Author and Date */}
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">
               {coverPreview.author}
@@ -332,202 +304,238 @@ export function MappingStep5({
   }
 
   return (
-    <div className="flex h-full gap-6">
-      {/* Left Panel - Metadata Form */}
-      <div className="flex-1 space-y-6">
-        <div>
-          <h2 className="text-lg font-semibold mb-2">Document Metadata</h2>
-          <p className="text-sm text-muted-foreground mb-6">
-            Complete the document information to generate your cover page
-          </p>
+    <div className="flex h-full gap-4 p-4">
+      {/* Main Content - Cover & Metadata */}
+      <div className={cn("transition-all duration-300", showHighlights ? "w-1/2" : "flex-1")}>
+        <div className="space-y-6 h-full overflow-auto pr-2">
           
-          <div className="space-y-6">
-            {/* Title */}
-            <div className="space-y-2">
-              <Label htmlFor="title" className="flex items-center gap-2">
-                <BookOpen className="w-4 h-4" />
-                Title *
-              </Label>
-              <Input
-                id="title"
-                value={metadata.title}
-                onChange={(e) => handleMetadataChange('title', e.target.value)}
-                placeholder="Enter document title"
-                className="text-base"
-              />
-              {renderSuggestions('titles', (value) => handleSuggestionClick('title', value))}
-            </div>
+          {/* Header */}
+          <div>
+            <h2 className="text-lg font-semibold mb-2">Cover & Metadata Generator</h2>
+            <p className="text-sm text-muted-foreground">
+              Complete the document information and review smart highlights
+            </p>
+          </div>
 
-            {/* Subtitle */}
-            <div className="space-y-2">
-              <Label htmlFor="subtitle">Subtitle (Optional)</Label>
-              <Input
-                id="subtitle"
-                value={metadata.subtitle || ''}
-                onChange={(e) => handleMetadataChange('subtitle', e.target.value)}
-                placeholder="Enter subtitle"
-              />
-              {renderSuggestions('subtitles', (value) => handleSuggestionClick('subtitle', value))}
-            </div>
-
-            {/* Author */}
-            <div className="space-y-2">
-              <Label htmlFor="author" className="flex items-center gap-2">
-                <User className="w-4 h-4" />
-                Author *
-              </Label>
-              <Input
-                id="author"
-                value={metadata.author}
-                onChange={(e) => handleMetadataChange('author', e.target.value)}
-                placeholder="Enter author name"
-              />
-            </div>
-
-            {/* Date */}
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <CalendarIcon className="w-4 h-4" />
-                Publication Date
-              </Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !metadata.date && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {metadata.date ? format(metadata.date, "PPP") : "Pick a date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={metadata.date}
-                    onSelect={(date) => date && handleMetadataChange('date', date)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            {/* Keywords */}
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Tag className="w-4 h-4" />
-                Keywords
-              </Label>
+          <div className="flex gap-6">
+            {/* Left Panel - Metadata Form */}
+            <div className="flex-1 space-y-6">
+              {/* Title */}
               <div className="space-y-2">
+                <Label htmlFor="title" className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4" />
+                  Title *
+                </Label>
                 <Input
-                  value={keywordInput}
-                  onChange={(e) => setKeywordInput(e.target.value)}
-                  onKeyDown={handleKeywordInputKeyPress}
-                  placeholder="Add keywords (press Enter or comma to add)"
+                  id="title"
+                  value={metadata.title}
+                  onChange={(e) => handleMetadataChange('title', e.target.value)}
+                  placeholder="Enter document title"
+                  className="text-base"
                 />
-                
-                {/* Current keywords */}
-                {metadata.keywords.length > 0 && (
+                {renderSuggestions('titles', (value) => handleSuggestionClick('title', value))}
+              </div>
+
+              {/* Subtitle */}
+              <div className="space-y-2">
+                <Label htmlFor="subtitle">Subtitle (Optional)</Label>
+                <Input
+                  id="subtitle"
+                  value={metadata.subtitle || ''}
+                  onChange={(e) => handleMetadataChange('subtitle', e.target.value)}
+                  placeholder="Enter subtitle"
+                />
+                {renderSuggestions('subtitles', (value) => handleSuggestionClick('subtitle', value))}
+              </div>
+
+              {/* Author */}
+              <div className="space-y-2">
+                <Label htmlFor="author" className="flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Author *
+                </Label>
+                <Input
+                  id="author"
+                  value={metadata.author}
+                  onChange={(e) => handleMetadataChange('author', e.target.value)}
+                  placeholder="Enter author name"
+                />
+              </div>
+
+              {/* Date */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <CalendarIcon className="w-4 h-4" />
+                  Publication Date
+                </Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !metadata.date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {metadata.date ? format(metadata.date, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={metadata.date}
+                      onSelect={(date) => date && handleMetadataChange('date', date)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Keywords */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Tag className="w-4 h-4" />
+                  Keywords
+                </Label>
+                <div className="space-y-2">
+                  <Input
+                    value={keywordInput}
+                    onChange={(e) => setKeywordInput(e.target.value)}
+                    onKeyDown={handleKeywordInputKeyPress}
+                    placeholder="Add keywords (press Enter or comma to add)"
+                  />
+                  
+                  {/* Current keywords */}
+                  {metadata.keywords.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {metadata.keywords.map((keyword) => (
+                        <Badge
+                          key={keyword}
+                          variant="secondary"
+                          className="cursor-pointer hover:bg-destructive hover:text-destructive-foreground"
+                          onClick={() => handleKeywordRemove(keyword)}
+                        >
+                          {keyword} ×
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Keyword suggestions */}
                   <div className="flex flex-wrap gap-2">
-                    {metadata.keywords.map((keyword) => (
-                      <Badge
+                    {suggestions.keywords.map((keyword) => (
+                      <Button
                         key={keyword}
-                        variant="secondary"
-                        className="cursor-pointer hover:bg-destructive hover:text-destructive-foreground"
-                        onClick={() => handleKeywordRemove(keyword)}
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => handleKeywordAdd(keyword)}
                       >
-                        {keyword} ×
-                      </Badge>
+                        <Tag className="w-3 h-3 mr-1" />
+                        {keyword}
+                      </Button>
                     ))}
                   </div>
-                )}
-                
-                {/* Keyword suggestions */}
-                <div className="flex flex-wrap gap-2">
-                  {suggestions.keywords.map((keyword) => (
-                    <Button
-                      key={keyword}
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={() => handleKeywordAdd(keyword)}
-                    >
-                      <Tag className="w-3 h-3 mr-1" />
-                      {keyword}
-                    </Button>
-                  ))}
                 </div>
               </div>
-            </div>
 
-            {/* Description */}
-            <div className="space-y-2">
-              <Label htmlFor="description">Description (Optional)</Label>
-              <Textarea
-                id="description"
-                value={metadata.description || ''}
-                onChange={(e) => handleMetadataChange('description', e.target.value)}
-                placeholder="Brief description of the document"
-                rows={3}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Right Panel - Cover Preview */}
-      <div className="w-80 border-l border-border pl-6">
-        <div className="sticky top-0 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium">Cover Preview</h3>
-            <Badge variant="outline" className="text-xs">
-              {config.template?.name || 'Template'}
-            </Badge>
-          </div>
-          
-          {renderCoverPreview()}
-          
-          {coverPreview && (
-            <div className="space-y-3">
-              <Separator />
-              
+              {/* Description */}
               <div className="space-y-2">
-                <h4 className="text-xs font-medium text-muted-foreground">COVER ELEMENTS</h4>
-                <div className="space-y-1 text-xs">
-                  <div className="flex justify-between">
-                    <span>Title (H1):</span>
-                    <span className="text-muted-foreground">✓</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Subtitle (Caption):</span>
-                    <span className="text-muted-foreground">
-                      {metadata.subtitle ? '✓' : '−'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Cover Shape:</span>
-                    <span className="text-muted-foreground">✓</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Body Background:</span>
-                    <span className="text-muted-foreground">✓</span>
-                  </div>
-                </div>
+                <Label htmlFor="description">Description (Optional)</Label>
+                <Textarea
+                  id="description"
+                  value={metadata.description || ''}
+                  onChange={(e) => handleMetadataChange('description', e.target.value)}
+                  placeholder="Brief description of the document"
+                  rows={3}
+                />
               </div>
-              
-              <Button 
-                onClick={handleComplete}
-                disabled={!metadata.title.trim() || !metadata.author.trim()}
-                className="w-full bg-gradient-primary hover:shadow-glow transition-all duration-200"
-              >
-                Insert Cover & Continue
-              </Button>
             </div>
-          )}
+
+            {/* Right Panel - Cover Preview */}
+            <div className="w-80 border-l border-border pl-6">
+              <div className="sticky top-0 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium">Cover Preview</h3>
+                  <Badge variant="outline" className="text-xs">
+                    {config.template?.name || 'Template'}
+                  </Badge>
+                </div>
+                
+                {renderCoverPreview()}
+                
+                {coverPreview && (
+                  <div className="space-y-3">
+                    <Separator />
+                    
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-medium text-muted-foreground">COVER ELEMENTS</h4>
+                      <div className="space-y-1 text-xs">
+                        <div className="flex justify-between">
+                          <span>Title (H1):</span>
+                          <span className="text-muted-foreground">✓</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Subtitle (Caption):</span>
+                          <span className="text-muted-foreground">
+                            {metadata.subtitle ? '✓' : '−'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Cover Shape:</span>
+                          <span className="text-muted-foreground">✓</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Body Background:</span>
+                          <span className="text-muted-foreground">✓</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-between items-center pt-6 border-t">
+            <Button 
+              variant="outline" 
+              onClick={toggleHighlightsPanel}
+              className="flex items-center gap-2"
+            >
+              <Sparkles className="w-4 h-4" />
+              {showHighlights ? 'Hide' : 'Show'} Smart Highlights
+              {selectedHighlights.length > 0 && (
+                <Badge variant="secondary" className="ml-1">
+                  {selectedHighlights.length}
+                </Badge>
+              )}
+            </Button>
+            
+            <Button 
+              onClick={handleGenerateAndContinue}
+              size="lg"
+              className="flex items-center gap-2"
+              disabled={!metadata.title.trim() || !metadata.author.trim()}
+            >
+              <FileText className="w-4 h-4" />
+              Insert Cover & Continue
+            </Button>
+          </div>
         </div>
       </div>
+
+      {/* Highlights Panel */}
+      {showHighlights && (
+        <div className="w-1/2 border-l border-border pl-4">
+          <HighlightsPanel 
+            irDocument={irDocument}
+            onHighlightsConfirm={handleHighlightsConfirm}
+          />
+        </div>
+      )}
     </div>
   )
 }
