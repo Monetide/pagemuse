@@ -5,6 +5,7 @@ import { toast } from '@/hooks/use-toast'
 export interface MediaFile {
   id: string
   user_id: string
+  workspace_id?: string
   display_name: string
   file_name: string
   file_path: string

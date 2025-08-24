@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useDocuments } from '@/hooks/useSupabaseData'
+import { useWorkspaceContext } from '@/contexts/WorkspaceContext'
 import { supabase } from '@/integrations/supabase/client'
 import { toast } from '@/hooks/use-toast'
 import { 
@@ -18,7 +19,8 @@ import {
   Eye,
   Edit,
   Trash2,
-  X
+  X,
+  Building2
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -29,12 +31,14 @@ import {
 
 export default function MyDocuments() {
   const navigate = useNavigate()
+  const { currentWorkspace } = useWorkspaceContext()
   const { documents, loading, removeDocument, bulkDeleteDocuments } = useDocuments()
   const [searchQuery, setSearchQuery] = useState('')
   const [deletingDocId, setDeletingDocId] = useState<string | null>(null)
   const [selectedDocuments, setSelectedDocuments] = useState<Set<string>>(new Set())
   const [bulkDeleting, setBulkDeleting] = useState(false)
 
+  // Since documents are already filtered by workspace in the hook, we don't need additional filtering
   const filteredDocuments = documents.filter(doc =>
     doc.title.toLowerCase().includes(searchQuery.toLowerCase())
   )
@@ -185,12 +189,12 @@ export default function MyDocuments() {
         <div>
           <h1 className="text-3xl font-bold text-foreground">My Documents</h1>
           <p className="text-muted-foreground mt-2">
-            Manage and organize all your documents
+            {documents.length} document{documents.length !== 1 ? 's' : ''} in {currentWorkspace?.name}
           </p>
         </div>
         <Button 
           className="bg-gradient-primary hover:shadow-glow transition-all duration-200"
-          onClick={() => navigate('/documents/new/editor')}
+          onClick={() => navigate(`/w/${currentWorkspace?.id}/documents/new/editor`)}
         >
           <Plus className="w-4 h-4 mr-2" />
           New Document
@@ -200,8 +204,14 @@ export default function MyDocuments() {
       {/* Search and Filters */}
       <Card className="border-0 shadow-soft">
         <CardContent className="p-6">
-          <div className="flex gap-4 items-center">
-            <div className="relative flex-1">
+          <div className="flex gap-4 items-center flex-wrap">
+            {/* Workspace Filter Chip */}
+            <Badge variant="secondary" className="flex items-center gap-2 px-3 py-1">
+              <Building2 className="w-3 h-3" />
+              Workspace: {currentWorkspace?.name}
+            </Badge>
+            
+            <div className="relative flex-1 min-w-64">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
                 placeholder="Search documents..."
@@ -285,7 +295,7 @@ export default function MyDocuments() {
               {!searchQuery && (
                 <Button 
                   className="bg-gradient-primary hover:shadow-glow transition-all duration-200"
-                  onClick={() => navigate('/documents/new/editor')}
+                  onClick={() => navigate(`/w/${currentWorkspace?.id}/documents/new/editor`)}
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Create Document
@@ -353,16 +363,16 @@ export default function MyDocuments() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => {
-                            console.log('Navigating to view document:', doc.id, 'URL:', `/documents/${doc.id}/editor`)
-                            navigate(`/documents/${doc.id}/editor`)
+                            console.log('Navigating to view document:', doc.id, 'URL:', `/w/${currentWorkspace?.id}/documents/${doc.id}/editor`)
+                            navigate(`/w/${currentWorkspace?.id}/documents/${doc.id}/editor`)
                           }}>
                             <Eye className="w-4 h-4 mr-2" />
                             View
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => {
-                            console.log('Navigating to edit document:', doc.id, 'URL:', `/documents/${doc.id}/editor`)
+                            console.log('Navigating to edit document:', doc.id, 'URL:', `/w/${currentWorkspace?.id}/documents/${doc.id}/editor`)
                             console.log('Document object:', doc)
-                            navigate(`/documents/${doc.id}/editor`)
+                            navigate(`/w/${currentWorkspace?.id}/documents/${doc.id}/editor`)
                           }}>
                             <Edit className="w-4 h-4 mr-2" />
                             Edit

@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { useWorkspaceContext } from '@/contexts/WorkspaceContext'
 import { 
   Plus, 
   Search, 
@@ -16,7 +17,8 @@ import {
   SortDesc,
   Calendar,
   Type,
-  Hash
+  Hash,
+  Building2
 } from 'lucide-react'
 import {
   Select,
@@ -39,6 +41,7 @@ import { MediaCard } from '@/components/media/MediaCard'
 import { MediaCollectionsSidebar } from '@/components/media/MediaCollectionsSidebar'
 
 export default function MediaLibrary() {
+  const { currentWorkspace } = useWorkspaceContext()
   const {
     mediaFiles,
     collections,
@@ -61,11 +64,14 @@ export default function MediaLibrary() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [selectedCollectionId, setSelectedCollectionId] = useState<string>()
 
-  // Get all unique tags from media files
-  const allTags = Array.from(new Set(mediaFiles.flatMap(file => file.tags)))
+  // Filter media files by current workspace
+  const workspaceMediaFiles = mediaFiles.filter(file => file.workspace_id === currentWorkspace?.id)
+
+  // Get all unique tags from workspace media files
+  const allTags = Array.from(new Set(workspaceMediaFiles.flatMap(file => file.tags)))
 
   // Filter and sort media files
-  const filteredAndSortedFiles = mediaFiles
+  const filteredAndSortedFiles = workspaceMediaFiles
     .filter(file => {
       const matchesSearch = file.display_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            file.file_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -157,7 +163,7 @@ export default function MediaLibrary() {
               <p className="text-muted-foreground mt-2">
                 {selectedCollectionId 
                   ? `Collection: ${collections.find(c => c.id === selectedCollectionId)?.name || 'Unknown'}`
-                  : `${filteredAndSortedFiles.length} media file${filteredAndSortedFiles.length !== 1 ? 's' : ''} total`
+                  : `${workspaceMediaFiles.length} media file${workspaceMediaFiles.length !== 1 ? 's' : ''} in ${currentWorkspace?.name}`
                 }
               </p>
             </div>
@@ -190,6 +196,12 @@ export default function MediaLibrary() {
 
           {/* Search and Filters */}
           <div className="flex gap-4 items-center flex-wrap">
+            {/* Workspace Filter Chip */}
+            <Badge variant="secondary" className="flex items-center gap-2 px-3 py-1">
+              <Building2 className="w-3 h-3" />
+              Workspace: {currentWorkspace?.name}
+            </Badge>
+            
             <div className="relative flex-1 min-w-64">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
@@ -278,15 +290,15 @@ export default function MediaLibrary() {
               <CardContent className="p-12 text-center">
                 <Image className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-lg font-semibold text-foreground mb-2">
-                  {mediaFiles.length === 0 ? 'No media files yet' : 'No files match your filters'}
+                  {workspaceMediaFiles.length === 0 ? 'No media files yet' : 'No files match your filters'}
                 </h3>
                 <p className="text-muted-foreground mb-6">
-                  {mediaFiles.length === 0
+                  {workspaceMediaFiles.length === 0
                     ? 'Upload your first media file to get started'
                     : 'Try adjusting your search or filters'
                   }
                 </p>
-                {mediaFiles.length === 0 && (
+                {workspaceMediaFiles.length === 0 && (
                   <Button onClick={() => document.getElementById('file-upload')?.click()}>
                     <Upload className="w-4 h-4 mr-2" />
                     Upload First File

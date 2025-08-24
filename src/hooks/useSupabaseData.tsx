@@ -14,6 +14,7 @@ export interface Template {
   is_premium: boolean
   is_global: boolean
   user_id?: string
+  workspace_id?: string
   global_styling: any
   metadata: any
   usage_count: number
@@ -24,6 +25,7 @@ export interface Template {
 export interface Document {
   id: string
   user_id: string
+  workspace_id?: string
   template_id?: string | null
   title: string
   content: any
