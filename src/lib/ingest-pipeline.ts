@@ -13,6 +13,7 @@ import {
 } from './ir-schema';
 import * as mammoth from 'mammoth';
 import { processPDFFile, PDFProcessingOptions } from './pdf-processor';
+import { cleanIRDocument, CleanupResult, IRCleanupOptions, DEFAULT_IR_CLEANUP_OPTIONS } from './ir-cleanup';
 
 import { 
   IRDocument as LegacyIRDocument,
@@ -41,6 +42,8 @@ export interface IngestOptions {
   extractAssets?: boolean;
   // PDF-specific options
   pdfOptions?: PDFProcessingOptions;
+  // IR cleanup options
+  cleanupOptions?: IRCleanupOptions;
 }
 
 export const DEFAULT_INGEST_OPTIONS: IngestOptions = {
@@ -56,7 +59,8 @@ export const DEFAULT_INGEST_OPTIONS: IngestOptions = {
     enableOCR: true,
     detectColumns: true,
     mergeHyphenatedWords: true
-  }
+  },
+  cleanupOptions: DEFAULT_IR_CLEANUP_OPTIONS
 };
 
 // Main ingest function
@@ -106,7 +110,23 @@ export function ingestToIR(
     }
   };
 
-  return convertToLegacyIR(newIR);
+  const legacyIR = convertToLegacyIR(newIR);
+  
+  // Apply cleanup if enabled
+  if (effectiveOptions.cleanupOptions) {
+    const cleanupResult = cleanIRDocument(legacyIR, effectiveOptions.cleanupOptions);
+    // Store cleanup audit in metadata for debugging
+    if (cleanupResult.auditLog.length > 0) {
+      cleanupResult.document.metadata = {
+        ...cleanupResult.document.metadata,
+        cleanupAudit: cleanupResult.auditLog,
+        cleanupSummary: cleanupResult.summary
+      };
+    }
+    return cleanupResult.document;
+  }
+
+  return legacyIR;
 }
 
 // Plain text parser
@@ -805,7 +825,22 @@ export async function ingestDocx(file: File, options: IngestOptions = DEFAULT_IN
       }
     };
 
-    return convertToLegacyIR(newIR);
+    const legacyIR = convertToLegacyIR(newIR);
+    
+    // Apply cleanup if enabled
+    if (options.cleanupOptions) {
+      const cleanupResult = cleanIRDocument(legacyIR, options.cleanupOptions);
+      if (cleanupResult.auditLog.length > 0) {
+        cleanupResult.document.metadata = {
+          ...cleanupResult.document.metadata,
+          cleanupAudit: cleanupResult.auditLog,
+          cleanupSummary: cleanupResult.summary
+        };
+      }
+      return cleanupResult.document;
+    }
+
+    return legacyIR;
   } catch (error) {
     console.error('Error processing DOCX file:', error);
     throw new Error(`Failed to process DOCX file: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -825,7 +860,7 @@ export async function ingestPdf(file: File, options: IngestOptions = DEFAULT_ING
     console.log('PDF processing completed. Converting to legacy format...');
     
     // Convert to legacy format for compatibility
-    return convertToLegacyIR({
+    const legacyIR = convertToLegacyIR({
       title: irDocument.title,
       sections: irDocument.sections.map(section => ({
         id: section.id,
@@ -849,6 +884,21 @@ export async function ingestPdf(file: File, options: IngestOptions = DEFAULT_ING
       })),
       metadata: irDocument.metadata
     } as any);
+    
+    // Apply cleanup if enabled
+    if (options.cleanupOptions) {
+      const cleanupResult = cleanIRDocument(legacyIR, options.cleanupOptions);
+      if (cleanupResult.auditLog.length > 0) {
+        cleanupResult.document.metadata = {
+          ...cleanupResult.document.metadata,
+          cleanupAudit: cleanupResult.auditLog,
+          cleanupSummary: cleanupResult.summary
+        };
+      }
+      return cleanupResult.document;
+    }
+
+    return legacyIR;
     
   } catch (error) {
     console.error('Error processing PDF file:', error);
