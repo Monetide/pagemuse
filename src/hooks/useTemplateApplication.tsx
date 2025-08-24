@@ -5,9 +5,11 @@ import { TemplateEngine } from '@/lib/template-engine'
 import { createTemplate } from '@/lib/template-model'
 import { useToast } from '@/hooks/use-toast'
 import { useDocumentPersistence } from '@/hooks/useDocumentPersistence'
+import { useWorkspaceContext } from '@/contexts/WorkspaceContext'
 
 export function useTemplateApplication() {
   const navigate = useNavigate()
+  const { currentWorkspace } = useWorkspaceContext()
   const { toast } = useToast()
   const { saveDocument } = useDocumentPersistence()
   const [loading, setLoading] = useState(false)
@@ -29,15 +31,15 @@ export function useTemplateApplication() {
       
       console.log('Generated document:', document)
 
-      // Save the document to the database
+      // Save the document to the database - saveDocument already uses workspace context
       const documentId = await saveDocument(document)
       
       if (!documentId) {
         throw new Error('Failed to save document')
       }
 
-      // Navigate to editor with saved document
-      navigate(`/documents/${documentId}/editor`)
+      // Navigate to editor with saved document in workspace context
+      navigate(`/w/${currentWorkspace?.id}/documents/${documentId}/editor`)
       
       toast({
         title: "Template Applied",

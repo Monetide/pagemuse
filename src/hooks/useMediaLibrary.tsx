@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { toast } from '@/hooks/use-toast'
+import { useWorkspaceContext } from '@/contexts/WorkspaceContext'
 
 export interface MediaFile {
   id: string
@@ -58,12 +59,13 @@ export interface UploadProgress {
 }
 
 export const useMediaLibrary = () => {
+  const { currentWorkspace } = useWorkspaceContext()
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([])
   const [collections, setCollections] = useState<MediaCollection[]>([])
   const [loading, setLoading] = useState(true)
   const [uploadProgress, setUploadProgress] = useState<UploadProgress[]>([])
 
-  // Fetch media files
+  // Fetch media files with workspace filtering
   const fetchMediaFiles = useCallback(async (collectionId?: string) => {
     try {
       setLoading(true)
@@ -93,9 +95,11 @@ export const useMediaLibrary = () => {
         if (error) throw error
         setMediaFiles(data || [])
       } else {
+        // Filter by workspace
         const { data, error } = await supabase
           .from('media')
           .select('*')
+          .eq('workspace_id', currentWorkspace?.id)
           .order('created_at', { ascending: false })
 
         if (error) throw error
@@ -110,7 +114,7 @@ export const useMediaLibrary = () => {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [currentWorkspace])
 
   // Fetch collections
   const fetchCollections = useCallback(async () => {
@@ -150,6 +154,15 @@ export const useMediaLibrary = () => {
 
   // Upload files with progress tracking
   const uploadFiles = useCallback(async (files: File[]) => {
+    if (!currentWorkspace) {
+      toast({
+        title: "Upload failed",
+        description: "No workspace selected",
+        variant: "destructive"
+      })
+      return
+    }
+
     const uploadItems: UploadProgress[] = files.map(file => ({
       file,
       progress: 0,
@@ -199,11 +212,12 @@ export const useMediaLibrary = () => {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error('User not authenticated')
 
-        // Create media record
+        // Create media record with workspace context
         const { data: mediaData, error: mediaError } = await supabase
           .from('media')
           .insert({
             user_id: user.id,
+            workspace_id: currentWorkspace?.id,
             display_name: file.name.split('.').slice(0, -1).join('.'),
             file_name: file.name,
             file_path: filePath,
@@ -250,12 +264,12 @@ export const useMediaLibrary = () => {
       }
     }
 
-    // Clear progress after delay
-    setTimeout(() => {
-      setUploadProgress([])
-      fetchMediaFiles() // Refresh media files
-    }, 2000)
-  }, [fetchMediaFiles])
+      // Clear progress after delay
+      setTimeout(() => {
+        setUploadProgress([])
+        fetchMediaFiles() // Refresh media files
+      }, 2000)
+    }, [fetchMediaFiles, currentWorkspace])
 
   // Update media metadata
   const updateMediaMetadata = useCallback(async (
@@ -410,11 +424,13 @@ export const useMediaLibrary = () => {
     })
   }
 
-  // Initialize
+  // Initialize - refetch when workspace changes
   useEffect(() => {
-    fetchMediaFiles()
-    fetchCollections()
-  }, [fetchMediaFiles, fetchCollections])
+    if (currentWorkspace) {
+      fetchMediaFiles()
+      fetchCollections()
+    }
+  }, [fetchMediaFiles, fetchCollections, currentWorkspace])
 
   return {
     mediaFiles,

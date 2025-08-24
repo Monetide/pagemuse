@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { useWorkspaceContext } from '@/contexts/WorkspaceContext'
 import { 
   Save, 
   X, 
@@ -18,7 +19,9 @@ import {
   Settings,
   Command,
   Bug,
-  History
+  History,
+  Building2,
+  ChevronDown
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -40,6 +43,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { SaveStatus, DocumentMetadata } from '@/hooks/useDocumentPersistence'
 import { ShareDialog } from './ShareDialog'
+import { WorkspaceSwitcher } from '@/components/layout/WorkspaceSwitcher'
 
 interface DocumentHeaderProps {
   documentId?: string
@@ -67,11 +71,13 @@ export function DocumentHeader({
   onToggleVersionHistory
 }: DocumentHeaderProps) {
   const navigate = useNavigate()
+  const { currentWorkspace } = useWorkspaceContext()
   const { id } = useParams()
   const [isEditing, setIsEditing] = useState(false)
   const [editingTitle, setEditingTitle] = useState(title)
   const [saveAsTitle, setSaveAsTitle] = useState('')
   const [saveAsOpen, setSaveAsOpen] = useState(false)
+  const [workspaceSwitcherOpen, setWorkspaceSwitcherOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -164,6 +170,28 @@ export function DocumentHeader({
             <FolderOpen className="w-4 h-4 mr-2" />
             Library
           </Button>
+
+          {/* Workspace Pill */}
+          {currentWorkspace && (
+            <div className="relative">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setWorkspaceSwitcherOpen(!workspaceSwitcherOpen)}
+                className="flex items-center gap-2 text-xs px-3 py-1 h-auto relative"
+              >
+                <Building2 className="w-3 h-3" />
+                <span className="font-medium">{currentWorkspace.name}</span>
+                <ChevronDown className="w-3 h-3" />
+              </Button>
+              
+              {workspaceSwitcherOpen && (
+                <div className="absolute top-full left-0 mt-1 z-50">
+                  <WorkspaceSwitcher />
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex items-center gap-2 flex-1">
             {isEditing ? (
