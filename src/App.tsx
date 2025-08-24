@@ -28,7 +28,9 @@ import DocumentModelRedirect from "./components/DocumentModelRedirect";
 import { Navigate } from "react-router-dom";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { HealthCheck } from "@/components/HealthCheck";
-import { InvitationAcceptance } from "@/components/document/InvitationAcceptance";
+import { InvitationAcceptance } from "@/pages/InvitationAcceptance";
+import { WorkspaceMembers } from "@/components/workspace/WorkspaceMembers";
+import { WorkspaceSettings } from "@/components/workspace/WorkspaceSettings";
 import { SharedDocumentViewer } from "@/components/document/SharedDocumentViewer";
 import { PublishedDocumentViewer } from "@/components/document/PublishedDocumentViewer";
 
@@ -50,7 +52,7 @@ const App = () => {
               <ErrorBoundary>
                 <Routes>
                   {/* Public routes - accessible without authentication */}
-                  <Route path="/invite/:token" element={<InvitationAcceptance />} />
+                  <Route path="/invite" element={<InvitationAcceptance />} />
                   <Route path="/shared/:token" element={<SharedDocumentViewer />} />
                   <Route path="/published/:token" element={<PublishedDocumentViewer />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
@@ -101,7 +103,8 @@ const App = () => {
                                     <TemplateGenerator />
                                   </AdminGuard>
                                 } />
-                                <Route path="/settings" element={<div className="p-6">Settings coming soon...</div>} />
+                                 <Route path="/members" element={<WorkspaceMembers />} />
+                                 <Route path="/settings" element={<WorkspaceSettings />} />
                                 {/* Redirects from old paths */}
                                 <Route path="/document-model" element={<DocumentModelRedirect />} />
                                 <Route path="/document-model/:documentId" element={<DocumentModelRedirect />} />

@@ -1,4 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { Resend } from 'npm:resend@2.0.0';
+
+const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -58,13 +61,14 @@ Deno.serve(async (req) => {
     }
 
     if (req.method === 'GET') {
-      // Get workspace members
-      const { data: members, error } = await supabaseClient
+      // Get workspace members and pending invitations
+      const { data: members, error: membersError } = await supabaseClient
         .from('workspace_members')
         .select(`
           id,
           role,
           created_at,
+          user_id,
           profiles:user_id (
             display_name,
             avatar_url
@@ -72,16 +76,23 @@ Deno.serve(async (req) => {
         `)
         .eq('workspace_id', workspaceId);
 
-      if (error) {
-        console.error('Error fetching members:', error);
+      const { data: invitations, error: invitationsError } = await supabaseClient
+        .from('workspace_invitations')
+        .select('*')
+        .eq('workspace_id', workspaceId)
+        .is('accepted_at', null)
+        .gt('expires_at', new Date().toISOString());
+
+      if (membersError || invitationsError) {
+        console.error('Error fetching data:', membersError || invitationsError);
         return new Response(
-          JSON.stringify({ error: 'Failed to fetch members' }),
+          JSON.stringify({ error: 'Failed to fetch workspace data' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       return new Response(
-        JSON.stringify({ members }),
+        JSON.stringify({ members, invitations }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -96,14 +107,90 @@ Deno.serve(async (req) => {
         );
       }
 
-      // TODO: Implement member invitation logic
-      // This would typically involve:
-      // 1. Creating an invitation record
-      // 2. Sending an invitation email
-      // 3. Handling the invitation acceptance flow
+      // Check if user is already a member
+      const { data: existingMember } = await supabaseClient
+        .from('workspace_members')
+        .select('id')
+        .eq('workspace_id', workspaceId)
+        .eq('profiles.email', email)
+        .limit(1);
+
+      if (existingMember && existingMember.length > 0) {
+        return new Response(
+          JSON.stringify({ error: 'User is already a member of this workspace' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Check for existing pending invitation
+      const { data: existingInvite } = await supabaseClient
+        .from('workspace_invitations')
+        .select('id')
+        .eq('workspace_id', workspaceId)
+        .eq('email', email)
+        .is('accepted_at', null)
+        .gt('expires_at', new Date().toISOString())
+        .limit(1);
+
+      if (existingInvite && existingInvite.length > 0) {
+        return new Response(
+          JSON.stringify({ error: 'An invitation is already pending for this email' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Get workspace details for email
+      const { data: workspace } = await supabaseClient
+        .from('workspaces')
+        .select('name')
+        .eq('id', workspaceId)
+        .single();
+
+      // Create invitation
+      const { data: invitation, error: inviteError } = await supabaseClient
+        .from('workspace_invitations')
+        .insert({
+          workspace_id: workspaceId,
+          email,
+          role,
+          invited_by_user_id: user.id
+        })
+        .select()
+        .single();
+
+      if (inviteError) {
+        console.error('Error creating invitation:', inviteError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to create invitation' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Send invitation email
+      try {
+        const inviteUrl = `${Deno.env.get('SUPABASE_URL')?.replace('/rest/v1', '')}/invite?token=${invitation.token}`;
+        
+        await resend.emails.send({
+          from: 'PageMuse <noreply@pagemuse.ai>',
+          to: [email],
+          subject: `You're invited to join ${workspace?.name || 'a workspace'} on PageMuse`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h1>You're invited to join ${workspace?.name || 'a workspace'}</h1>
+              <p>You've been invited to join the workspace "${workspace?.name}" on PageMuse with the role of ${role}.</p>
+              <p><a href="${inviteUrl}" style="background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Accept Invitation</a></p>
+              <p>This invitation will expire in 7 days.</p>
+              <p>If you didn't expect this invitation, you can safely ignore this email.</p>
+            </div>
+          `,
+        });
+      } catch (emailError) {
+        console.error('Error sending invitation email:', emailError);
+        // Continue anyway - invitation is created
+      }
 
       return new Response(
-        JSON.stringify({ message: 'Invitation functionality coming soon' }),
+        JSON.stringify({ message: 'Invitation sent successfully', invitation }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

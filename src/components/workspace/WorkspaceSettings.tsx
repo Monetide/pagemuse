@@ -45,7 +45,11 @@ export const WorkspaceSettings = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <PermissionButton action="manage_members" className="w-full">
+              <PermissionButton 
+                action="manage_members" 
+                className="w-full"
+                onClick={() => window.location.href = `/w/${window.location.pathname.split('/')[2]}/members`}
+              >
                 Manage Members
               </PermissionButton>
             </CardContent>
