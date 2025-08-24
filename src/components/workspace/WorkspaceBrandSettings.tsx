@@ -13,12 +13,18 @@ import {
   AlertCircle,
   Plus,
   Check,
-  Activity
+  Activity,
+  Download,
+  Upload,
+  MoreHorizontal
 } from 'lucide-react';
 import { useBrandKits } from '@/hooks/useBrandKits';
 import { useWorkspaces } from '@/hooks/useWorkspaces';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
 import { CreateBrandKitDialog } from './CreateBrandKitDialog';
+import { BrandKitExportDialog } from './BrandKitExportDialog';
+import { BrandKitImportDialog } from './BrandKitImportDialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import type { BrandKit } from '@/types/brandKit';
 
 export const WorkspaceBrandSettings = () => {
@@ -26,6 +32,9 @@ export const WorkspaceBrandSettings = () => {
   const { updateWorkspace } = useWorkspaces();
   const { currentWorkspace } = useWorkspaceContext();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [selectedBrandKit, setSelectedBrandKit] = useState<BrandKit | null>(null);
   const [updating, setUpdating] = useState(false);
 
   const defaultBrandKit = currentWorkspace?.default_brand_kit_id 
@@ -45,6 +54,16 @@ export const WorkspaceBrandSettings = () => {
     } finally {
       setUpdating(false);
     }
+  };
+
+  const handleExport = (brandKit: BrandKit) => {
+    setSelectedBrandKit(brandKit);
+    setExportDialogOpen(true);
+  };
+
+  const handleImportSuccess = () => {
+    // Refresh brand kits list
+    window.location.reload();
   };
 
   return (
@@ -178,6 +197,13 @@ export const WorkspaceBrandSettings = () => {
                   <Activity className="w-4 h-4 mr-2" />
                   View Activity
                 </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => setImportDialogOpen(true)}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Import Brand Kit
+                </Button>
                 <Button onClick={() => setCreateDialogOpen(true)}>
                   <Plus className="w-4 h-4 mr-2" />
                   Create Brand Kit
@@ -231,6 +257,21 @@ export const WorkspaceBrandSettings = () => {
                             "Set as Default"
                           )}
                         </Button>
+                        
+                        {/* Actions Menu */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleExport(kit)}>
+                              <Download className="w-4 h-4 mr-2" />
+                              Export Brand Kit
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   );
@@ -246,6 +287,13 @@ export const WorkspaceBrandSettings = () => {
                 <Button onClick={() => setCreateDialogOpen(true)}>
                   <Plus className="w-4 h-4 mr-2" />
                   Create Brand Kit
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => setImportDialogOpen(true)}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Import Brand Kit
                 </Button>
               </div>
             )}
@@ -293,6 +341,18 @@ export const WorkspaceBrandSettings = () => {
       <CreateBrandKitDialog 
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
+      />
+      
+      <BrandKitExportDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
+        brandKit={selectedBrandKit}
+      />
+      
+      <BrandKitImportDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        onImportSuccess={handleImportSuccess}
       />
     </div>
   );
