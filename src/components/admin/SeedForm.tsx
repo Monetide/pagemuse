@@ -15,6 +15,7 @@ import { MotifSelector, type MotifSelection, type MotifAsset } from '@/component
 import { PageMasterSelector, type PageMasterSelection } from '@/components/admin/PageMasterSelector'
 import { ObjectStyleSelector, type ObjectStyleSelection } from '@/components/admin/ObjectStyleSelector'
 import AutoComposePreview from '@/components/admin/AutoComposePreview'
+import QualityChecker from '@/components/admin/QualityChecker'
 import { 
   Form,
   FormControl,
@@ -241,6 +242,13 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
 
   const handleMotifShuffle = (newMotifs: any) => {
     setValue('motifs', newMotifs, { shouldValidate: true })
+  }
+
+  const handleQualityFixes = (updatedData: SeedFormData) => {
+    // Apply all the fixes to the form
+    Object.entries(updatedData).forEach(([key, value]) => {
+      setValue(key as keyof SeedFormData, value, { shouldValidate: true })
+    })
   }
 
   const removeFile = (type: 'logo' | 'referenceImage') => {
@@ -510,6 +518,12 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
         <AutoComposePreview 
           seedData={formState.isValid ? watchedValues : undefined}
           onMotifShuffle={handleMotifShuffle}
+        />
+
+        {/* Quality Checker */}
+        <QualityChecker 
+          seedData={formState.isValid ? watchedValues : undefined}
+          onFixesApplied={handleQualityFixes}
         />
 
         {/* Reference Image */}

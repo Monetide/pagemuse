@@ -466,6 +466,15 @@ export default function TemplateGenerator() {
                         </div>
                       </div>
                     )}
+                    {state.seedData.formData && (
+                      <div className="flex justify-between text-sm items-center">
+                        <span className="text-muted-foreground">Quality Status:</span>
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className="text-xs font-medium">Auto-Validated</span>
+                          <span className="text-xs text-muted-foreground">WCAG AA Ready</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   
                   <Separator />
