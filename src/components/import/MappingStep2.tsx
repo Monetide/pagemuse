@@ -4,7 +4,8 @@ import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
-import { Section, BookOpen, MessageSquareQuote, Hash, CheckCircle } from 'lucide-react'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Section, BookOpen, MessageSquareQuote, Hash, CheckCircle, AlertTriangle, Sidebar, SplitSquareHorizontal } from 'lucide-react'
 import { MappingConfig } from './MappingWizard'
 import { IRDocument } from '@/lib/ir-types'
 
@@ -31,6 +32,58 @@ export function MappingStep2({ config, updateConfig, irDocument }: MappingStep2P
   const calloutCount = irDocument.sections.reduce((acc, section) => 
     acc + section.blocks.filter(block => block.type === 'callout').length, 0
   )
+
+  // Generate mini preview data based on current settings
+  const generateSectionPreview = () => {
+    const previewItems: Array<{
+      id: string
+      type: 'section-break' | 'heading' | 'content'
+      level?: number
+      text: string
+      isNewSection?: boolean
+    }> = []
+
+    // Sample content structure for preview
+    const sampleContent = [
+      { type: 'heading', level: 1, text: 'Introduction' },
+      { type: 'content', text: 'Lorem ipsum dolor sit amet...' },
+      { type: 'heading', level: 2, text: 'Background' },
+      { type: 'content', text: 'Consectetur adipiscing elit...' },
+      { type: 'heading', level: 2, text: 'Methodology' },
+      { type: 'content', text: 'Sed do eiusmod tempor...' },
+      { type: 'heading', level: 1, text: 'Results' },
+      { type: 'content', text: 'Ut labore et dolore magna...' },
+      { type: 'heading', level: 2, text: 'Analysis' },
+      { type: 'content', text: 'Aliqua ut enim ad minim...' }
+    ]
+
+    sampleContent.forEach((item, index) => {
+      const shouldCreateSection = 
+        (item.type === 'heading' && item.level === 1 && config.sectionization.newSectionAtH1) ||
+        (item.type === 'heading' && item.level === 2 && config.sectionization.newSectionAtH2)
+
+      if (shouldCreateSection) {
+        previewItems.push({
+          id: `section-${index}`,
+          type: 'section-break',
+          text: '─── Section Break ───',
+          isNewSection: true
+        })
+      }
+
+      previewItems.push({
+        id: `item-${index}`,
+        type: item.type as 'heading' | 'content',
+        level: item.level,
+        text: item.text
+      })
+    })
+
+    return previewItems
+  }
+
+  const previewItems = generateSectionPreview()
+  const estimatedSections = previewItems.filter(item => item.type === 'section-break').length + 1
 
   return (
     <div className="space-y-6 p-6 h-full overflow-auto">
@@ -87,7 +140,7 @@ export function MappingStep2({ config, updateConfig, irDocument }: MappingStep2P
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <Label className="text-sm font-medium">Start new section at H1</Label>
+                <Label className="text-sm font-medium">Start new Section at H1 (default)</Label>
                 <p className="text-xs text-muted-foreground">
                   Create a new document section for each H1 heading
                 </p>
@@ -104,9 +157,9 @@ export function MappingStep2({ config, updateConfig, irDocument }: MappingStep2P
             
             <div className="flex items-center justify-between">
               <div className="space-y-1">
-                <Label className="text-sm font-medium">Start new section at H2</Label>
+                <Label className="text-sm font-medium">Also at H2</Label>
                 <p className="text-xs text-muted-foreground">
-                  Also create sections for H2 headings (creates more sections)
+                  Additionally create sections for H2 headings
                 </p>
               </div>
               <Switch
@@ -118,34 +171,98 @@ export function MappingStep2({ config, updateConfig, irDocument }: MappingStep2P
                 }
               />
             </div>
+
+            {config.sectionization.newSectionAtH2 && (
+              <Alert className="border-warning/20 bg-warning/5">
+                <AlertTriangle className="h-4 w-4 text-warning" />
+                <AlertDescription className="text-warning-foreground">
+                  <strong>Warning:</strong> Creating sections at H2 level will result in shorter sections 
+                  with less content. You'll have approximately {estimatedSections} sections instead of fewer, longer ones.
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
           
           <Separator />
-          
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Minimum Heading Level</Label>
-            <Select
-              value={config.sectionization.minHeadingLevel.toString()}
-              onValueChange={(value) => 
-                updateConfig({
-                  sectionization: { 
-                    ...config.sectionization, 
-                    minHeadingLevel: parseInt(value) as 1 | 2 | 3 
-                  }
-                })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">H1 (Most Sections)</SelectItem>
-                <SelectItem value="2">H2 (Balanced)</SelectItem>
-                <SelectItem value="3">H3 (Fewer Sections)</SelectItem>
-              </SelectContent>
-            </Select>
+
+          {/* Sidebar Flow for Notes/Callouts */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <Sidebar className="w-4 h-4" />
+                  Sidebar flow for Notes/Callouts
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Place notes and callouts in sidebar for better content flow
+                </p>
+              </div>
+              <Switch
+                checked={config.sidebarFlow}
+                onCheckedChange={(checked) => updateConfig({ sidebarFlow: checked })}
+              />
+            </div>
+
+            {config.sidebarFlow && (
+              <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border-l-2 border-l-blue-400">
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  <strong>Sidebar flow enabled:</strong> Notes and callouts will be moved to the sidebar, 
+                  keeping the main content clean and focused.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <Separator />
+
+          {/* Mini Preview */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <SplitSquareHorizontal className="w-4 h-4" />
+                Section Preview
+              </Label>
+              <Badge variant="secondary" className="text-xs">
+                ~{estimatedSections} sections
+              </Badge>
+            </div>
+            
+            <div className="border rounded-lg p-4 bg-muted/30 max-h-48 overflow-y-auto">
+              <div className="space-y-2 text-sm">
+                {previewItems.map((item, index) => (
+                  <div key={item.id} className="flex items-center gap-2">
+                    {item.type === 'section-break' ? (
+                      <div className="flex-1 flex items-center gap-2 py-1">
+                        <div className="h-px bg-primary flex-1"></div>
+                        <Badge variant="default" className="text-xs bg-primary/10 text-primary">
+                          Section Break
+                        </Badge>
+                        <div className="h-px bg-primary flex-1"></div>
+                      </div>
+                    ) : item.type === 'heading' ? (
+                      <div className="flex items-center gap-2 py-1">
+                        <Hash className={`w-3 h-3 ${
+                          item.level === 1 ? 'text-blue-600' : 'text-green-600'
+                        }`} />
+                        <span className={`font-medium ${
+                          item.level === 1 ? 'text-blue-600' : 'text-green-600'
+                        }`}>
+                          H{item.level}: {item.text}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 py-1 text-muted-foreground ml-5">
+                        <span className="text-xs">📄</span>
+                        <span className="truncate">{item.text}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+            
             <p className="text-xs text-muted-foreground">
-              Headings below this level won't trigger new sections
+              Preview shows how content will be split into sections based on your heading settings
             </p>
           </div>
         </CardContent>

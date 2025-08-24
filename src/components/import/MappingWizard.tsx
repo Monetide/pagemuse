@@ -153,7 +153,7 @@ export function MappingWizard({
     setConfig({
       mode: 'new-document',
       useCase: 'other',
-      sidebarFlow: true,
+      sidebarFlow: true, // Default to on
       sectionization: {
         newSectionAtH1: true,
         newSectionAtH2: false,
