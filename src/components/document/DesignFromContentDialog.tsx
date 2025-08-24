@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
 import { FileText, Upload, Link, AlertCircle, Sparkles, Loader2, Globe, X } from 'lucide-react';
 
@@ -24,6 +25,7 @@ interface IngestPayload {
     fileType?: string;
     domain?: string;
     additionalFiles?: File[];
+    useOCR?: boolean;
   };
 }
 
@@ -37,6 +39,7 @@ export const DesignFromContentDialog = ({ open, onOpenChange, onConfirm }: Desig
   const [fetchedContent, setFetchedContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [useOCR, setUseOCR] = useState(false);
   
   const supportedFormats = ['.docx', '.pdf', '.txt', '.md', '.html'];
   const supportedMimeTypes = [
@@ -59,6 +62,14 @@ export const DesignFromContentDialog = ({ open, onOpenChange, onConfirm }: Desig
       default:
         return false;
     }
+  };
+  
+  const isPdfFile = (file: File) => {
+    return file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+  };
+  
+  const hasPdfFiles = () => {
+    return uploadedFiles.some(file => isPdfFile(file));
   };
   
   const isValidUrl = (url: string) => {
@@ -167,6 +178,7 @@ export const DesignFromContentDialog = ({ open, onOpenChange, onConfirm }: Desig
             fileSize: primaryFile.size,
             fileType: primaryFile.type,
             additionalFiles: additionalFiles.length > 0 ? additionalFiles : undefined,
+            useOCR: isPdfFile(primaryFile) ? useOCR : undefined,
           },
         };
         break;
@@ -198,6 +210,7 @@ export const DesignFromContentDialog = ({ open, onOpenChange, onConfirm }: Desig
     setFetchedContent('');
     setError(null);
     setIsLoading(false);
+    setUseOCR(false);
     setActiveTab('paste');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -351,12 +364,41 @@ export const DesignFromContentDialog = ({ open, onOpenChange, onConfirm }: Desig
                             {index === 0 && (
                               <Badge variant="secondary" className="text-xs">Primary</Badge>
                             )}
+                            {isPdfFile(file) && (
+                              <Badge variant="outline" className="text-xs">PDF</Badge>
+                            )}
                           </div>
                           <Badge variant="outline" className="text-xs">
                             {(file.size / (1024 * 1024)).toFixed(1)}MB
                           </Badge>
                         </div>
                       ))}
+                    </div>
+                  )}
+                  
+                  {/* OCR Toggle for PDFs */}
+                  {hasPdfFiles() && (
+                    <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1">
+                          <label className="text-sm font-medium text-foreground mb-2 block">
+                            PDF Processing Options
+                          </label>
+                          <p className="text-sm text-muted-foreground mb-3">
+                            Text-based preferred. Use OCR if needed (slower).
+                          </p>
+                          <div className="flex items-center gap-3">
+                            <Switch
+                              id="ocr-toggle"
+                              checked={useOCR}
+                              onCheckedChange={setUseOCR}
+                            />
+                            <label htmlFor="ocr-toggle" className="text-sm text-foreground cursor-pointer">
+                              {useOCR ? 'Use OCR (optical character recognition)' : 'Use text-based extraction'}
+                            </label>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
