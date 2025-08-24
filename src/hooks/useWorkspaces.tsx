@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
+import { useWorkspaceActivity } from './useWorkspaceActivity';
 
 export interface Workspace {
   id: string;
@@ -100,6 +101,17 @@ export const useWorkspaces = () => {
 
       if (memberError) throw memberError;
 
+      // Log workspace creation activity
+      await supabase
+        .from('workspace_activities')
+        .insert({
+          workspace_id: workspace.id,
+          user_id: user.id,
+          activity_type: 'workspace_created',
+          description: `Created workspace "${name}"`,
+          metadata: { workspace_name: name }
+        });
+
       await fetchWorkspaces();
       toast.success('Workspace created successfully');
       return workspace;
@@ -118,6 +130,19 @@ export const useWorkspaces = () => {
         .eq('id', workspaceId);
 
       if (error) throw error;
+
+      // Log workspace rename activity if name changed
+      if (updates.name) {
+        await supabase
+          .from('workspace_activities')
+          .insert({
+            workspace_id: workspaceId,
+            user_id: user?.id,
+            activity_type: 'workspace_renamed',
+            description: `Renamed workspace to "${updates.name}"`,
+            metadata: { new_name: updates.name }
+          });
+      }
 
       await fetchWorkspaces();
       toast.success('Workspace updated successfully');

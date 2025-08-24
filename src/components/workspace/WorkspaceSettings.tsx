@@ -4,7 +4,9 @@ import { PermissionButton } from '@/components/auth/PermissionButton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Settings, Users, Crown, Shield, Palette } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Settings, Users, Crown, Shield, Palette, Clock } from 'lucide-react';
+import { WorkspaceActivityLog } from './WorkspaceActivityLog';
 
 export const WorkspaceSettings = () => {
   const { 
@@ -31,146 +33,162 @@ export const WorkspaceSettings = () => {
         </Badge>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Members Management */}
-        <PermissionGuard action="manage_members">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center space-x-2">
-                <Users className="h-5 w-5" />
-                <CardTitle>Members</CardTitle>
-              </div>
-              <CardDescription>
-                Manage workspace members and their roles.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <PermissionButton 
-                action="manage_members" 
-                className="w-full"
-                onClick={() => window.location.href = `/w/${window.location.pathname.split('/')[2]}/members`}
-              >
-                Manage Members
-              </PermissionButton>
-            </CardContent>
-          </Card>
-        </PermissionGuard>
+      <Tabs defaultValue="general" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="general">General</TabsTrigger>
+          <TabsTrigger value="activity">
+            <Clock className="h-4 w-4 mr-2" />
+            Activity
+          </TabsTrigger>
+        </TabsList>
 
-        {/* Brand Kits Management */}
-        <Card className="opacity-60">
-          <CardHeader>
-            <div className="flex items-center space-x-2">
-              <Palette className="h-5 w-5" />
-              <CardTitle>Brand</CardTitle>
-            </div>
-            <CardDescription>
-              No Brand Kits yet. Add one after workspace setup.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              className="w-full" 
-              disabled
-              variant="outline"
-            >
-              Manage Brand Kits (Coming Soon)
-            </Button>
-          </CardContent>
-        </Card>
+        <TabsContent value="general" className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Members Management */}
+            <PermissionGuard action="manage_members">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center space-x-2">
+                    <Users className="h-5 w-5" />
+                    <CardTitle>Members</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Manage workspace members and their roles.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <PermissionButton 
+                    action="manage_members" 
+                    className="w-full"
+                    onClick={() => window.location.href = `/w/${window.location.pathname.split('/')[2]}/members`}
+                  >
+                    Manage Members
+                  </PermissionButton>
+                </CardContent>
+              </Card>
+            </PermissionGuard>
 
-        {/* Template Management */}
-        <PermissionGuard action="manage_templates">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center space-x-2">
-                <Settings className="h-5 w-5" />
-                <CardTitle>Templates</CardTitle>
-              </div>
-              <CardDescription>
-                Manage workspace templates and layouts.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <PermissionButton action="manage_templates" className="w-full">
-                Manage Templates
-              </PermissionButton>
-            </CardContent>
-          </Card>
-        </PermissionGuard>
+            {/* Brand Kits Management */}
+            <Card className="opacity-60">
+              <CardHeader>
+                <div className="flex items-center space-x-2">
+                  <Palette className="h-5 w-5" />
+                  <CardTitle>Brand</CardTitle>
+                </div>
+                <CardDescription>
+                  No Brand Kits yet. Add one after workspace setup.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Button 
+                  className="w-full" 
+                  disabled
+                  variant="outline"
+                >
+                  Manage Brand Kits (Coming Soon)
+                </Button>
+              </CardContent>
+            </Card>
 
-        {/* Workspace Settings */}
-        <PermissionGuard action="update_workspace">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center space-x-2">
-                <Settings className="h-5 w-5" />
-                <CardTitle>General Settings</CardTitle>
-              </div>
-              <CardDescription>
-                Update workspace name, description, and other settings.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <PermissionButton action="update_workspace" className="w-full">
-                Edit Workspace
-              </PermissionButton>
-            </CardContent>
-          </Card>
-        </PermissionGuard>
-      </div>
+            {/* Template Management */}
+            <PermissionGuard action="manage_templates">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center space-x-2">
+                    <Settings className="h-5 w-5" />
+                    <CardTitle>Templates</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Manage workspace templates and layouts.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <PermissionButton action="manage_templates" className="w-full">
+                    Manage Templates
+                  </PermissionButton>
+                </CardContent>
+              </Card>
+            </PermissionGuard>
 
-      {/* Danger Zone - Only for workspace owners */}
-      <PermissionGuard action="delete_workspace">
-        <Card className="border-destructive">
-          <CardHeader>
-            <CardTitle className="text-destructive">Danger Zone</CardTitle>
-            <CardDescription>
-              Actions in this section are irreversible. Please proceed with caution.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <PermissionButton 
-              action="delete_workspace" 
-              variant="destructive"
-              className="w-full"
-            >
-              Delete Workspace
-            </PermissionButton>
-          </CardContent>
-        </Card>
-      </PermissionGuard>
-
-      {/* Permission Reference */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Permission Reference</CardTitle>
-          <CardDescription>
-            What you can do with your current role.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-2">
-            <h4 className="font-medium">Your current permissions:</h4>
-            <div className="space-y-1 text-sm text-muted-foreground">
-              <div>✓ Create and edit documents</div>
-              <div>✓ Use templates</div>
-              <div>✓ Apply brand kit to your documents</div>
-              <div>✓ Upload media</div>
-              {isWorkspaceAdmin && (
-                <>
-                  <div>✓ Manage workspace members</div>
-                  <div>✓ Manage brand kits</div>
-                  <div>✓ Manage templates</div>
-                  <div>✓ Update workspace settings</div>
-                </>
-              )}
-              {isWorkspaceOwner && (
-                <div>✓ Delete workspace</div>
-              )}
-            </div>
+            {/* Workspace Settings */}
+            <PermissionGuard action="update_workspace">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center space-x-2">
+                    <Settings className="h-5 w-5" />
+                    <CardTitle>General Settings</CardTitle>
+                  </div>
+                  <CardDescription>
+                    Update workspace name, description, and other settings.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <PermissionButton action="update_workspace" className="w-full">
+                    Edit Workspace
+                  </PermissionButton>
+                </CardContent>
+              </Card>
+            </PermissionGuard>
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Danger Zone - Only for workspace owners */}
+          <PermissionGuard action="delete_workspace">
+            <Card className="border-destructive">
+              <CardHeader>
+                <CardTitle className="text-destructive">Danger Zone</CardTitle>
+                <CardDescription>
+                  Actions in this section are irreversible. Please proceed with caution.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <PermissionButton 
+                  action="delete_workspace" 
+                  variant="destructive"
+                  className="w-full"
+                >
+                  Delete Workspace
+                </PermissionButton>
+              </CardContent>
+            </Card>
+          </PermissionGuard>
+
+          {/* Permission Reference */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Permission Reference</CardTitle>
+              <CardDescription>
+                What you can do with your current role.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-2">
+                <h4 className="font-medium">Your current permissions:</h4>
+                <div className="space-y-1 text-sm text-muted-foreground">
+                  <div>✓ Create and edit documents</div>
+                  <div>✓ Use templates</div>
+                  <div>✓ Apply brand kit to your documents</div>
+                  <div>✓ Upload media</div>
+                  {isWorkspaceAdmin && (
+                    <>
+                      <div>✓ Manage workspace members</div>
+                      <div>✓ Manage brand kits</div>
+                      <div>✓ Manage templates</div>
+                      <div>✓ Update workspace settings</div>
+                    </>
+                  )}
+                  {isWorkspaceOwner && (
+                    <div>✓ Delete workspace</div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="activity" className="space-y-6">
+          <WorkspaceActivityLog />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
