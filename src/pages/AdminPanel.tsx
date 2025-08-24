@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { IRSchemaPanel } from '@/components/admin/IRSchemaPanel'
+import { IngestTestPanel } from '@/components/admin/IngestTestPanel'
 import { 
   Users, 
   FileText, 
@@ -17,7 +18,8 @@ import {
   Crown,
   Database,
   ChevronRight,
-  Code2
+  Code2,
+  TestTube
 } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAdminDashboardStats } from '@/hooks/useAdminDashboardStats'
@@ -160,12 +162,13 @@ export default function AdminPanel() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="content">Content</TabsTrigger>
           <TabsTrigger value="system">System</TabsTrigger>
           <TabsTrigger value="schema">IR Schema</TabsTrigger>
+          <TabsTrigger value="ingest">Ingest Test</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -414,6 +417,10 @@ export default function AdminPanel() {
 
         <TabsContent value="schema">
           <IRSchemaPanel />
+        </TabsContent>
+
+        <TabsContent value="ingest">
+          <IngestTestPanel />
         </TabsContent>
       </Tabs>
     </div>
