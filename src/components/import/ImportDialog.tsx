@@ -19,8 +19,12 @@ import {
   Download, 
   RefreshCw, 
   AlertTriangle,
-  CheckCircle 
+  CheckCircle,
+  Eye 
 } from 'lucide-react'
+import { IRPreviewDrawer } from '@/components/debug/IRPreviewDrawer'
+import { IRDocument } from '@/lib/ir-types'
+import { IngestPipeline } from '@/lib/ingest-pipeline'
 
 export type ImportMode = 'new-document' | 'append-section' | 'insert-section' | 'replace-document' | 'insert-at-cursor' | 'replace-selection'
 
@@ -47,6 +51,35 @@ export const ImportDialog = ({
   const [importMode, setImportMode] = useState<ImportMode>(defaultMode)
   const [isImporting, setIsImporting] = useState(false)
   const [importProgress, setImportProgress] = useState(0)
+  const [previewIR, setPreviewIR] = useState<IRDocument | null>(null)
+  const [showIRPreview, setShowIRPreview] = useState(false)
+  const [processingForPreview, setProcessingForPreview] = useState(false)
+
+  // Generate IR preview when files are selected
+  const generateIRPreview = async (files: File[]) => {
+    if (files.length === 0) {
+      setPreviewIR(null)
+      return
+    }
+
+    setProcessingForPreview(true)
+    try {
+      // Preview the first file for now
+      const firstFile = files[0]
+      const irDocument = await IngestPipeline.processFile(firstFile)
+      setPreviewIR(irDocument)
+    } catch (error) {
+      console.error('Failed to generate IR preview:', error)
+      setPreviewIR(null)
+    } finally {
+      setProcessingForPreview(false)
+    }
+  }
+
+  const handleFilesSelected = (files: File[]) => {
+    setSelectedFiles(files)
+    generateIRPreview(files)
+  }
 
   const modes = [
     {
@@ -111,6 +144,8 @@ export const ImportDialog = ({
 
   const resetDialog = () => {
     setSelectedFiles([])
+    setPreviewIR(null)
+    setShowIRPreview(false)
     setImportMode(defaultMode)
     setIsImporting(false)
     setImportProgress(0)
@@ -156,7 +191,7 @@ export const ImportDialog = ({
           <div className="space-y-4">
             <Label className="text-sm font-medium">Select Files</Label>
             <ImportDropZone
-              onFileSelect={setSelectedFiles}
+              onFileSelect={handleFilesSelected}
               className="w-full"
             />
             
@@ -244,14 +279,27 @@ export const ImportDialog = ({
           )}
         </div>
 
-        <DialogFooter>
-          <Button 
-            variant="outline" 
-            onClick={() => handleOpenChange(false)}
-            disabled={isImporting}
-          >
-            Cancel
-          </Button>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => handleOpenChange(false)}
+              disabled={isImporting}
+            >
+              Cancel
+            </Button>
+            {previewIR && (
+              <Button 
+                variant="outline" 
+                onClick={() => setShowIRPreview(true)}
+                disabled={isImporting || processingForPreview}
+                className="gap-2"
+              >
+                <Eye className="w-4 h-4" />
+                Show IR
+              </Button>
+            )}
+          </div>
           <Button 
             onClick={handleImport}
             disabled={selectedFiles.length === 0 || isImporting}
@@ -271,6 +319,18 @@ export const ImportDialog = ({
           </Button>
         </DialogFooter>
       </DialogContent>
+      
+      <IRPreviewDrawer
+        isOpen={showIRPreview}
+        onOpenChange={setShowIRPreview}
+        irDocument={previewIR}
+        sourceInfo={selectedFiles[0] ? {
+          type: selectedFiles[0].type || 'unknown',
+          filename: selectedFiles[0].name,
+          size: selectedFiles[0].size,
+          imageCount: 0 // TODO: detect image count in files
+        } : undefined}
+      />
     </Dialog>
   )
 }

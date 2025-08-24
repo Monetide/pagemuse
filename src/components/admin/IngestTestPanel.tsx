@@ -30,8 +30,10 @@ import {
   Minus,
   Hash,
   MessageSquare,
-  AlertTriangle
+  AlertTriangle,
+  Eye
 } from 'lucide-react';
+import { IRPreviewDrawer } from '@/components/debug/IRPreviewDrawer';
 
 export const IngestTestPanel = () => {
   const [inputContent, setInputContent] = useState(MARKDOWN_WITH_TABLE_AND_IMAGE);
@@ -40,6 +42,7 @@ export const IngestTestPanel = () => {
   const [error, setError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [testResults, setTestResults] = useState<string[]>([]);
+  const [showIRPreview, setShowIRPreview] = useState(false);
 
   const handleTest = async () => {
     if (!inputContent.trim()) return;
@@ -373,6 +376,16 @@ export const IngestTestPanel = () => {
                     <TestTube className="w-4 h-4 mr-2" />
                     Test MD Sample
                   </Button>
+                  {result && (
+                    <Button 
+                      variant="outline"
+                      onClick={() => setShowIRPreview(true)}
+                      disabled={isProcessing}
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      Show IR
+                    </Button>
+                  )}
                 </div>
                 
                 {error && (
@@ -659,6 +672,17 @@ export const IngestTestPanel = () => {
           </div>
         </TabsContent>
       </Tabs>
+      
+      <IRPreviewDrawer
+        isOpen={showIRPreview}
+        onOpenChange={setShowIRPreview}
+        irDocument={result}
+        sourceInfo={{
+          type: inputFormat,
+          size: inputContent.length,
+          imageCount: 0
+        }}
+      />
     </div>
   );
 };

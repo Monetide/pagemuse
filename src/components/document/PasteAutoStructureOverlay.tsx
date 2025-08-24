@@ -10,7 +10,9 @@ import { IngestPipeline, convertToLegacyIR } from '@/lib/ingest-pipeline'
 import { IRMapper } from '@/lib/ir-mapper'
 import { Block } from '@/lib/document-model'
 import { Card } from '@/components/ui/card'
-import { CheckCircle, FileText, Sparkles } from 'lucide-react'
+import { CheckCircle, FileText, Sparkles, Eye } from 'lucide-react'
+import { IRPreviewDrawer } from '@/components/debug/IRPreviewDrawer'
+import { IRDocument } from '@/lib/ir-types'
 
 interface PasteAutoStructureOverlayProps {
   isOpen: boolean
@@ -42,6 +44,8 @@ export const PasteAutoStructureOverlay: React.FC<PasteAutoStructureOverlayProps>
   })
   const [previewBlocks, setPreviewBlocks] = useState<Block[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
+  const [irDocument, setIrDocument] = useState<IRDocument | null>(null)
+  const [showIRPreview, setShowIRPreview] = useState(false)
 
   useEffect(() => {
     if (isOpen && pastedContent) {
@@ -66,13 +70,14 @@ export const PasteAutoStructureOverlay: React.FC<PasteAutoStructureOverlayProps>
         coalesceConsecutiveParagraphs: options.processingMode === 'plain-text'
       }
       
-      const irDocument = await IngestPipeline.processFile(file, ingestOptions)
+      const processedIrDocument = await IngestPipeline.processFile(file, ingestOptions)
+      setIrDocument(processedIrDocument)
       
       // Apply structure options
       if (options.sectionization === 'none') {
         // Flatten all sections into one
-        const allBlocks = irDocument.sections.flatMap(section => section.blocks)
-        irDocument.sections = [{
+        const allBlocks = processedIrDocument.sections.flatMap(section => section.blocks)
+        processedIrDocument.sections = [{
           id: 'main',
           title: 'Content',
           order: 1,
@@ -88,7 +93,7 @@ export const PasteAutoStructureOverlay: React.FC<PasteAutoStructureOverlayProps>
       
       // IRDocument is already in the correct legacy format
       const mapper = new IRMapper()
-      const document = mapper.mapDocument(irDocument)
+      const document = mapper.mapDocument(processedIrDocument)
       const blocks = document.sections.flatMap(section => 
         section.flows.flatMap(flow => flow.blocks)
       )
@@ -256,6 +261,10 @@ export const PasteAutoStructureOverlay: React.FC<PasteAutoStructureOverlayProps>
               <Button onClick={handleConfirm} disabled={isProcessing || previewBlocks.length === 0}>
                 Import {previewBlocks.length} blocks
               </Button>
+              <Button variant="outline" onClick={() => setShowIRPreview(true)} disabled={!irDocument}>
+                <Eye className="h-4 w-4 mr-2" />
+                Show IR
+              </Button>
               <Button variant="outline" onClick={onClose}>
                 Cancel
               </Button>
@@ -317,6 +326,17 @@ export const PasteAutoStructureOverlay: React.FC<PasteAutoStructureOverlayProps>
           </div>
         </div>
       </DialogContent>
+      
+      <IRPreviewDrawer
+        isOpen={showIRPreview}
+        onOpenChange={setShowIRPreview}
+        irDocument={irDocument}
+        sourceInfo={{
+          type: 'paste',
+          size: pastedContent.length,
+          imageCount: 0
+        }}
+      />
     </Dialog>
   )
 }
