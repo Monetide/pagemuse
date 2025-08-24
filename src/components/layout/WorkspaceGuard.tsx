@@ -4,6 +4,7 @@ import { useWorkspaces } from '@/hooks/useWorkspaces';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyWorkspaceState } from '@/components/workspace/EmptyWorkspaceState';
+import { WorkspaceAccessDenied } from '@/components/workspace/WorkspaceAccessDenied';
 
 interface WorkspaceGuardProps {
   children: React.ReactNode;
@@ -34,13 +35,11 @@ export const WorkspaceGuard = ({ children }: WorkspaceGuardProps) => {
     return <EmptyWorkspaceState />;
   }
 
-  // If workspaceId is provided but doesn't exist, redirect to first workspace
-  if (workspaceId) {
+  // If workspaceId is provided but doesn't exist in user's workspaces, show access denied
+  if (workspaceId && workspaceId !== 'redirect') {
     const workspace = workspaces.find(w => w.id === workspaceId);
     if (!workspace) {
-      const firstWorkspace = workspaces.find(w => w.name === 'Personal') || workspaces[0];
-      const currentPath = location.pathname.replace(`/w/${workspaceId}`, '');
-      return <Navigate to={`/w/${firstWorkspace.id}${currentPath}`} replace />;
+      return <WorkspaceAccessDenied />;
     }
   }
 

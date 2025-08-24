@@ -26,6 +26,7 @@ import DocumentModelDemo from "./pages/DocumentModelDemo";
 import DocumentSettings from "./pages/DocumentSettings";
 import DocumentModelRedirect from "./components/DocumentModelRedirect";
 import { Navigate } from "react-router-dom";
+import { WorkspaceRedirectHandler } from "@/components/workspace/WorkspaceRedirectHandler";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { HealthCheck } from "@/components/HealthCheck";
 import { InvitationAcceptance } from "@/pages/InvitationAcceptance";
@@ -57,7 +58,7 @@ const App = () => {
                   <Route path="/published/:token" element={<PublishedDocumentViewer />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   
-                  {/* Legacy route redirects - redirect to first workspace */}
+                  {/* Legacy route redirects - redirect to workspace handler */}
                   <Route path="/dashboard" element={<Navigate to="/w/redirect/dashboard" replace />} />
                   <Route path="/documents" element={<Navigate to="/w/redirect/documents" replace />} />
                   <Route path="/documents/:id/editor" element={<Navigate to="/w/redirect/documents" replace />} />
@@ -66,6 +67,15 @@ const App = () => {
                   <Route path="/admin" element={<Navigate to="/w/redirect/admin" replace />} />
                   <Route path="/admin/templates" element={<Navigate to="/w/redirect/admin/templates" replace />} />
                   <Route path="/admin/template-generator" element={<Navigate to="/w/redirect/admin/template-generator" replace />} />
+                  
+                  {/* Workspace redirect handler */}
+                  <Route path="/w/redirect/*" element={
+                    <AuthGate>
+                      <WorkspaceProvider>
+                        <WorkspaceRedirectHandler />
+                      </WorkspaceProvider>
+                    </AuthGate>
+                  } />
                   
                   {/* Workspace routes - require authentication and workspace context */}
                   <Route path="/w/:workspaceId/*" element={
@@ -118,20 +128,20 @@ const App = () => {
                     </AuthGate>
                   } />
                   
-                  {/* Root redirect - redirect to first workspace */}
+                  {/* Root redirect - redirect to workspace handler */}
                   <Route path="/" element={
                     <AuthGate>
                       <WorkspaceProvider>
-                        <Navigate to="/w/redirect/dashboard" replace />
+                        <WorkspaceRedirectHandler />
                       </WorkspaceProvider>
                     </AuthGate>
                   } />
                   
-                  {/* Catch-all - redirect to first workspace */}
+                  {/* Catch-all - redirect to workspace handler */}
                   <Route path="*" element={
                     <AuthGate>
                       <WorkspaceProvider>
-                        <Navigate to="/w/redirect" replace />
+                        <WorkspaceRedirectHandler />
                       </WorkspaceProvider>
                     </AuthGate>
                   } />
