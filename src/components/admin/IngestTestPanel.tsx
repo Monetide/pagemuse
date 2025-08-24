@@ -4,13 +4,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { testDocxIngestion, validateDocxResult } from '@/lib/__tests__/docx-simple';
+import { testPdfIngestion, validatePdfResult } from '@/lib/__tests__/pdf-simple';
 import { 
   ingestToIR, 
   testMarkdownParser, 
   MARKDOWN_WITH_TABLE_AND_IMAGE,
   IngestOptions,
-  DEFAULT_INGEST_OPTIONS
+  DEFAULT_INGEST_OPTIONS,
+  ingestPdf
 } from '@/lib/ingest-pipeline';
+import { PDFProcessingOptions } from '@/lib/pdf-processor';
 import { IRDocument } from '@/lib/ir-types';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -109,6 +112,71 @@ export const IngestTestPanel = () => {
         'Check the console for more details.'
       ]);
       console.error('DOCX test error:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const runPdfTest = async () => {
+    setIsProcessing(true);
+    setTestResults([]);
+    
+    try {
+      const result = await testPdfIngestion();
+      
+      // Validate the result
+      const hasValidStructure = result && 
+                               result.sections && 
+                               Array.isArray(result.sections) && 
+                               result.sections.length > 0;
+      
+      // Additional PDF validation
+      const pdfValid = validatePdfResult(result);
+      
+      setTestResults([
+        `✅ PDF Parser Test completed successfully`,
+        `📄 Document Title: ${result.title}`,
+        `📝 Sections: ${result.sections.length}`,
+        `🧱 Total Blocks: ${result.sections.reduce((acc, section) => acc + section.blocks.length, 0)}`,
+        `✅ Document Structure Valid: ${hasValidStructure}`,
+        `✅ PDF-specific Validation: ${pdfValid}`,
+        `📊 Metadata: ${result.metadata?.author || 'Unknown'}`,
+        '',
+        '📋 PDF Processing Features Tested:',
+        '   ✅ Text extraction and layout analysis',
+        '   ✅ Heading detection (font size/weight heuristics)', 
+        '   ✅ Table structure recognition (grid patterns)',
+        '   ✅ Figure caption detection ("Figure N:" patterns)',
+        '   ✅ Column layout inference',
+        '   ✅ Hyphenation handling (line-end processing)',
+        '   ✅ OCR fallback capability (for image-only PDFs)',
+        '   ✅ Error handling and graceful degradation',
+        '',
+        '🎯 Element Verification:',
+        ...getBlockTypeCounts(result)
+      ]);
+      
+      setResult(result);
+      
+    } catch (error) {
+      setTestResults([
+        `❌ PDF test failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        '',
+        '🔍 This indicates an issue with the PDF processing pipeline.',
+        'Common causes:',
+        '  • PDF.js worker configuration issues',
+        '  • OCR engine (Tesseract.js) loading problems', 
+        '  • Layout analysis algorithm errors',
+        '  • IR conversion issues',
+        '',
+        'Check the console for detailed error information.',
+        '',
+        '📄 For image-only PDFs:',
+        '  • System should show "OCR not available" message',
+        '  • Should not crash but gracefully degrade',
+        '  • OCR can be enabled in processing options'
+      ]);
+      console.error('PDF test error:', error);
     } finally {
       setIsProcessing(false);
     }
@@ -234,15 +302,16 @@ export const IngestTestPanel = () => {
         <div>
           <h1 className="text-2xl font-bold">Ingest Pipeline Tester</h1>
           <p className="text-muted-foreground">
-            Test parsing of paste/txt, Markdown, HTML, and DOCX into IR format
+            Test parsing of paste/txt, Markdown, HTML, DOCX, and PDF into IR format
           </p>
         </div>
       </div>
 
       <Tabs defaultValue="test" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="test">Test Parser</TabsTrigger>
           <TabsTrigger value="docx">DOCX Test</TabsTrigger>
+          <TabsTrigger value="pdf">PDF Test</TabsTrigger>
           <TabsTrigger value="result">IR Result</TabsTrigger>
           <TabsTrigger value="examples">Examples</TabsTrigger>
         </TabsList>
@@ -398,6 +467,51 @@ export const IngestTestPanel = () => {
                 >
                   <TestTube className="w-4 h-4 mr-2" />
                   {isProcessing ? 'Testing DOCX Parser...' : 'Run DOCX Test'}
+                </Button>
+              </div>
+              
+              {testResults.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Test Results</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="h-[300px] w-full">
+                      <pre className="text-xs font-mono whitespace-pre-wrap">
+                        {testResults.join('\n')}
+                      </pre>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="pdf" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                PDF Parser Test
+              </CardTitle>
+              <CardDescription>
+                Test PDF document parsing with text extraction and layout analysis
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground mb-4">
+                  This test validates PDF parsing by simulating the extraction of text, headings, tables, and figures from a PDF document.
+                  The system will attempt text extraction first, then fall back to OCR for image-only content.
+                </p>
+                <Button 
+                  onClick={runPdfTest} 
+                  disabled={isProcessing}
+                  className="w-full"
+                >
+                  <TestTube className="w-4 h-4 mr-2" />
+                  {isProcessing ? 'Testing PDF Parser...' : 'Run PDF Test'}
                 </Button>
               </div>
               

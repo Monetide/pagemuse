@@ -12,6 +12,7 @@ import {
   ListItem
 } from './ir-schema';
 import * as mammoth from 'mammoth';
+import { processPDFFile, PDFProcessingOptions } from './pdf-processor';
 
 import { 
   IRDocument as LegacyIRDocument,
@@ -38,6 +39,8 @@ export interface IngestOptions {
   mergeShortParagraphs?: boolean;
   generateAnchors?: boolean;
   extractAssets?: boolean;
+  // PDF-specific options
+  pdfOptions?: PDFProcessingOptions;
 }
 
 export const DEFAULT_INGEST_OPTIONS: IngestOptions = {
@@ -46,7 +49,14 @@ export const DEFAULT_INGEST_OPTIONS: IngestOptions = {
   extractTables: true,
   coalesceConsecutiveParagraphs: true,
   generateAnchors: false,
-  extractAssets: false
+  extractAssets: false,
+  pdfOptions: {
+    ocrLanguage: 'eng',
+    confidenceThreshold: 75,
+    enableOCR: true,
+    detectColumns: true,
+    mergeHyphenatedWords: true
+  }
 };
 
 // Main ingest function
@@ -685,15 +695,20 @@ export class IngestPipeline {
 
 export async function ingestFile(file: File, options?: IngestOptions): Promise<LegacyIRDocument> {
   const text = await file.text();
-  let format: 'paste' | 'txt' | 'markdown' | 'html' | 'docx' = 'txt';
+  let format: 'paste' | 'txt' | 'markdown' | 'html' | 'docx' | 'pdf' = 'txt';
   
   const extension = file.name.split('.').pop()?.toLowerCase();
   if (extension === 'md') format = 'markdown';
   if (extension === 'html' || extension === 'htm') format = 'html';
   if (extension === 'docx') format = 'docx';
+  if (extension === 'pdf') format = 'pdf';
   
   if (format === 'docx') {
     return await ingestDocx(file, options);
+  }
+  
+  if (format === 'pdf') {
+    return await ingestPdf(file, options);
   }
   
   return ingestToIR(text, format, options);
@@ -794,5 +809,80 @@ export async function ingestDocx(file: File, options: IngestOptions = DEFAULT_IN
   } catch (error) {
     console.error('Error processing DOCX file:', error);
     throw new Error(`Failed to process DOCX file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+// PDF ingestion function
+export async function ingestPdf(file: File, options: IngestOptions = DEFAULT_INGEST_OPTIONS): Promise<LegacyIRDocument> {
+  try {
+    // Use the PDF processor with provided options or defaults
+    const pdfOptions = options.pdfOptions || DEFAULT_INGEST_OPTIONS.pdfOptions!;
+    
+    console.log('Starting PDF processing with options:', pdfOptions);
+    
+    const irDocument = await processPDFFile(file, pdfOptions);
+    
+    console.log('PDF processing completed. Converting to legacy format...');
+    
+    // Convert to legacy format for compatibility
+    return convertToLegacyIR({
+      title: irDocument.title,
+      sections: irDocument.sections.map(section => ({
+        id: section.id,
+        title: section.title,
+        blocks: section.blocks.map(block => ({
+          type: block.type as any,
+          content: block.content,
+          level: (block.content as any)?.level,
+          listType: (block.content as any)?.type === 'ordered' ? 'ol' : 'ul',
+          items: (block.content as any)?.items,
+          header: (block.content as any)?.headers,
+          rows: (block.content as any)?.rows,
+          src: (block.content as any)?.image?.url,
+          alt: (block.content as any)?.alt,
+          caption: (block.content as any)?.caption,
+          calloutType: (block.content as any)?.type,
+          title: (block.content as any)?.title,
+          text: (block.content as any)?.text || block.content,
+          marker: block.attrs?.marker
+        }))
+      })),
+      metadata: irDocument.metadata
+    } as any);
+    
+  } catch (error) {
+    console.error('Error processing PDF file:', error);
+    
+    // Return error document instead of throwing
+    return convertToLegacyIR({
+      title: file.name.replace(/\.pdf$/i, '') || 'PDF Document',
+      sections: [{
+        id: 'error-section',
+        title: 'Processing Error',
+        blocks: [{
+          type: 'paragraph',
+          content: error instanceof Error 
+            ? `Failed to process PDF: ${error.message}. This may be an image-only PDF that requires OCR, or there may be an issue with the file format.`
+            : 'Failed to process PDF file. Please try again or check if the file is corrupted.',
+          level: undefined,
+          listType: undefined,
+          items: undefined,
+          header: undefined,
+          rows: undefined,
+          src: undefined,
+          alt: undefined,
+          caption: undefined,
+          calloutType: undefined,
+          title: undefined,
+          text: undefined,
+          marker: undefined
+        }]
+      }],
+      metadata: {
+        createdAt: new Date().toISOString(),
+        wordCount: 0,
+        author: 'System'
+      }
+    } as any);
   }
 }
