@@ -1065,6 +1065,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_workspace_admin: {
+        Args: { p_user_id?: string; p_workspace_id: string }
+        Returns: boolean
+      }
+      is_workspace_member: {
+        Args: { p_user_id?: string; p_workspace_id: string }
+        Returns: boolean
+      }
       log_document_activity: {
         Args: {
           _activity_type: string
