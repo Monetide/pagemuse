@@ -16,12 +16,21 @@ export default function TemplateLibrary() {
   const { createFromTemplate } = useTemplateApplication()
   const [searchQuery, setSearchQuery] = useState('')
 
-  // Filter templates: global templates + workspace-specific templates
+  // Separate workspace and global templates
   const workspaceTemplates = templates.filter(template => 
-    template.is_global || template.workspace_id === currentWorkspace?.id
+    template.workspace_id === currentWorkspace?.id
+  )
+  const globalTemplates = templates.filter(template => 
+    template.is_global
   )
 
-  const filteredTemplates = workspaceTemplates.filter(template =>
+  const filteredWorkspaceTemplates = workspaceTemplates.filter(template =>
+    template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    template.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    template.category.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const filteredGlobalTemplates = globalTemplates.filter(template =>
     template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     template.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     template.category.toLowerCase().includes(searchQuery.toLowerCase())
@@ -31,6 +40,11 @@ export default function TemplateLibrary() {
     await createFromTemplate(template)
   }
 
+  const handleDuplicateTemplate = async (template: Template) => {
+    // TODO: Implement template duplication to workspace
+    console.log('Duplicating template to workspace:', template.name)
+  }
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -38,7 +52,7 @@ export default function TemplateLibrary() {
         <div>
           <h1 className="text-3xl font-bold text-foreground">Template Library</h1>
           <p className="text-muted-foreground mt-2">
-            {filteredTemplates.length} template{filteredTemplates.length !== 1 ? 's' : ''} available for {currentWorkspace?.name}
+            {filteredWorkspaceTemplates.length + filteredGlobalTemplates.length} template{filteredWorkspaceTemplates.length + filteredGlobalTemplates.length !== 1 ? 's' : ''} available for {currentWorkspace?.name}
           </p>
         </div>
         <Button className="bg-gradient-primary hover:shadow-glow transition-all duration-200">
@@ -74,13 +88,43 @@ export default function TemplateLibrary() {
         </CardContent>
       </Card>
 
-      {/* Template Gallery */}
-      <TemplateGallery
-        templates={filteredTemplates}
-        loading={loading}
-        mode="new"
-        onUseTemplate={handleUseTemplate}
-      />
+      {/* Workspace Templates Section */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-semibold text-foreground">My Workspace</h2>
+          <Badge variant="secondary" className="flex items-center gap-2 px-3 py-1">
+            <Building2 className="w-3 h-3" />
+            {currentWorkspace?.name}
+          </Badge>
+        </div>
+        <TemplateGallery
+          templates={filteredWorkspaceTemplates}
+          loading={loading}
+          mode="new"
+          onUseTemplate={handleUseTemplate}
+        />
+      </div>
+
+      {/* Global Templates Section */}
+      {filteredGlobalTemplates.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-semibold text-foreground">Global Templates</h2>
+            <Badge variant="outline" className="flex items-center gap-2 px-3 py-1">
+              <Palette className="w-3 h-3" />
+              Global
+            </Badge>
+          </div>
+          <TemplateGallery
+            templates={filteredGlobalTemplates}
+            loading={loading}
+            mode="new"
+            onUseTemplate={handleUseTemplate}
+            onDuplicateTemplate={handleDuplicateTemplate}
+            showDuplicateAction={true}
+          />
+        </div>
+      )}
     </div>
   )
 }

@@ -31,6 +31,8 @@ interface TemplateGalleryProps {
   mode: 'new' | 'apply'
   onUseTemplate: (template: Template) => void
   onApplyTemplate?: (template: Template) => void
+  onDuplicateTemplate?: (template: Template) => void
+  showDuplicateAction?: boolean
 }
 
 export function TemplateGallery({ 
@@ -38,7 +40,9 @@ export function TemplateGallery({
   loading, 
   mode, 
   onUseTemplate,
-  onApplyTemplate 
+  onApplyTemplate,
+  onDuplicateTemplate,
+  showDuplicateAction = false
 }: TemplateGalleryProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('all')
@@ -119,13 +123,24 @@ export function TemplateGallery({
                 <Eye className="w-4 h-4 mr-1" />
                 Preview
               </Button>
-              <Button 
-                size="sm" 
-                onClick={() => handleUseTemplate(template)}
-                className="hover:shadow-soft transition-all"
-              >
-                {mode === 'apply' ? 'Apply' : 'Use Template'}
-              </Button>
+              {showDuplicateAction && onDuplicateTemplate ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onDuplicateTemplate(template)}
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Duplicate
+                </Button>
+              ) : (
+                <Button 
+                  size="sm" 
+                  onClick={() => handleUseTemplate(template)}
+                  className="hover:shadow-soft transition-all"
+                >
+                  {mode === 'apply' ? 'Apply' : 'Use Template'}
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -180,13 +195,24 @@ export function TemplateGallery({
                   <Eye className="w-4 h-4 mr-1" />
                   Preview
                 </Button>
-                <Button 
-                  size="sm" 
-                  onClick={() => handleUseTemplate(template)}
-                  className="hover:shadow-soft transition-all"
-                >
-                  {mode === 'apply' ? 'Apply' : 'Use Template'}
-                </Button>
+                {showDuplicateAction && onDuplicateTemplate ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onDuplicateTemplate(template)}
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Duplicate
+                  </Button>
+                ) : (
+                  <Button 
+                    size="sm" 
+                    onClick={() => handleUseTemplate(template)}
+                    className="hover:shadow-soft transition-all"
+                  >
+                    {mode === 'apply' ? 'Apply' : 'Use Template'}
+                  </Button>
+                )}
               </div>
             </div>
           </div>
