@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Save, FileText, Palette, Hash, Download, Archive } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { toast } from 'sonner'
+import { DocumentBrandActivity } from '@/components/document/DocumentBrandActivity'
 
 const DocumentSettings = () => {
   const { id } = useParams()
@@ -258,6 +259,11 @@ const DocumentSettings = () => {
             </div>
           </div>
         </Card>
+
+        {/* Brand Activity Section */}
+        {documentId && (
+          <DocumentBrandActivity documentId={documentId} />
+        )}
 
         {/* Numbering & TOC Section */}
         <Card className="p-6">

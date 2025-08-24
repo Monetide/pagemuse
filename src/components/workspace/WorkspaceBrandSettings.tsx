@@ -12,7 +12,8 @@ import {
   Settings,
   AlertCircle,
   Plus,
-  Check
+  Check,
+  Activity
 } from 'lucide-react';
 import { useBrandKits } from '@/hooks/useBrandKits';
 import { useWorkspaces } from '@/hooks/useWorkspaces';
@@ -169,10 +170,19 @@ export const WorkspaceBrandSettings = () => {
                   Manage all brand kits available in this workspace
                 </CardDescription>
               </div>
-              <Button onClick={() => setCreateDialogOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Create Brand Kit
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => window.location.href = `/w/${currentWorkspace?.slug}/settings/brand/activity`}
+                >
+                  <Activity className="w-4 h-4 mr-2" />
+                  View Activity
+                </Button>
+                <Button onClick={() => setCreateDialogOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Brand Kit
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>

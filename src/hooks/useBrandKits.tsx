@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
 import { useAuth } from './useAuth';
+import { useWorkspaceActivity } from './useWorkspaceActivity';
 import { toast } from 'sonner';
 import type { 
   BrandKit, 
@@ -18,6 +19,7 @@ export const useBrandKits = () => {
   const [error, setError] = useState<string | null>(null);
   const { currentWorkspace } = useWorkspaceContext();
   const { user } = useAuth();
+  const { logActivity } = useWorkspaceActivity();
 
   const fetchBrandKits = async () => {
     if (!currentWorkspace) {
@@ -77,6 +79,18 @@ export const useBrandKits = () => {
         ...brandKitData.neutrals
       });
 
+      // Log activity
+      await logActivity(
+        'brand_kit_created',
+        `Created brand kit "${brandKitData.name}"`,
+        {
+          brand_kit_id: brandKitData.id,
+          palette: brandKitData.palette,
+          neutrals: brandKitData.neutrals,
+          tokens_generated: Object.keys({...brandKitData.palette, ...brandKitData.neutrals}).length
+        }
+      );
+
       await fetchBrandKits();
       toast.success('Brand kit created successfully');
       return brandKitData;
@@ -89,6 +103,13 @@ export const useBrandKits = () => {
 
   const updateBrandKit = async (id: string, data: UpdateBrandKitData): Promise<BrandKit | null> => {
     try {
+      // Get the original brand kit for diff
+      const { data: originalBrandKit } = await supabase
+        .from('brand_kits')
+        .select('*')
+        .eq('id', id)
+        .single();
+
       const updatePayload: any = {};
       if (data.name) updatePayload.name = data.name;
       if (data.logo_primary_url !== undefined) updatePayload.logo_primary_url = data.logo_primary_url;
@@ -122,6 +143,19 @@ export const useBrandKits = () => {
           });
         }
       }
+
+      // Log activity with diff
+      const diff = generateBrandKitDiff(originalBrandKit, brandKit as any);
+      await logActivity(
+        'brand_kit_updated',
+        `Updated brand kit "${brandKit.name || originalBrandKit?.name}"`,
+        {
+          brand_kit_id: id,
+          changes: updatePayload,
+          diff,
+          tokens_updated: (data.palette || data.neutrals) ? Object.keys({...(data.palette || {}), ...(data.neutrals || {})}).length : 0
+        }
+      );
 
       await fetchBrandKits();
       toast.success('Brand kit updated successfully');
@@ -230,6 +264,7 @@ export const useKitApplications = () => {
   const [applications, setApplications] = useState<KitApplication[]>([]);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
+  const { logActivity } = useWorkspaceActivity();
 
   const fetchApplications = async (targetType?: 'template' | 'document', targetId?: string) => {
     try {
@@ -282,6 +317,20 @@ export const useKitApplications = () => {
 
       if (error) throw error;
 
+      // Log activity
+      await logActivity(
+        'brand_kit_applied',
+        `Applied brand kit "${brandKit.name}" to ${data.target_type}`,
+        {
+          brand_kit_id: data.brand_kit_id,
+          target_type: data.target_type,
+          target_id: data.target_id,
+          follow_updates: data.follow_updates,
+          brand_kit_name: brandKit.name,
+          snapshot_created: true
+        }
+      );
+
       toast.success('Brand kit applied successfully');
       return application as unknown as KitApplication;
     } catch (err) {
@@ -293,12 +342,34 @@ export const useKitApplications = () => {
 
   const removeApplication = async (id: string): Promise<boolean> => {
     try {
+      // Get application details before deletion
+      const { data: applicationData } = await supabase
+        .from('kit_applications')
+        .select('*, brand_kits(name)')
+        .eq('id', id)
+        .single();
+
       const { error } = await supabase
         .from('kit_applications')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
+
+      // Log activity
+      if (applicationData) {
+        await logActivity(
+          'brand_kit_rollback',
+          `Rolled back brand kit "${applicationData.brand_kits?.name || 'Unknown'}" from ${applicationData.target_type}`,
+          {
+            brand_kit_id: applicationData.brand_kit_id,
+            target_type: applicationData.target_type,
+            target_id: applicationData.target_id,
+            application_id: id,
+            originally_applied: applicationData.applied_at
+          }
+        );
+      }
 
       toast.success('Brand kit application removed');
       return true;
@@ -316,4 +387,53 @@ export const useKitApplications = () => {
     applyBrandKit,
     removeApplication
   };
+};
+
+// Helper function to generate diff between brand kit versions
+const generateBrandKitDiff = (before: any, after: any) => {
+  const diff: any = {};
+  
+  // Compare palette colors
+  if (before?.palette && after?.palette) {
+    const paletteChanges: any = {};
+    Object.keys({...before.palette, ...after.palette}).forEach(key => {
+      if (before.palette[key] !== after.palette[key]) {
+        paletteChanges[key] = {
+          before: before.palette[key],
+          after: after.palette[key]
+        };
+      }
+    });
+    if (Object.keys(paletteChanges).length > 0) {
+      diff.palette = paletteChanges;
+    }
+  }
+
+  // Compare neutral colors
+  if (before?.neutrals && after?.neutrals) {
+    const neutralsChanges: any = {};
+    Object.keys({...before.neutrals, ...after.neutrals}).forEach(key => {
+      if (before.neutrals[key] !== after.neutrals[key]) {
+        neutralsChanges[key] = {
+          before: before.neutrals[key],
+          after: after.neutrals[key]
+        };
+      }
+    });
+    if (Object.keys(neutralsChanges).length > 0) {
+      diff.neutrals = neutralsChanges;
+    }
+  }
+
+  // Compare other fields
+  ['name', 'logo_primary_url', 'logo_alt_url', 'fonts'].forEach(field => {
+    if (before?.[field] !== after?.[field]) {
+      diff[field] = {
+        before: before?.[field],
+        after: after?.[field]
+      };
+    }
+  });
+
+  return diff;
 };
