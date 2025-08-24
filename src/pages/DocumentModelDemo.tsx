@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useDocumentSectionManagement } from '@/hooks/useDocumentSectionManagement'
 import { DocumentHeader } from '@/components/document/DocumentHeader'
 import { Navigator } from '@/components/document/Navigator'
@@ -15,6 +15,8 @@ import { CanvasSectionHeader } from '@/components/document/CanvasSectionHeader'
 import { TrashPanel } from '@/components/document/TrashPanel'
 import { CoachMarks } from '@/components/onboarding/CoachMarks'
 import { useOnboarding } from '@/hooks/useOnboarding'
+import { NewDocumentFlow } from '@/components/document/NewDocumentFlow'
+import { useKitApplications } from '@/hooks/useBrandKits'
 
 import { AccessibilityProvider } from '@/components/accessibility/AccessibilityProvider'
 import { DragDropProvider } from '@/contexts/DragDropContext'
@@ -25,12 +27,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PageMaster, Section, Block, createDocument, createSection, createFlow, createBlock, addBlockToFlow, addFlowToSection, addSectionToDocument } from '@/lib/document-model'
 import { History, Trash2 } from 'lucide-react'
 import { generateLayout, LayoutResult } from '@/lib/layout-engine'
+import type { BrandKit } from '@/types/brandKit'
 
 export default function DocumentModelDemo() {
   const { id } = useParams()
+  const navigate = useNavigate()
   console.log('DocumentModelDemo: Raw ID from params:', id)
   const documentId = id === 'new' ? undefined : id
+  const isNewDocument = id === 'new'
   console.log('DocumentModelDemo: Processed documentId:', documentId)
+  const { applyBrandKit } = useKitApplications()
   const { 
     document,
     createNewDocument,
@@ -91,6 +97,35 @@ export default function DocumentModelDemo() {
       createNewDocument(docTitle.trim())
       setDocTitle('')
     }
+  }
+
+  const handleNewDocumentComplete = async (title: string, brandKit: BrandKit | null) => {
+    // Create the document first
+    const newDoc = createNewDocument(title)
+    
+    // Apply brand kit if selected
+    if (brandKit && persistence.currentDocumentId) {
+      try {
+        await applyBrandKit({
+          target_type: 'document',
+          target_id: persistence.currentDocumentId,
+          brand_kit_id: brandKit.id,
+          follow_updates: true, // Always follow updates for new documents
+          snapshot: brandKit
+        })
+      } catch (error) {
+        console.error('Failed to apply brand kit to new document:', error)
+      }
+    }
+    
+    // Navigate to the editor
+    if (persistence.currentDocumentId) {
+      navigate(`/documents/${persistence.currentDocumentId}/editor`)
+    }
+  }
+
+  const handleNewDocumentCancel = () => {
+    navigate(-1) // Go back to previous page
   }
 
   const handleAddSection = () => {
@@ -387,9 +422,14 @@ export default function DocumentModelDemo() {
             title={document.title}
             saveStatus={persistence.saveStatus}
             documentMetadata={persistence.documentMetadata}
+            currentBrandKitId={undefined} // TODO: Get from document metadata or kit applications
             onTitleChange={updateTitle}
             onSaveAs={handleSaveAs}
             onClose={persistence.closeDocument}
+            onBrandKitChange={(brandKit) => {
+              // TODO: Handle brand kit change - update document theme
+              console.log('Brand kit changed for document:', brandKit);
+            }}
             debugMode={debugMode}
             onDebugToggle={() => {}} // Debug mode is read-only from URL param
             onToggleVersionHistory={() => setShowVersionHistory(!showVersionHistory)}
@@ -413,6 +453,13 @@ export default function DocumentModelDemo() {
                 </div>
               </div>
             )
+          ) : isNewDocument ? (
+            <div className="flex-1 flex items-center justify-center p-6">
+              <NewDocumentFlow
+                onComplete={handleNewDocumentComplete}
+                onCancel={handleNewDocumentCancel}
+              />
+            </div>
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <div className="max-w-md space-y-6 text-center">

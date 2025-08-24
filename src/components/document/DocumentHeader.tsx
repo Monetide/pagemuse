@@ -47,16 +47,18 @@ import { DocumentBrandKitSelector } from './DocumentBrandKitSelector'
 import { WorkspaceSwitcher } from '@/components/layout/WorkspaceSwitcher'
 
 interface DocumentHeaderProps {
-  documentId?: string
-  title: string
-  saveStatus: SaveStatus
-  documentMetadata: DocumentMetadata | null
-  onTitleChange: (newTitle: string) => void
-  onSaveAs: (newTitle: string) => void
-  onClose: () => void
-  debugMode?: boolean
-  onDebugToggle?: (enabled: boolean) => void
-  onToggleVersionHistory?: () => void
+  documentId?: string;
+  title: string;
+  saveStatus: SaveStatus;
+  documentMetadata: DocumentMetadata | null;
+  currentBrandKitId?: string;
+  onTitleChange: (newTitle: string) => void;
+  onSaveAs: (newTitle: string) => void;
+  onClose: () => void;
+  onBrandKitChange?: (brandKit: any) => void;
+  debugMode?: boolean;
+  onDebugToggle?: (enabled: boolean) => void;
+  onToggleVersionHistory?: () => void;
 }
 
 export function DocumentHeader({
@@ -64,9 +66,11 @@ export function DocumentHeader({
   title,
   saveStatus,
   documentMetadata,
+  currentBrandKitId,
   onTitleChange,
   onSaveAs,
   onClose,
+  onBrandKitChange,
   debugMode = false,
   onDebugToggle,
   onToggleVersionHistory
@@ -265,12 +269,8 @@ export function DocumentHeader({
             {documentId && (
               <DocumentBrandKitSelector 
                 documentId={documentId}
-                // TODO: Pass current brand kit ID from document metadata
-                currentBrandKitId={undefined}
-                onBrandKitChange={(brandKit) => {
-                  // TODO: Handle brand kit change in parent component
-                  console.log('Brand kit changed:', brandKit);
-                }}
+                currentBrandKitId={currentBrandKitId}
+                onBrandKitChange={onBrandKitChange}
               />
             )}
             
