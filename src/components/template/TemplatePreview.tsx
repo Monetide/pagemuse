@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { Template } from '@/hooks/useSupabaseData'
 import { TemplateApplyBrandKitButton } from './TemplateApplyBrandKitButton'
+import { BrandTab } from '@/components/brand/BrandTab'
 
 interface TemplatePreviewProps {
   template: Template
@@ -124,10 +125,10 @@ export function TemplatePreview({
 
         <div className="flex-1 min-h-0">
             <Tabs defaultValue="preview" className="h-full flex flex-col">
-              <TabsList className="grid w-full grid-cols-4 flex-shrink-0">
+              <TabsList className="grid w-full grid-cols-5 flex-shrink-0">
                 <TabsTrigger value="preview" className="flex items-center gap-2">
                   <Eye className="w-4 h-4" />
-                  Preview Pages
+                  Preview
                 </TabsTrigger>
                 <TabsTrigger value="details" className="flex items-center gap-2">
                   <FileText className="w-4 h-4" />
@@ -136,6 +137,10 @@ export function TemplatePreview({
                 <TabsTrigger value="styles" className="flex items-center gap-2">
                   <Palette className="w-4 h-4" />
                   Styles
+                </TabsTrigger>
+                <TabsTrigger value="brand" className="flex items-center gap-2">
+                  <Image className="w-4 h-4" />
+                  Brand
                 </TabsTrigger>
                 <TabsTrigger value="validation" className="flex items-center gap-2">
                   <Shield className="w-4 h-4" />
@@ -381,6 +386,18 @@ export function TemplatePreview({
                       </div>
                     </div>
                   </div>
+                </ScrollArea>
+              </TabsContent>
+
+              <TabsContent value="brand" className="h-full mt-0">
+                <ScrollArea className="h-full">
+                  <BrandTab
+                    entityType="template"
+                    entityId={template.id}
+                    currentBrandKitId={undefined}
+                    onBrandKitChange={() => {}}
+                    onLogoSettingsChange={() => {}}
+                  />
                 </ScrollArea>
               </TabsContent>
 

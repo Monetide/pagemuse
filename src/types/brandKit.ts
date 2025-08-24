@@ -51,6 +51,25 @@ export interface KitApplication {
   snapshot: any;
 }
 
+// Logo placement settings interface
+export interface LogoPlacementSettings {
+  coverLogo: {
+    enabled: boolean
+    position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+    size: number // 8-14% of page width
+    autoInvert: boolean
+    nudgeOnOverlap: boolean
+  }
+  headerLogo: {
+    enabled: boolean
+    style: 'grayscale' | 'primary'
+  }
+  footerLogo: {
+    enabled: boolean
+    style: 'grayscale' | 'primary'
+  }
+}
+
 export type CreateBrandKitData = Omit<BrandKit, 'id' | 'created_at' | 'updated_at' | 'created_by'>;
 export type UpdateBrandKitData = Partial<Omit<BrandKit, 'id' | 'workspace_id' | 'created_by' | 'created_at' | 'updated_at'>>;
 export type CreateKitApplicationData = Omit<KitApplication, 'id' | 'applied_at' | 'applied_by'>;

@@ -2,26 +2,38 @@ import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ColorwaySelector } from '@/components/template/ColorwaySelector'
 import { createDefaultThemeTokens, switchColorway, TemplateThemeTokens } from '@/lib/template-model'
+import { BrandTab } from '@/components/brand/BrandTab'
+import { LogoPlacementSettings, createDefaultLogoSettings } from '@/components/brand/LogoPlacementControls'
 import { useToast } from '@/hooks/use-toast'
 import { 
   Palette, 
   Type, 
   RotateCcw,
-  Save
+  Save,
+  Image
 } from 'lucide-react'
 
 interface DocumentThemeSettingsProps {
   documentId: string
   currentTheme?: TemplateThemeTokens
+  currentBrandKitId?: string
+  logoSettings?: LogoPlacementSettings
   onThemeChange?: (theme: TemplateThemeTokens) => void
+  onBrandKitChange?: (brandKitId: string | null) => void
+  onLogoSettingsChange?: (settings: LogoPlacementSettings) => void
 }
 
 export function DocumentThemeSettings({ 
   documentId, 
   currentTheme,
-  onThemeChange 
+  currentBrandKitId,
+  logoSettings = createDefaultLogoSettings(),
+  onThemeChange,
+  onBrandKitChange,
+  onLogoSettingsChange
 }: DocumentThemeSettingsProps) {
   const { toast } = useToast()
   const [themeTokens, setThemeTokens] = useState<TemplateThemeTokens>(() => 
@@ -62,11 +74,25 @@ export function DocumentThemeSettings({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-foreground mb-2">Theme Settings</h2>
+        <h2 className="text-2xl font-bold text-foreground mb-2">Document Styling</h2>
         <p className="text-muted-foreground">
-          Customize the visual appearance of your document
+          Customize the visual appearance, branding, and layout of your document
         </p>
       </div>
+
+      <Tabs defaultValue="theme" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="theme" className="flex items-center gap-2">
+            <Palette className="w-4 h-4" />
+            Theme
+          </TabsTrigger>
+          <TabsTrigger value="brand" className="flex items-center gap-2">
+            <Image className="w-4 h-4" />
+            Brand
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="theme" className="space-y-6 mt-6">
 
       <Card>
         <CardHeader>
@@ -178,33 +204,46 @@ export function DocumentThemeSettings({
         </CardContent>
       </Card>
 
-      {/* Action Buttons */}
-      <div className="flex items-center justify-between">
-        <Button
-          variant="outline"
-          onClick={handleResetTheme}
-          className="flex items-center gap-2"
-        >
-          <RotateCcw className="w-4 h-4" />
-          Reset to Default
-        </Button>
-
-        <div className="flex items-center gap-2">
-          {hasChanges && (
-            <span className="text-sm text-muted-foreground">
-              Unsaved changes
-            </span>
-          )}
+        {/* Action Buttons */}
+        <div className="flex items-center justify-between">
           <Button
-            onClick={handleSaveTheme}
-            disabled={!hasChanges}
+            variant="outline"
+            onClick={handleResetTheme}
             className="flex items-center gap-2"
           >
-            <Save className="w-4 h-4" />
-            Save Theme
+            <RotateCcw className="w-4 h-4" />
+            Reset to Default
           </Button>
+
+          <div className="flex items-center gap-2">
+            {hasChanges && (
+              <span className="text-sm text-muted-foreground">
+                Unsaved changes
+              </span>
+            )}
+            <Button
+              onClick={handleSaveTheme}
+              disabled={!hasChanges}
+              className="flex items-center gap-2"
+            >
+              <Save className="w-4 h-4" />
+              Save Theme
+            </Button>
+          </div>
         </div>
-      </div>
+        </TabsContent>
+
+        <TabsContent value="brand" className="mt-6">
+          <BrandTab
+            entityType="document"
+            entityId={documentId}
+            currentBrandKitId={currentBrandKitId}
+            logoSettings={logoSettings}
+            onBrandKitChange={onBrandKitChange}
+            onLogoSettingsChange={onLogoSettingsChange}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
