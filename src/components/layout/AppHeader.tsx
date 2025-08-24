@@ -12,12 +12,15 @@ import { ViewModeToggle } from '@/components/document/ViewModeToggle'
 import { ValidationButton } from '@/components/document/ValidationButton'
 import { useAuth } from '@/hooks/useAuth'
 import { useAdminRole } from '@/hooks/useAdminRole'
+import { useWorkspaceNavigation } from '@/hooks/useWorkspaceNavigation'
+import { WorkspaceSwitcher } from './WorkspaceSwitcher'
 import { User, LogOut, Settings, Shield } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 
 export function AppHeader() {
   const { user, signOut } = useAuth()
   const { isAdmin } = useAdminRole()
+  const { currentWorkspaceId } = useWorkspaceNavigation()
   const location = useLocation()
 
   const handleSignOut = async () => {
@@ -28,7 +31,7 @@ export function AppHeader() {
   const userInitials = userDisplayName.slice(0, 2).toUpperCase()
 
   const navigationItems = [
-    { name: 'Dashboard', path: '/' },
+    { name: 'Dashboard', path: '/dashboard' },
     { name: 'Documents', path: '/documents' },
     { name: 'Templates', path: '/templates' },
     { name: 'Media', path: '/media' },
@@ -38,31 +41,31 @@ export function AppHeader() {
   return (
     <header className="h-14 border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-50">
       <div className="flex h-full items-center justify-between px-6">
-        {/* Logo */}
-        <div className="flex items-center space-x-8">
-          <NavLink to="/" className="flex items-center space-x-2">
+        {/* Logo and Workspace Switcher */}
+        <div className="flex items-center space-x-4">
+          <NavLink to={currentWorkspaceId ? `/w/${currentWorkspaceId}/dashboard` : '/dashboard'} className="flex items-center space-x-2">
             <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
               PageMuse
             </span>
           </NavLink>
-          
-          {/* Navigation Links */}
-          <nav className="flex items-center space-x-8">
-            {navigationItems.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={({ isActive }) =>
-                  `text-sm font-medium transition-colors hover:text-primary ${
-                    isActive ? 'text-primary' : 'text-muted-foreground'
-                  }`
-                }
-              >
-                {item.name}
-              </NavLink>
-            ))}
-          </nav>
+          <WorkspaceSwitcher />
         </div>
+        {/* Navigation Links */}
+        <nav className="flex items-center space-x-6">
+          {navigationItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={currentWorkspaceId ? `/w/${currentWorkspaceId}${item.path}` : item.path}
+              className={({ isActive }) =>
+                `text-sm font-medium transition-colors hover:text-primary ${
+                  isActive ? 'text-primary' : 'text-muted-foreground'
+                }`
+              }
+            >
+              {item.name}
+            </NavLink>
+          ))}
+        </nav>
 
         {/* View Mode Toggle and Validation - only show on document pages */}
         {location.pathname.includes('/document') && (
@@ -106,7 +109,7 @@ export function AppHeader() {
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <NavLink to="/admin">
+                  <NavLink to={currentWorkspaceId ? `/w/${currentWorkspaceId}/admin` : '/admin'}>
                     <Shield className="mr-2 h-4 w-4" />
                     Admin Panel
                   </NavLink>

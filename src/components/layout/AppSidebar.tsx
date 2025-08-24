@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
+import { useWorkspaceNavigation } from '@/hooks/useWorkspaceNavigation'
 import {
   Sidebar,
   SidebarContent,
@@ -27,7 +28,7 @@ import { useAdminRole } from '@/hooks/useAdminRole'
 import { useEffect, useRef } from 'react'
 
 const mainItems = [
-  { title: 'Dashboard', url: '/', icon: LayoutDashboard },
+  { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
   { title: 'My Documents', url: '/documents', icon: FileText },
   { title: 'Template Library', url: '/templates', icon: Palette },
   { title: 'Media Library', url: '/media', icon: Image },
@@ -47,8 +48,9 @@ export function AppSidebar() {
   const { focusedSection, setFocusedSection, announce } = useAccessibility()
   const { updateFocusableElements, focusNext, focusPrevious } = useFocusManagement()
   const { isAdmin } = useAdminRole()
+  const { currentWorkspaceId, getCurrentWorkspacePath } = useWorkspaceNavigation()
   const sidebarRef = useRef<HTMLDivElement>(null)
-  const currentPath = location.pathname
+  const currentPath = getCurrentWorkspacePath()
   const isCollapsed = state === 'collapsed'
   const isFocused = focusedSection === 'sidebar'
 
@@ -113,7 +115,7 @@ export function AppSidebar() {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink 
-                      to={item.url} 
+                      to={currentWorkspaceId ? `/w/${currentWorkspaceId}${item.url}` : item.url}
                       end 
                       className={getNavCls}
                       title={isCollapsed ? item.title : undefined}
@@ -142,7 +144,7 @@ export function AppSidebar() {
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
                       <NavLink 
-                        to={item.url} 
+                        to={currentWorkspaceId ? `/w/${currentWorkspaceId}${item.url}` : item.url}
                         className={getNavCls}
                         title={isCollapsed ? item.title : undefined}
                         aria-label={item.title}
@@ -168,7 +170,7 @@ export function AppSidebar() {
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild>
                         <NavLink 
-                          to={item.url} 
+                          to={currentWorkspaceId ? `/w/${currentWorkspaceId}${item.url}` : item.url}
                           className={getNavCls}
                           title={isCollapsed ? item.title : undefined}
                           aria-label={item.title}
