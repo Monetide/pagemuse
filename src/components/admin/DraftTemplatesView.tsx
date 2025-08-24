@@ -207,7 +207,7 @@ export function DraftTemplatesView() {
               {searchQuery ? 'Try adjusting your search criteria' : 'Create your first template to get started'}
             </p>
             {!searchQuery && (
-              <Button onClick={() => navigate('/admin/templates/generator')}>
+              <Button onClick={() => navigate('/admin/template-generator')}>
                 <Plus className="w-4 h-4 mr-2" />
                 Create Template
               </Button>
