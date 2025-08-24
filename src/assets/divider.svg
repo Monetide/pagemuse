@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 20" class="w-full h-5">
+  <defs>
+    <linearGradient id="dividerGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" fill="currentColor" data-token="border/subtle" opacity="0" />
+      <stop offset="20%" fill="currentColor" data-token="brand/primary" opacity="0.8" />
+      <stop offset="50%" fill="currentColor" data-token="brand/accent" />
+      <stop offset="80%" fill="currentColor" data-token="brand/primary" opacity="0.8" />
+      <stop offset="100%" fill="currentColor" data-token="border/subtle" opacity="0" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Main divider line -->
+  <rect x="0" y="9" width="400" height="2" fill="url(#dividerGradient)" />
+  
+  <!-- Decorative elements -->
+  <circle cx="200" cy="10" r="4" fill="currentColor" data-token="brand/accent" />
+  <circle cx="180" cy="10" r="2" fill="currentColor" data-token="brand/primary" opacity="0.6" />
+  <circle cx="220" cy="10" r="2" fill="currentColor" data-token="brand/primary" opacity="0.6" />
+</svg>

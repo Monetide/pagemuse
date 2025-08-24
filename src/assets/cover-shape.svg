@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" class="w-full h-full">
+  <defs>
+    <linearGradient id="shapeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" fill="currentColor" data-token="brand/primary" />
+      <stop offset="100%" fill="currentColor" data-token="brand/accent" />
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="4" dy="4" stdDeviation="8" flood-color="currentColor" data-token="text/body" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+  
+  <!-- Main organic shape -->
+  <path d="M50 200 
+           Q150 50 300 100 
+           Q450 150 550 100 
+           Q580 200 500 250
+           Q400 350 300 300
+           Q200 350 100 300
+           Q20 250 50 200 Z" 
+        fill="url(#shapeGradient)" 
+        filter="url(#shadow)" />
+  
+  <!-- Secondary accent shape -->
+  <ellipse cx="450" cy="150" rx="60" ry="40" 
+           fill="currentColor" data-token="brand/secondary" 
+           opacity="0.7" 
+           transform="rotate(25 450 150)" />
+  
+  <!-- Small decorative elements -->
+  <circle cx="150" cy="180" r="8" fill="currentColor" data-token="bg/page" opacity="0.9" />
+  <circle cx="350" cy="220" r="6" fill="currentColor" data-token="bg/page" opacity="0.9" />
+  <circle cx="480" cy="280" r="4" fill="currentColor" data-token="bg/page" opacity="0.9" />
+  
+  <!-- Outline accent -->
+  <path d="M50 200 
+           Q150 50 300 100 
+           Q450 150 550 100 
+           Q580 200 500 250
+           Q400 350 300 300
+           Q200 350 100 300
+           Q20 250 50 200 Z" 
+        fill="none" 
+        stroke="currentColor" 
+        data-token="border/subtle" 
+        stroke-width="1" 
+        opacity="0.5" />
+</svg>

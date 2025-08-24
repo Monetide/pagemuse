@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" class="w-full h-full">
+  <!-- Background gradient with brand colors -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" fill="currentColor" data-token="bg/page" />
+      <stop offset="100%" fill="currentColor" data-token="bg/section" />
+    </linearGradient>
+    <pattern id="dots" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+      <circle cx="20" cy="20" r="2" fill="currentColor" data-token="border/subtle" opacity="0.3" />
+    </pattern>
+  </defs>
+  
+  <!-- Main background -->
+  <rect width="800" height="600" fill="url(#bgGradient)" />
+  
+  <!-- Decorative dots pattern -->
+  <rect width="800" height="600" fill="url(#dots)" />
+  
+  <!-- Decorative shapes -->
+  <circle cx="100" cy="100" r="60" fill="currentColor" data-token="brand/primary" opacity="0.1" />
+  <circle cx="700" cy="500" r="80" fill="currentColor" data-token="brand/accent" opacity="0.08" />
+  
+  <!-- Curved accent line -->
+  <path d="M0 300 Q200 250 400 300 T800 300" stroke="currentColor" data-token="brand/secondary" stroke-width="2" fill="none" opacity="0.3" />
+</svg>

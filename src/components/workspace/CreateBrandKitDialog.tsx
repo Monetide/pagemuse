@@ -10,6 +10,10 @@ import { Upload, Image as ImageIcon, X, Palette, Loader2, AlertTriangle, CheckCi
 import { useBrandKits } from '@/hooks/useBrandKits';
 import { useMediaLibrary } from '@/hooks/useMediaLibrary';
 import { generateColorways, getContrastRatio, adjustForAACompliance } from '@/lib/colorway-generator';
+import { recolorSvg, generateTokenMapFromBrandKit } from '@/lib/svg-recoloring';
+import bodyBgSvg from '@/assets/body-bg.svg?raw';
+import dividerSvg from '@/assets/divider.svg?raw';
+import coverShapeSvg from '@/assets/cover-shape.svg?raw';
 import type { CreateBrandKitData } from '@/types/brandKit';
 
 interface CreateBrandKitDialogProps {
@@ -528,6 +532,45 @@ export const CreateBrandKitDialog = ({ open, onOpenChange }: CreateBrandKitDialo
                 <CardContent className="p-4">
                   <div className="space-y-3">
                     <Label className="text-sm font-medium">Live Preview</Label>
+                    
+                    {/* SVG Assets Preview */}
+                    <div className="space-y-3">
+                      <div className="text-xs text-muted-foreground">Template Assets</div>
+                      
+                      {/* Cover Shape */}
+                      <div className="relative h-24 rounded border overflow-hidden">
+                        <div 
+                          className="absolute inset-0"
+                          dangerouslySetInnerHTML={{ 
+                            __html: recolorSvg(coverShapeSvg, generateTokenMapFromBrandKit(formData))
+                          }} 
+                        />
+                      </div>
+                      
+                      {/* Body Background */}
+                      <div className="relative h-16 rounded border overflow-hidden">
+                        <div 
+                          className="absolute inset-0"
+                          dangerouslySetInnerHTML={{ 
+                            __html: recolorSvg(bodyBgSvg, generateTokenMapFromBrandKit(formData))
+                          }} 
+                        />
+                      </div>
+                      
+                      {/* Divider */}
+                      <div className="relative h-5 rounded border overflow-hidden">
+                        <div 
+                          className="absolute inset-0"
+                          dangerouslySetInnerHTML={{ 
+                            __html: recolorSvg(dividerSvg, generateTokenMapFromBrandKit(formData))
+                          }} 
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="h-px bg-border" />
+                    
+                    {/* Text Content Preview */}
                     <div 
                       className="space-y-4 p-4 rounded-lg border-2"
                       style={{ 
@@ -596,12 +639,6 @@ export const CreateBrandKitDialog = ({ open, onOpenChange }: CreateBrandKitDialo
                           Secondary Button
                         </button>
                       </div>
-                      
-                      {/* Divider */}
-                      <div 
-                        className="h-px w-full"
-                        style={{ backgroundColor: formData.neutrals.borderSubtle }}
-                      />
                       
                       {/* Small text example */}
                       <div 
