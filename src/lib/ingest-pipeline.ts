@@ -552,7 +552,8 @@ function organizeSections(blocks: BlockIR[]): SectionIR[] {
   const sections: SectionIR[] = [];
   let currentSection: SectionIR = { 
     id: 'section-0',
-    blocks: [] 
+    blocks: [],
+    order: 0 
   };
   let sectionCounter = 0;
   
@@ -667,16 +668,21 @@ export function testMarkdownParser(): DocumentIR {
 
 // Backward compatibility exports
 export class IngestPipeline {
-  static async ingest(content: string, format: 'paste' | 'txt' | 'markdown' | 'html' = 'txt', options?: IngestOptions): Promise<DocumentIR> {
-    return ingestToIR(content, format, options);
+  static async ingest(
+    content: string,
+    format: 'paste' | 'txt' | 'markdown' | 'html' = 'txt',
+    options?: IngestOptions
+  ): Promise<LegacyIRDocument> {
+    const newIR = ingestToIR(content, format, options)
+    return convertToLegacyIR(newIR)
   }
   
-  static async processFile(file: File, options?: IngestOptions): Promise<DocumentIR> {
-    return ingestFile(file, options);
+  static async processFile(file: File, options?: IngestOptions): Promise<LegacyIRDocument> {
+    return ingestFile(file, options)
   }
 }
 
-export async function ingestFile(file: File, options?: IngestOptions): Promise<DocumentIR> {
+export async function ingestFile(file: File, options?: IngestOptions): Promise<LegacyIRDocument> {
   const text = await file.text();
   let format: 'paste' | 'txt' | 'markdown' | 'html' | 'docx' = 'txt';
   
@@ -689,7 +695,8 @@ export async function ingestFile(file: File, options?: IngestOptions): Promise<D
     return await ingestDocx(file, options);
   }
   
-  return ingestToIR(text, format, options);
+  const newIR = ingestToIR(text, format, options);
+  return convertToLegacyIR(newIR);
 }
 
 // Legacy types for backward compatibility - remove duplicate definitions
@@ -757,7 +764,7 @@ export function convertToLegacyIR(documentIR: DocumentIR): LegacyIRDocument {
 }
 
 // DOCX ingestion function
-export async function ingestDocx(file: File, options: IngestOptions = DEFAULT_INGEST_OPTIONS): Promise<DocumentIR> {
+export async function ingestDocx(file: File, options: IngestOptions = DEFAULT_INGEST_OPTIONS): Promise<LegacyIRDocument> {
   try {
     const arrayBuffer = await file.arrayBuffer();
     const result = await mammoth.convertToHtml({ arrayBuffer });
@@ -773,7 +780,7 @@ export async function ingestDocx(file: File, options: IngestOptions = DEFAULT_IN
     // Organize into sections
     const sections = organizeSections(blocks);
     
-    return {
+    const newIR: DocumentIR = {
       title: file.name.replace(/\.docx$/i, '') || 'Imported Document',
       sections,
       metadata: {
@@ -782,6 +789,8 @@ export async function ingestDocx(file: File, options: IngestOptions = DEFAULT_IN
         author: 'Unknown'
       }
     };
+
+    return convertToLegacyIR(newIR);
   } catch (error) {
     console.error('Error processing DOCX file:', error);
     throw new Error(`Failed to process DOCX file: ${error instanceof Error ? error.message : 'Unknown error'}`);
