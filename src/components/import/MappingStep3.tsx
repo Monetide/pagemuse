@@ -23,7 +23,8 @@ import {
   Quote,
   MessageSquare,
   List,
-  Settings
+  Settings,
+  Sidebar
 } from 'lucide-react'
 import { MappingConfig } from './MappingWizard'
 import { IRDocument, IRBlock, IRSection } from '@/lib/ir-types'
@@ -201,6 +202,24 @@ export function MappingStep3({ config, updateConfig, irDocument, onPreviewUpdate
     generateSections()
   }
 
+  const getSectionSidebarEnabled = (sectionIndex: number): boolean => {
+    return config.structuralEdits.sidebarSections?.includes(sectionIndex) ?? false
+  }
+
+  const toggleSectionSidebar = (sectionIndex: number) => {
+    const currentSidebarSections = config.structuralEdits.sidebarSections || []
+    const isEnabled = currentSidebarSections.includes(sectionIndex)
+    
+    updateConfig({
+      structuralEdits: {
+        ...config.structuralEdits,
+        sidebarSections: isEnabled 
+          ? currentSidebarSections.filter(index => index !== sectionIndex)
+          : [...currentSidebarSections, sectionIndex]
+      }
+    })
+  }
+
   const startEditingTitle = (sectionId: string, currentTitle: string) => {
     setEditingTitle(sectionId)
     setNewTitle(currentTitle)
@@ -331,6 +350,22 @@ export function MappingStep3({ config, updateConfig, irDocument, onPreviewUpdate
                       <Badge variant="outline" className="text-xs">
                         {section.blocks.length} blocks
                       </Badge>
+                      
+                      {config.sidebarFlow && (
+                        <Button
+                          variant={getSectionSidebarEnabled(sectionIndex) ? "default" : "ghost"}
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            toggleSectionSidebar(sectionIndex)
+                          }}
+                          className="h-6 px-2 text-xs"
+                          title={getSectionSidebarEnabled(sectionIndex) ? "Disable sidebar for this section" : "Enable sidebar for this section"}
+                        >
+                          <Sidebar className="w-3 h-3 mr-1" />
+                          {getSectionSidebarEnabled(sectionIndex) ? "Sidebar On" : "Sidebar"}
+                        </Button>
+                      )}
                       
                       {section.canSplit && (
                         <Button

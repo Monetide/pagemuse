@@ -191,10 +191,10 @@ export function MappingStep2({ config, updateConfig, irDocument }: MappingStep2P
               <div className="space-y-1">
                 <Label className="text-sm font-medium flex items-center gap-2">
                   <Sidebar className="w-4 h-4" />
-                  Sidebar flow for Notes/Callouts
+                  Global Sidebar Flow
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Place notes and callouts in sidebar for better content flow
+                  Enable sidebar flow option for all sections (can be toggled per section later)
                 </p>
               </div>
               <Switch
@@ -206,8 +206,9 @@ export function MappingStep2({ config, updateConfig, irDocument }: MappingStep2P
             {config.sidebarFlow && (
               <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border-l-2 border-l-blue-400">
                 <p className="text-sm text-blue-700 dark:text-blue-300">
-                  <strong>Sidebar flow enabled:</strong> Notes and callouts will be moved to the sidebar, 
-                  keeping the main content clean and focused.
+                  <strong>Sidebar flow enabled:</strong> Sections will have the option to place notes and callouts 
+                  in a sidebar frame, keeping the main content clean and focused. You can toggle this per section 
+                  in the next step.
                 </p>
               </div>
             )}

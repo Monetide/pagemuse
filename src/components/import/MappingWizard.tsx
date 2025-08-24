@@ -10,6 +10,7 @@ import { MappingStep2 } from './MappingStep2'
 import { MappingStep3 } from './MappingStep3'
 import { MappingStep4 } from './MappingStep4'
 import { MappingStep5 } from './MappingStep5'
+import { MappingStep6 } from './MappingStep6'
 import { CleanupResultsPanel } from './CleanupResultsPanel'
 import { CleanupAuditEntry } from '@/lib/ir-cleanup'
 import { IRDocument } from '@/lib/ir-types'
@@ -53,6 +54,7 @@ export interface MappingConfig {
     tableHeaderRows: Record<string, boolean> // tableId -> hasHeaderRow
     sectionMerges: Array<{ from: string; to: string }>
     sectionSplits: Array<{ blockId: string; newSectionName: string }>
+    sidebarSections?: number[] // section indices with sidebar enabled
   }
 }
 
@@ -81,7 +83,8 @@ export function MappingWizard({
     step2: true,  // Always valid once visited
     step3: false, // Valid when preview is generated
     step4: false, // Valid when template + brand selected
-    step5: false  // Valid when metadata is complete
+    step5: false, // Valid when metadata is complete
+    step6: false  // Valid when layout is complete
   })
   const [config, setConfig] = useState<MappingConfig>({
     mode: 'new-document',
@@ -112,7 +115,8 @@ export function MappingWizard({
       decorativeImages: [],
       tableHeaderRows: {},
       sectionMerges: [],
-      sectionSplits: []
+      sectionSplits: [],
+      sidebarSections: []
     }
   })
   
@@ -125,7 +129,7 @@ export function MappingWizard({
   }, [])
 
   const handleNext = useCallback(() => {
-    if (currentStep < 5 && canProceedToStep(currentStep + 1)) {
+    if (currentStep < 6 && canProceedToStep(currentStep + 1)) {
       setCurrentStep(prev => prev + 1)
       
       // Mark current step as visited/valid
@@ -150,7 +154,7 @@ export function MappingWizard({
 
   const handleStartOver = useCallback(() => {
     setCurrentStep(1)
-    setStepValidation({ step1: true, step2: true, step3: false, step4: false, step5: false })
+    setStepValidation({ step1: true, step2: true, step3: false, step4: false, step5: false, step6: false })
     setPreviewDocument(null)
     setHasUnsavedChanges(false)
     // Reset config to defaults
@@ -183,7 +187,8 @@ export function MappingWizard({
         decorativeImages: [],
         tableHeaderRows: {},
         sectionMerges: [],
-        sectionSplits: []
+        sectionSplits: [],
+        sidebarSections: []
       }
     })
   }, [])
@@ -207,6 +212,7 @@ export function MappingWizard({
       case 3: return stepValidation.step1 && stepValidation.step2
       case 4: return stepValidation.step1 && stepValidation.step2 && stepValidation.step3
       case 5: return stepValidation.step1 && stepValidation.step2 && stepValidation.step3 && stepValidation.step4
+      case 6: return stepValidation.step1 && stepValidation.step2 && stepValidation.step3 && stepValidation.step4 && stepValidation.step5
       default: return false
     }
   }
@@ -223,6 +229,7 @@ export function MappingWizard({
       case 3: return 'Preview & Fixups'
       case 4: return 'Template & Brand'
       case 5: return 'Cover & Metadata'
+      case 6: return 'Pour & Paginate'
       default: return ''
     }
   }
@@ -234,6 +241,7 @@ export function MappingWizard({
       case 3: return 'Review and make final adjustments'
       case 4: return 'Select template and brand kit'
       case 5: return 'Generate cover and set metadata'
+      case 6: return 'Apply professional layout rules'
       default: return ''
     }
   }
@@ -245,6 +253,7 @@ export function MappingWizard({
       case 3: return stepValidation.step3
       case 4: return stepValidation.step4
       case 5: return stepValidation.step5
+      case 6: return stepValidation.step6
       default: return false
     }
   }
@@ -286,7 +295,7 @@ export function MappingWizard({
           
           {/* Progress Steps */}
           <div className="flex items-center gap-6 mt-6">
-            {[1, 2, 3, 4, 5].map((step) => (
+            {[1, 2, 3, 4, 5, 6].map((step) => (
               <div key={step} className="flex items-center gap-3">
                 <div 
                   className={`flex items-center justify-center w-10 h-10 rounded-full border-2 cursor-pointer transition-all duration-200 ${
@@ -312,7 +321,7 @@ export function MappingWizard({
                   <div className="text-sm font-medium">{getStepTitle(step)}</div>
                   <div className="text-xs text-muted-foreground">{getStepDescription(step)}</div>
                 </div>
-                {step < 5 && (
+                {step < 6 && (
                   <div className="w-12 h-px bg-border ml-3" />
                 )}
               </div>
@@ -321,10 +330,10 @@ export function MappingWizard({
           
           {/* Progress Bar */}
           <div className="mt-4">
-            <Progress value={(currentStep / 5) * 100} className="h-2" />
+            <Progress value={(currentStep / 6) * 100} className="h-2" />
             <div className="flex justify-between text-xs text-muted-foreground mt-1">
-              <span>Step {currentStep} of 5</span>
-              <span>{Math.round((currentStep / 5) * 100)}% Complete</span>
+              <span>Step {currentStep} of 6</span>
+              <span>{Math.round((currentStep / 6) * 100)}% Complete</span>
             </div>
           </div>
         </DialogHeader>
@@ -372,11 +381,25 @@ export function MappingWizard({
                 config={config}
                 updateConfig={updateConfig}
                 irDocument={irDocument}
-                fileName={fileName}
-                onComplete={handleConfirm}
-                onValidationChange={(isValid) => 
-                  setStepValidation(prev => ({ ...prev, step5: isValid }))
-                }
+                mappedDocument={previewDocument}
+                onComplete={() => {
+                  setStepValidation(prev => ({ ...prev, step5: true }))
+                  setCurrentStep(6)
+                }}
+              />
+            )}
+
+            {currentStep === 6 && previewDocument && (
+              <MappingStep6
+                config={config}
+                updateConfig={updateConfig}
+                irDocument={irDocument}
+                mappedDocument={previewDocument}
+                onComplete={() => {
+                  if (previewDocument) {
+                    onConfirm(config, previewDocument, cleanupAudit)
+                  }
+                }}
               />
             )}
           </div>
@@ -410,7 +433,7 @@ export function MappingWizard({
         <div className="flex-shrink-0 flex justify-between items-center pt-6 border-t">
           <div className="flex items-center gap-4">
             <div className="text-sm text-muted-foreground">
-              Step {currentStep} of 5 • {getStepTitle(currentStep)}
+              Step {currentStep} of 6 • {getStepTitle(currentStep)}
             </div>
             {hasUnsavedChanges && (
               <Badge variant="outline" className="text-xs border-warning text-warning">
@@ -431,7 +454,7 @@ export function MappingWizard({
               Previous
             </Button>
             
-            {currentStep < 5 ? (
+            {currentStep < 6 ? (
               <Button 
                 onClick={handleNext}
                 disabled={!canProceedToStep(currentStep + 1)}
@@ -443,7 +466,7 @@ export function MappingWizard({
             ) : (
               <Button 
                 onClick={handleConfirm}
-                disabled={!stepValidation.step5 || !previewDocument}
+                disabled={!stepValidation.step6 || !previewDocument}
                 className="bg-gradient-primary hover:shadow-glow transition-all duration-200 flex items-center gap-2"
               >
                 <CheckCircle className="w-4 h-4" />

@@ -17,6 +17,8 @@ export interface IRSection {
   notes?: IRFootnote[]
   order: number
   metadata?: Record<string, any>
+  sidebarEnabled?: boolean
+  sidebarBlocks?: IRBlock[]
 }
 
 export interface IRBlock {

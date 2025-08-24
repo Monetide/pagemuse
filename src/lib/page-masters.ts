@@ -5,8 +5,13 @@ export interface PageMasterPreset {
   name: string
   description: string
   pageSize: 'Letter' | 'A4'
-  layoutType: 'cover-fullbleed' | 'body-1col' | 'body-2col'
+  layoutType: 'cover-fullbleed' | 'body-1col' | 'body-2col' | 'body-1col-sidebar' | 'body-2col-sidebar'
   pageMaster: PageMaster
+  sidebarConfig?: {
+    width: number // Points
+    position: 'left' | 'right'
+    gap: number // Gap between main content and sidebar
+  }
 }
 
 // Convert inches to points (1 inch = 72 points)
@@ -169,6 +174,68 @@ export const PAGE_MASTER_PRESETS: PageMasterPreset[] = [
       gridSpacing: 12, // 12pt baseline
       allowTableRotation: false
     }
+  },
+
+  // Letter Body 1-column with Sidebar
+  {
+    id: 'body-1col-sidebar-letter',
+    name: 'Body 1-Column + Sidebar (Letter)',
+    description: 'Single column body layout with sidebar for Letter size',
+    pageSize: 'Letter',
+    layoutType: 'body-1col-sidebar',
+    pageMaster: {
+      pageSize: 'Letter',
+      orientation: 'portrait',
+      margins: { 
+        top: 1 * INCH_TO_PT, 
+        right: 1 * INCH_TO_PT, 
+        bottom: 1 * INCH_TO_PT, 
+        left: 1 * INCH_TO_PT 
+      },
+      columns: 1,
+      columnGap: 0,
+      hasHeader: true,
+      hasFooter: true,
+      baselineGrid: true,
+      gridSpacing: 12, // 12pt baseline
+      allowTableRotation: false
+    },
+    sidebarConfig: {
+      width: 2 * INCH_TO_PT, // 2 inch sidebar
+      position: 'right',
+      gap: 0.25 * INCH_TO_PT // 0.25in gap
+    }
+  },
+
+  // A4 Body 1-column with Sidebar
+  {
+    id: 'body-1col-sidebar-a4',
+    name: 'Body 1-Column + Sidebar (A4)',
+    description: 'Single column body layout with sidebar for A4 size',
+    pageSize: 'A4',
+    layoutType: 'body-1col-sidebar',
+    pageMaster: {
+      pageSize: 'A4',
+      orientation: 'portrait',
+      margins: { 
+        top: 25.4 * MM_TO_PT, 
+        right: 25.4 * MM_TO_PT, 
+        bottom: 25.4 * MM_TO_PT, 
+        left: 25.4 * MM_TO_PT 
+      },
+      columns: 1,
+      columnGap: 0,
+      hasHeader: true,
+      hasFooter: true,
+      baselineGrid: true,
+      gridSpacing: 12, // 12pt baseline
+      allowTableRotation: false
+    },
+    sidebarConfig: {
+      width: 50.8 * MM_TO_PT, // ~2 inch equivalent in mm
+      position: 'right',
+      gap: 6.35 * MM_TO_PT // ~0.25in equivalent in mm
+    }
   }
 ]
 
@@ -180,6 +247,6 @@ export function getPageMastersBySize(pageSize: 'Letter' | 'A4'): PageMasterPrese
   return PAGE_MASTER_PRESETS.filter(preset => preset.pageSize === pageSize)
 }
 
-export function getPageMastersByType(layoutType: 'cover-fullbleed' | 'body-1col' | 'body-2col'): PageMasterPreset[] {
+export function getPageMastersByType(layoutType: 'cover-fullbleed' | 'body-1col' | 'body-2col' | 'body-1col-sidebar' | 'body-2col-sidebar'): PageMasterPreset[] {
   return PAGE_MASTER_PRESETS.filter(preset => preset.layoutType === layoutType)
 }
