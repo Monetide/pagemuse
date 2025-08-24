@@ -395,9 +395,9 @@ export function MappingWizard({
                 updateConfig={updateConfig}
                 irDocument={irDocument}
                 mappedDocument={previewDocument}
-                onComplete={(processedDocument) => {
-                  if (processedDocument || previewDocument) {
-                    onConfirm(config, processedDocument || previewDocument, cleanupAudit)
+                onComplete={() => {
+                  if (previewDocument) {
+                    onConfirm(config, previewDocument, cleanupAudit)
                   }
                 }}
               />
