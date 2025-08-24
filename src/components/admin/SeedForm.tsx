@@ -12,6 +12,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { TypographySelector, type TypographyPairing } from '@/components/admin/TypographySelector'
 import { ColorwaySelector, type Colorway } from '@/components/admin/ColorwaySelector'
 import { MotifSelector, type MotifSelection, type MotifAsset } from '@/components/admin/MotifSelector'
+import { PageMasterSelector, type PageMasterSelection } from '@/components/admin/PageMasterSelector'
 import { 
   Form,
   FormControl,
@@ -74,6 +75,10 @@ const seedFormSchema = z.object({
       'cover-shape': z.string(),
     }),
     assets: z.array(z.any()),
+  }).optional(),
+  pageMasters: z.object({
+    cover: z.string().nullable(),
+    body: z.string().nullable(),
   }).optional(),
   logo: z.any().optional(),
   referenceImage: z.any().optional(),
@@ -218,6 +223,10 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
       selection,
       assets
     }, { shouldValidate: true })
+  }
+
+  const handlePageMasterChange = (selection: PageMasterSelection) => {
+    setValue('pageMasters', selection, { shouldValidate: true })
   }
 
   const removeFile = (type: 'logo' | 'referenceImage') => {
@@ -469,6 +478,12 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
         <TypographySelector 
           selectedPairing={watch('typography')?.id}
           onSelectionChange={handleTypographyChange}
+        />
+
+        {/* Page Masters */}
+        <PageMasterSelector 
+          selection={watch('pageMasters')}
+          onSelectionChange={handlePageMasterChange}
         />
 
         {/* Reference Image */}

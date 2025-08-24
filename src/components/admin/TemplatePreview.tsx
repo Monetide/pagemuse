@@ -1,6 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import type { SeedFormData } from '@/components/admin/SeedForm'
+import { getPageMasterPreset } from '@/lib/page-masters'
 
 interface TemplatePreviewProps {
   data?: SeedFormData
@@ -23,6 +24,10 @@ export function TemplatePreview({ data }: TemplatePreviewProps) {
 
   const sansFont = data.typography?.sans.family || 'font-inter'
   const serifFont = data.typography?.serif.family || 'font-source-serif'
+  
+  // Get selected page masters
+  const coverMaster = data.pageMasters?.cover ? getPageMasterPreset(data.pageMasters.cover) : null
+  const bodyMaster = data.pageMasters?.body ? getPageMasterPreset(data.pageMasters.body) : null
   
   // Use colorway colors if available, otherwise fallback to brand color
   const colors = data.colorway ? data.colorway.colors : {
@@ -60,8 +65,26 @@ export function TemplatePreview({ data }: TemplatePreviewProps) {
             </Badge>
           </div>
 
+          {/* Page Master Indicator */}
+          {(coverMaster || bodyMaster) && (
+            <div className="px-4 py-2 bg-primary/5 border-b border-primary/10">
+              <div className="flex items-center gap-2 text-xs">
+                {coverMaster && (
+                  <Badge variant="outline" className="text-xs">
+                    Cover: {coverMaster.pageMaster.columns === 1 ? '1-Col' : `${coverMaster.pageMaster.columns}-Col`} {coverMaster.pageSize}
+                  </Badge>
+                )}
+                {bodyMaster && (
+                  <Badge variant="outline" className="text-xs">
+                    Body: {bodyMaster.pageMaster.columns === 1 ? '1-Col' : `${bodyMaster.pageMaster.columns}-Col`} {bodyMaster.pageSize}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Document Content */}
-          <div className="p-4 space-y-3">
+          <div className={`p-4 space-y-3 ${bodyMaster?.pageMaster.columns === 2 ? 'columns-2 gap-3' : ''}`}>
             {/* H1 Heading */}
             <h1 
               className={`${sansFont} text-template-h1 font-bold leading-tight`}
@@ -79,7 +102,7 @@ export function TemplatePreview({ data }: TemplatePreviewProps) {
             </h2>
 
             {/* Body Text */}
-            <div className="space-y-2">
+            <div className={`space-y-2 ${bodyMaster?.pageMaster.columns === 2 ? 'break-inside-avoid' : ''}`}>
               <p 
                 className={`${serifFont} text-template-body leading-relaxed`}
                 style={{ color: colors.textBody }}
@@ -90,7 +113,7 @@ export function TemplatePreview({ data }: TemplatePreviewProps) {
                 className={`${serifFont} text-template-body leading-relaxed`}
                 style={{ color: colors.textBody }}
               >
-                Multiple paragraphs maintain consistent spacing and flow.
+                Multiple paragraphs maintain consistent spacing and flow{bodyMaster?.pageMaster.columns === 2 ? ' across columns with proper text distribution' : ''}.
               </p>
             </div>
 
@@ -103,10 +126,10 @@ export function TemplatePreview({ data }: TemplatePreviewProps) {
             </h3>
             
             <p 
-              className={`${serifFont} text-template-body leading-relaxed`}
+              className={`${serifFont} text-template-body leading-relaxed ${bodyMaster?.pageMaster.columns === 2 ? 'break-inside-avoid' : ''}`}
               style={{ color: colors.textBody }}
             >
-              Additional content follows the established hierarchy.
+              Additional content follows the established hierarchy{bodyMaster?.pageMaster.baselineGrid ? ' aligned to baseline grid' : ''}.
             </p>
 
             {/* Caption */}
@@ -175,8 +198,8 @@ export function TemplatePreview({ data }: TemplatePreviewProps) {
           {/* SVG Motif Overlay Demo */}
           {data.motifs && data.colorway && (
             <>
-              {/* Background Pattern */}
-              {(() => {
+          {/* Background Pattern - only show if body master allows it */}
+              {bodyMaster && (() => {
                 const bgAsset = data.motifs.assets.find((a: any) => a.type === 'body-bg')
                 const bgVariant = bgAsset?.variants.find((v: any) => v.id === data.motifs.selection['body-bg'])
                 
@@ -188,7 +211,7 @@ export function TemplatePreview({ data }: TemplatePreviewProps) {
                         backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(bgVariant.svg)}")`,
                         backgroundRepeat: 'repeat',
                         backgroundSize: '100px 100px',
-                        opacity: 0.05
+                        opacity: bodyMaster.layoutType === 'cover-fullbleed' ? 0.08 : 0.04
                       }}
                     />
                   )

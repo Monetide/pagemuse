@@ -430,6 +430,20 @@ export default function TemplateGenerator() {
                         </div>
                       </div>
                     )}
+                    {state.seedData.formData?.pageMasters && (
+                      <div className="flex justify-between text-sm items-center">
+                        <span className="text-muted-foreground">Page Masters:</span>
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className="text-xs font-medium">
+                            {state.seedData.formData.pageMasters.cover?.includes('letter') ? 'Letter' : 
+                             state.seedData.formData.pageMasters.cover?.includes('a4') ? 'A4' : 'Not set'}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {state.seedData.formData.pageMasters.body?.includes('2col') ? '2-Column' : '1-Column'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   
                   <Separator />
