@@ -5,6 +5,7 @@
 
 // Core Document Structure
 export interface DocumentIR {
+  title: string;
   sections: SectionIR[];
   metadata?: DocumentMetadata;
 }
@@ -13,6 +14,7 @@ export interface SectionIR {
   title?: string;
   blocks: BlockIR[];
   id?: string;
+  notes?: any[];
 }
 
 // Document Metadata
@@ -43,6 +45,7 @@ export interface HeadingBlock {
   level: 1 | 2 | 3 | 4 | 5 | 6;
   content: string;
   id?: string;
+  attrs?: any;
 }
 
 // Paragraph Block
@@ -50,6 +53,7 @@ export interface ParagraphBlock {
   type: 'paragraph';
   content: string;
   formatting?: TextFormatting[];
+  attrs?: any;
 }
 
 // List Block (ordered/unordered)
@@ -58,6 +62,8 @@ export interface ListBlock {
   listType: 'ol' | 'ul';
   items: ListItem[];
   level?: number;
+  content?: string;
+  attrs?: any;
 }
 
 export interface ListItem {
@@ -72,6 +78,7 @@ export interface QuoteBlock {
   content: string;
   author?: string;
   source?: string;
+  attrs?: any;
 }
 
 // Callout Block
@@ -80,6 +87,7 @@ export interface CalloutBlock {
   calloutType: 'info' | 'warning' | 'error' | 'success' | 'note' | 'tip';
   title?: string;
   content: string;
+  attrs?: any;
 }
 
 // Figure Block (images, diagrams, etc.)
@@ -90,6 +98,8 @@ export interface FigureBlock {
   caption?: string;
   width?: number;
   height?: number;
+  content?: string;
+  attrs?: any;
 }
 
 // Table Block
@@ -98,12 +108,16 @@ export interface TableBlock {
   header: string[];
   rows: string[][];
   caption?: string;
+  content?: string;
+  attrs?: any;
 }
 
 // Divider Block
 export interface DividerBlock {
   type: 'divider';
   style?: 'solid' | 'dashed' | 'dotted';
+  content?: string;
+  attrs?: any;
 }
 
 // Footnote Block
@@ -112,6 +126,8 @@ export interface FootnoteBlock {
   marker: string | number;
   text: string;
   id?: string;
+  content?: string;
+  attrs?: any;
 }
 
 // Text Formatting
