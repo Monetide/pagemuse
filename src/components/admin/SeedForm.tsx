@@ -13,6 +13,7 @@ import { TypographySelector, type TypographyPairing } from '@/components/admin/T
 import { ColorwaySelector, type Colorway } from '@/components/admin/ColorwaySelector'
 import { MotifSelector, type MotifSelection, type MotifAsset } from '@/components/admin/MotifSelector'
 import { PageMasterSelector, type PageMasterSelection } from '@/components/admin/PageMasterSelector'
+import { ObjectStyleSelector, type ObjectStyleSelection } from '@/components/admin/ObjectStyleSelector'
 import { 
   Form,
   FormControl,
@@ -79,6 +80,10 @@ const seedFormSchema = z.object({
   pageMasters: z.object({
     cover: z.string().nullable(),
     body: z.string().nullable(),
+  }).optional(),
+  objectStyles: z.object({
+    styles: z.record(z.any()).optional(),
+    snippets: z.array(z.string()).optional(),
   }).optional(),
   logo: z.any().optional(),
   referenceImage: z.any().optional(),
@@ -227,6 +232,10 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
 
   const handlePageMasterChange = (selection: PageMasterSelection) => {
     setValue('pageMasters', selection, { shouldValidate: true })
+  }
+
+  const handleObjectStyleChange = (selection: ObjectStyleSelection) => {
+    setValue('objectStyles', selection, { shouldValidate: true })
   }
 
   const removeFile = (type: 'logo' | 'referenceImage') => {
@@ -484,6 +493,12 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
         <PageMasterSelector 
           selection={watch('pageMasters')}
           onSelectionChange={handlePageMasterChange}
+        />
+
+        {/* Object Styles & Snippets */}
+        <ObjectStyleSelector 
+          selection={watch('objectStyles')}
+          onSelectionChange={handleObjectStyleChange}
         />
 
         {/* Reference Image */}

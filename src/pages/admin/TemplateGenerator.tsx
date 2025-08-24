@@ -444,6 +444,19 @@ export default function TemplateGenerator() {
                         </div>
                       </div>
                     )}
+                    {state.seedData.formData?.objectStyles && (
+                      <div className="flex justify-between text-sm items-center">
+                        <span className="text-muted-foreground">Object Styles:</span>
+                        <div className="flex flex-col items-end gap-0.5">
+                          <span className="text-xs font-medium">
+                            {Object.keys(state.seedData.formData.objectStyles.styles || {}).length} style{Object.keys(state.seedData.formData.objectStyles.styles || {}).length !== 1 ? 's' : ''}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {state.seedData.formData.objectStyles.snippets?.length || 0} snippet{(state.seedData.formData.objectStyles.snippets?.length || 0) !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   
                   <Separator />

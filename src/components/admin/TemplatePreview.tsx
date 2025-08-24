@@ -2,6 +2,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import type { SeedFormData } from '@/components/admin/SeedForm'
 import { getPageMasterPreset } from '@/lib/page-masters'
+import { getSnippet, DEFAULT_OBJECT_STYLES } from '@/lib/object-styles'
 
 interface TemplatePreviewProps {
   data?: SeedFormData
@@ -29,6 +30,10 @@ export function TemplatePreview({ data }: TemplatePreviewProps) {
   const coverMaster = data.pageMasters?.cover ? getPageMasterPreset(data.pageMasters.cover) : null
   const bodyMaster = data.pageMasters?.body ? getPageMasterPreset(data.pageMasters.body) : null
   
+  // Get object styles and snippets
+  const objectStyles = data.objectStyles?.styles || {}
+  const selectedSnippets = data.objectStyles?.snippets || []
+  
   // Use colorway colors if available, otherwise fallback to brand color
   const colors = data.colorway ? data.colorway.colors : {
     brand: data.primaryColor || '#8B5CF6',
@@ -37,7 +42,9 @@ export function TemplatePreview({ data }: TemplatePreviewProps) {
     textMuted: '#666666',
     bgPage: '#ffffff',
     bgSection: '#f8f9fa',
-    borderSubtle: '#e5e5e5'
+    borderSubtle: '#e5e5e5',
+    warning: '#f59e0b',
+    warningLight: '#fef3c7'
   }
 
   return (
@@ -175,6 +182,164 @@ export function TemplatePreview({ data }: TemplatePreviewProps) {
                 Muted text remains accessible and readable.
               </p>
             </div>
+
+            {/* Object Style Demos */}
+            {Object.keys(objectStyles).length > 0 && (
+              <div className="mt-4 space-y-3">
+                <h4 className={`${sansFont} text-template-h3 font-medium`} style={{ color: colors.brand }}>
+                  Object Styles
+                </h4>
+                
+                {/* Figure Demo */}
+                {objectStyles['figure-default'] && (
+                  <div className="space-y-2">
+                    <div className="bg-muted/30 rounded h-16 flex items-center justify-center text-xs text-muted-foreground">
+                      [Figure Placeholder]
+                    </div>
+                    <p 
+                      className={`${serifFont} text-template-caption`}
+                      style={{ color: colors.textMuted }}
+                    >
+                      Figure 1: Sample caption using {objectStyles['figure-default'].properties.captionStyle} style
+                    </p>
+                  </div>
+                )}
+
+                {/* Table Demo */}
+                {objectStyles['table-default'] && (
+                  <div className="border border-muted rounded overflow-hidden">
+                    <div 
+                      className="grid grid-cols-3 text-xs font-medium"
+                      style={{ backgroundColor: colors.bgSection, padding: `${objectStyles['table-default'].properties.cellPadding}px` }}
+                    >
+                      <div style={{ color: colors.textBody }}>Metric</div>
+                      <div style={{ color: colors.textBody }}>Value</div>
+                      <div style={{ color: colors.textBody }}>Change</div>
+                    </div>
+                    <div 
+                      className="grid grid-cols-3 text-xs border-t border-muted"
+                      style={{ padding: `${objectStyles['table-default'].properties.cellPadding}px` }}
+                    >
+                      <div style={{ color: colors.textBody }}>Revenue</div>
+                      <div style={{ color: colors.textBody }}>$2.4M</div>
+                      <div style={{ color: colors.brand }}>+12%</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Callout Demo */}
+                {objectStyles['callout-default'] && (
+                  <div 
+                    className="relative rounded p-3"
+                    style={{ 
+                      backgroundColor: colors.bgSection,
+                      borderLeft: `${objectStyles['callout-default'].properties.accentWidth}px solid ${colors.brand}`
+                    }}
+                  >
+                    <p className={`${serifFont} text-template-body`} style={{ color: colors.textBody }}>
+                      💡 This is a sample callout with customized accent styling
+                    </p>
+                  </div>
+                )}
+
+                {/* TOC Demo */}
+                {objectStyles['toc-item-default'] && (
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className={`${serifFont} text-template-body`} style={{ color: colors.textBody }}>
+                        1. Introduction
+                      </span>
+                      <span className="text-template-body text-right" style={{ color: colors.textMuted }}>
+                        {objectStyles['toc-item-default'].properties.dotLeader && '...........'} 3
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center" style={{ paddingLeft: `${objectStyles['toc-item-default'].properties.indentUnit}px` }}>
+                      <span className={`${serifFont} text-template-body`} style={{ color: colors.textBody }}>
+                        1.1 Overview
+                      </span>
+                      <span className="text-template-body text-right" style={{ color: colors.textMuted }}>
+                        {objectStyles['toc-item-default'].properties.dotLeader && '...........'} 5
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Snippet Demos */}
+            {selectedSnippets.length > 0 && (
+              <div className="mt-4 space-y-3">
+                <h4 className={`${sansFont} text-template-h3 font-medium`} style={{ color: colors.brand }}>
+                  Content Snippets
+                </h4>
+                
+                {selectedSnippets.map(snippetId => {
+                  const snippet = getSnippet(snippetId)
+                  if (!snippet) return null
+
+                  switch (snippet.id) {
+                    case 'kpi-strip':
+                      return (
+                        <div key={snippetId} className="grid grid-cols-3 gap-3 p-3 rounded" style={{ backgroundColor: colors.bgSection }}>
+                          {[
+                            { label: 'Revenue', value: '$2.4M', change: '+12%' },
+                            { label: 'Growth', value: '23%', change: '+5%' },
+                            { label: 'Users', value: '45.2K', change: '+8%' }
+                          ].map((metric, i) => (
+                            <div key={i} className="text-center">
+                              <div className={`${sansFont} text-template-h2 font-bold`} style={{ color: colors.brand }}>{metric.value}</div>
+                              <div className="text-template-caption" style={{ color: colors.textMuted }}>{metric.label}</div>
+                              <div className="text-template-caption font-medium" style={{ color: colors.brand }}>{metric.change}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )
+                    
+                    case 'pull-quote':
+                      return (
+                        <blockquote 
+                          key={snippetId}
+                          className={`${serifFont} text-template-quote italic text-center border-l-4 pl-4 py-3`}
+                          style={{ 
+                            color: colors.textBody,
+                            borderLeftColor: colors.brand,
+                            backgroundColor: colors.bgSection
+                          }}
+                        >
+                          "Design is not just what it looks like and feels like. Design is how it works."
+                          <footer className="text-template-caption mt-2" style={{ color: colors.textMuted }}>
+                            — Steve Jobs
+                          </footer>
+                        </blockquote>
+                      )
+                    
+                    case 'cta-button':
+                      return (
+                        <div key={snippetId} className="text-center p-4 rounded" style={{ backgroundColor: colors.bgSection }}>
+                          <h5 className={`${sansFont} text-template-h3 font-semibold mb-2`} style={{ color: colors.brand }}>
+                            Ready to get started?
+                          </h5>
+                          <p className={`${serifFont} text-template-body mb-3`} style={{ color: colors.textBody }}>
+                            Download our comprehensive guide today.
+                          </p>
+                          <button 
+                            className="px-4 py-2 rounded font-medium text-sm"
+                            style={{ 
+                              backgroundColor: colors.brand, 
+                              color: colors.bgPage 
+                            }}
+                          >
+                            Download Free Guide
+                          </button>
+                        </div>
+                      )
+                    
+                    default:
+                      return null
+                  }
+                })}
+              </div>
+            )}
           </div>
 
           {/* Vibe Indicators */}
