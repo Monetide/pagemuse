@@ -1,12 +1,15 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { Upload, Image as ImageIcon, X, Palette, Loader2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Upload, Image as ImageIcon, X, Palette, Loader2, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useBrandKits } from '@/hooks/useBrandKits';
 import { useMediaLibrary } from '@/hooks/useMediaLibrary';
+import { generateColorways, getContrastRatio, adjustForAACompliance } from '@/lib/colorway-generator';
 import type { CreateBrandKitData } from '@/types/brandKit';
 
 interface CreateBrandKitDialogProps {
@@ -71,6 +74,9 @@ export const CreateBrandKitDialog = ({ open, onOpenChange }: CreateBrandKitDialo
   const { uploadFiles } = useMediaLibrary();
   const [loading, setLoading] = useState(false);
   const [extracting, setExtracting] = useState(false);
+  const [autoAdjustAA, setAutoAdjustAA] = useState(true);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [showConfirm, setShowConfirm] = useState(false);
   
   const [formData, setFormData] = useState<CreateBrandKitData>({
     workspace_id: '',
@@ -94,6 +100,55 @@ export const CreateBrandKitDialog = ({ open, onOpenChange }: CreateBrandKitDialo
   const primaryFileRef = useRef<HTMLInputElement>(null);
   const altFileRef = useRef<HTMLInputElement>(null);
 
+  // Generate neutrals from primary color
+  const generateNeutrals = (primaryColor: string) => {
+    const colorways = generateColorways(primaryColor);
+    const primary = colorways.find(c => c.id === 'primary');
+    if (primary) {
+      return {
+        textBody: primary.colors.textBody,
+        textMuted: primary.colors.textMuted,
+        bgPage: primary.colors.bgPage,
+        bgSection: primary.colors.bgSection,
+        borderSubtle: primary.colors.borderSubtle
+      };
+    }
+    return formData.neutrals;
+  };
+
+  // Validate contrast ratios
+  const validateContrastRatios = (neutrals: any) => {
+    const errors: string[] = [];
+    const bodyOnPage = getContrastRatio(neutrals.textBody, neutrals.bgPage);
+    const bodyOnSection = getContrastRatio(neutrals.textBody, neutrals.bgSection);
+    
+    if (bodyOnPage < 4.5) {
+      errors.push(`Body text on page background: ${bodyOnPage.toFixed(1)}:1 (needs 4.5:1)`);
+    }
+    if (bodyOnSection < 4.5) {
+      errors.push(`Body text on section background: ${bodyOnSection.toFixed(1)}:1 (needs 4.5:1)`);
+    }
+    
+    return errors;
+  };
+
+  // Update neutrals when primary color changes
+  useEffect(() => {
+    if (autoAdjustAA) {
+      const newNeutrals = generateNeutrals(formData.palette.primary);
+      setFormData(prev => ({ ...prev, neutrals: newNeutrals }));
+    }
+    
+    const errors = validateContrastRatios(formData.neutrals);
+    setValidationErrors(errors);
+  }, [formData.palette.primary, autoAdjustAA]);
+
+  // Validate current neutrals whenever they change
+  useEffect(() => {
+    const errors = validateContrastRatios(formData.neutrals);
+    setValidationErrors(errors);
+  }, [formData.neutrals]);
+
   const handleFileUpload = async (file: File, type: 'primary' | 'alt') => {
     try {
       setLoading(true);
@@ -116,14 +171,19 @@ export const CreateBrandKitDialog = ({ open, onOpenChange }: CreateBrandKitDialo
         img.onload = async () => {
           try {
             const colors = await extractColorsFromImage(img);
-            setFormData(prev => ({
-              ...prev,
-              palette: {
-                primary: colors[0] || '#0066cc',
-                secondary: colors[1] || '#666666',
-                accent: colors[2] || '#00cc66'
-              }
-            }));
+              setFormData(prev => {
+                const newPalette = {
+                  primary: colors[0] || '#0066cc',
+                  secondary: colors[1] || '#666666',
+                  accent: colors[2] || '#00cc66'
+                };
+                const newNeutrals = autoAdjustAA ? generateNeutrals(newPalette.primary) : prev.neutrals;
+                return {
+                  ...prev,
+                  palette: newPalette,
+                  neutrals: newNeutrals
+                };
+              });
           } catch (error) {
             console.error('Color extraction failed:', error);
           } finally {
@@ -146,11 +206,28 @@ export const CreateBrandKitDialog = ({ open, onOpenChange }: CreateBrandKitDialo
     e.preventDefault();
     if (!formData.name.trim()) return;
 
+    // Check for validation errors
+    if (validationErrors.length > 0 && !showConfirm) {
+      if (autoAdjustAA) {
+        // Auto-adjust if enabled
+        const adjustedNeutrals = { ...formData.neutrals };
+        adjustedNeutrals.textBody = adjustForAACompliance(adjustedNeutrals.textBody, adjustedNeutrals.bgPage, 4.5);
+        adjustedNeutrals.textBody = adjustForAACompliance(adjustedNeutrals.textBody, adjustedNeutrals.bgSection, 4.5);
+        setFormData(prev => ({ ...prev, neutrals: adjustedNeutrals }));
+        return;
+      } else {
+        // Show confirmation dialog
+        setShowConfirm(true);
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const brandKit = await createBrandKit(formData);
       if (brandKit) {
         onOpenChange(false);
+        setShowConfirm(false);
         // Reset form
         setFormData({
           workspace_id: '',
@@ -379,6 +456,220 @@ export const CreateBrandKitDialog = ({ open, onOpenChange }: CreateBrandKitDialo
             </div>
           </div>
 
+          {/* Neutrals Section */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label>Neutrals & Text Colors</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="auto-adjust" className="text-sm">Auto-adjust to pass AA</Label>
+                <Switch
+                  id="auto-adjust"
+                  checked={autoAdjustAA}
+                  onCheckedChange={setAutoAdjustAA}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="text-body">Body Text</Label>
+                <div className="flex gap-2">
+                  <div 
+                    className="w-8 h-8 rounded border border-border"
+                    style={{ backgroundColor: formData.neutrals.textBody }}
+                  />
+                  <Input
+                    id="text-body"
+                    type="color"
+                    value={formData.neutrals.textBody}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      neutrals: { ...prev.neutrals, textBody: e.target.value }
+                    }))}
+                    className="flex-1 h-8"
+                    disabled={autoAdjustAA}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="text-muted">Muted Text</Label>
+                <div className="flex gap-2">
+                  <div 
+                    className="w-8 h-8 rounded border border-border"
+                    style={{ backgroundColor: formData.neutrals.textMuted }}
+                  />
+                  <Input
+                    id="text-muted"
+                    type="color"
+                    value={formData.neutrals.textMuted}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      neutrals: { ...prev.neutrals, textMuted: e.target.value }
+                    }))}
+                    className="flex-1 h-8"
+                    disabled={autoAdjustAA}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bg-page">Page BG</Label>
+                <div className="flex gap-2">
+                  <div 
+                    className="w-8 h-8 rounded border border-border"
+                    style={{ backgroundColor: formData.neutrals.bgPage }}
+                  />
+                  <Input
+                    id="bg-page"
+                    type="color"
+                    value={formData.neutrals.bgPage}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      neutrals: { ...prev.neutrals, bgPage: e.target.value }
+                    }))}
+                    className="flex-1 h-8"
+                    disabled={autoAdjustAA}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bg-section">Section BG</Label>
+                <div className="flex gap-2">
+                  <div 
+                    className="w-8 h-8 rounded border border-border"
+                    style={{ backgroundColor: formData.neutrals.bgSection }}
+                  />
+                  <Input
+                    id="bg-section"
+                    type="color"
+                    value={formData.neutrals.bgSection}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      neutrals: { ...prev.neutrals, bgSection: e.target.value }
+                    }))}
+                    className="flex-1 h-8"
+                    disabled={autoAdjustAA}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="border-subtle">Border</Label>
+                <div className="flex gap-2">
+                  <div 
+                    className="w-8 h-8 rounded border border-border"
+                    style={{ backgroundColor: formData.neutrals.borderSubtle }}
+                  />
+                  <Input
+                    id="border-subtle"
+                    type="color"
+                    value={formData.neutrals.borderSubtle}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      neutrals: { ...prev.neutrals, borderSubtle: e.target.value }
+                    }))}
+                    className="flex-1 h-8"
+                    disabled={autoAdjustAA}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Contrast Preview */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">Contrast Preview</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div 
+                      className="p-3 rounded border"
+                      style={{ 
+                        backgroundColor: formData.neutrals.bgPage,
+                        color: formData.neutrals.textBody,
+                        borderColor: formData.neutrals.borderSubtle
+                      }}
+                    >
+                      <div className="text-sm font-medium">Page Background</div>
+                      <div className="text-xs" style={{ color: formData.neutrals.textMuted }}>
+                        Body text • Ratio: {getContrastRatio(formData.neutrals.textBody, formData.neutrals.bgPage).toFixed(1)}:1
+                      </div>
+                    </div>
+                    <div 
+                      className="p-3 rounded border"
+                      style={{ 
+                        backgroundColor: formData.neutrals.bgSection,
+                        color: formData.neutrals.textBody,
+                        borderColor: formData.neutrals.borderSubtle
+                      }}
+                    >
+                      <div className="text-sm font-medium">Section Background</div>
+                      <div className="text-xs" style={{ color: formData.neutrals.textMuted }}>
+                        Body text • Ratio: {getContrastRatio(formData.neutrals.textBody, formData.neutrals.bgSection).toFixed(1)}:1
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Validation Errors */}
+            {validationErrors.length > 0 && (
+              <Alert variant={autoAdjustAA ? "default" : "destructive"}>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  <div className="space-y-1">
+                    <div className="font-medium">
+                      {autoAdjustAA ? "Will auto-adjust on save:" : "WCAG AA compliance issues:"}
+                    </div>
+                    {validationErrors.map((error, index) => (
+                      <div key={index} className="text-sm">{error}</div>
+                    ))}
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {validationErrors.length === 0 && !autoAdjustAA && (
+              <Alert>
+                <CheckCircle className="h-4 w-4" />
+                <AlertDescription>
+                  All contrast ratios meet WCAG AA standards (4.5:1 minimum).
+                </AlertDescription>
+              </Alert>
+            )}
+          </div>
+
+          {/* Confirmation Dialog for Non-Compliant Save */}
+          {showConfirm && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <div className="space-y-2">
+                  <div className="font-medium">Save non-compliant brand kit?</div>
+                  <div className="text-sm">This brand kit has contrast ratio issues that may affect accessibility.</div>
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => setShowConfirm(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="destructive"
+                      onClick={handleSubmit}
+                    >
+                      Save Anyway
+                    </Button>
+                  </div>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button 
@@ -391,13 +682,18 @@ export const CreateBrandKitDialog = ({ open, onOpenChange }: CreateBrandKitDialo
             </Button>
             <Button 
               type="submit" 
-              disabled={loading || !formData.name.trim()}
+              disabled={loading || !formData.name.trim() || showConfirm}
               className="bg-gradient-primary hover:shadow-glow transition-all duration-200"
             >
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Creating...
+                </>
+              ) : validationErrors.length > 0 && autoAdjustAA ? (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Create & Auto-Fix
                 </>
               ) : (
                 <>
