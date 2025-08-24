@@ -45,7 +45,9 @@ export const defaultValidationConfig: ValidationConfig = {
     'table-without-header': { enabled: true, severity: 'warning' },
     'orphaned-callout': { enabled: true, severity: 'warning' },
     'low-contrast': { enabled: true, severity: 'warning' },
+    'low-contrast-auto': { enabled: true, severity: 'warning' },
     'excessive-hyphenation': { enabled: true, severity: 'warning' },
+    'min-font-size': { enabled: true, severity: 'warning' },
     'missing-alt-text': { enabled: true, severity: 'error' },
     'broken-cross-reference': { enabled: true, severity: 'error' },
     'overflowing-text': { enabled: true, severity: 'error' },
@@ -566,6 +568,256 @@ const blockOutsideFlowRule: ValidationRule = {
 
 import { brandValidationRules } from './brand-validation'
 
+// New Polish-specific validation rules
+const minFontSizeRule: ValidationRule = {
+  id: 'min-font-size',
+  name: 'Minimum Font Size',
+  severity: 'warning',
+  enabled: true,
+  validate: (document) => {
+    const issues: ValidationIssue[] = []
+    
+    document.sections.forEach(section => {
+      section.flows.forEach(flow => {
+        flow.blocks.forEach(block => {
+          if (block.type === 'paragraph' || block.type === 'heading') {
+            const style = block.styles?.[0]?.properties || {}
+            const fontSize = style.fontSize || 12
+            const isCaption = block.metadata?.type === 'caption'
+            const minSize = isCaption ? 9 : 10.5
+            
+            if (fontSize < minSize) {
+              issues.push({
+                id: `min-size-${block.id}`,
+                ruleId: 'min-font-size',
+                severity: 'warning',
+                blockId: block.id,
+                sectionId: section.id,
+                message: `Font size ${fontSize}pt is below minimum ${minSize}pt`,
+                description: `${isCaption ? 'Caption' : 'Body'} text should be at least ${minSize}pt for readability.`,
+                canFix: true,
+                fixLabel: 'Increase font size',
+                ignored: false,
+                snippet: typeof block.content === 'string' ? block.content.substring(0, 30) : 'Text'
+              })
+            }
+          }
+        })
+      })
+    })
+    
+    return issues
+  },
+  fix: (document, issue) => {
+    const updatedDocument = { ...document }
+    updatedDocument.sections = document.sections.map(section => {
+      if (section.id === issue.sectionId) {
+        return {
+          ...section,
+          flows: section.flows.map(flow => ({
+            ...flow,
+            blocks: flow.blocks.map(block => {
+              if (block.id === issue.blockId) {
+                const isCaption = block.metadata?.type === 'caption'
+                const minSize = isCaption ? 9 : 10.5
+                return {
+                  ...block,
+                  styles: [{
+                    id: 'auto-font-fix',
+                    name: 'Font Size Fix',
+                    category: 'typography',
+                    properties: {
+                      fontSize: minSize
+                    }
+                  }]
+                }
+              }
+              return block
+            })
+          }))
+        }
+      }
+      return section
+    })
+    return updatedDocument
+  }
+}
+
+const lowContrastAutoRule: ValidationRule = {
+  id: 'low-contrast-auto',
+  name: 'Low Contrast (Auto-fixable)',
+  severity: 'warning',
+  enabled: true,
+  validate: (document, layoutResults, brandKit) => {
+    const issues: ValidationIssue[] = []
+    
+    if (!brandKit?.colorTokens) return issues
+    
+    document.sections.forEach(section => {
+      section.flows.forEach(flow => {
+        flow.blocks.forEach(block => {
+          const style = block.styles?.[0]?.properties || {}
+          if (style.color && style.backgroundColor) {
+            const contrast = calculateContrastRatio(style.color, style.backgroundColor)
+            
+            if (contrast < 4.5) {
+              issues.push({
+                id: `low-contrast-auto-${block.id}`,
+                ruleId: 'low-contrast-auto',
+                severity: 'warning',
+                blockId: block.id,
+                sectionId: section.id,
+                message: `Contrast ratio ${contrast.toFixed(1)} is below AA standard`,
+                description: 'Text contrast will be improved using brand-safe colors.',
+                canFix: true,
+                fixLabel: 'Improve contrast',
+                ignored: false,
+                snippet: typeof block.content === 'string' ? block.content.substring(0, 30) : 'Text'
+              })
+            }
+          }
+        })
+      })
+    })
+    
+    return issues
+  },
+  fix: (document, issue, brandKit) => {
+    const updatedDocument = { ...document }
+    updatedDocument.sections = document.sections.map(section => {
+      if (section.id === issue.sectionId) {
+        return {
+          ...section,
+          flows: section.flows.map(flow => ({
+            ...flow,
+            blocks: flow.blocks.map(block => {
+              if (block.id === issue.blockId && brandKit?.colorTokens) {
+                // Use the darkest brand color for text on light backgrounds
+                const brandColors = Object.values(brandKit.colorTokens) as string[]
+                const darkestColor = brandColors.reduce((darkest, color) => {
+                  const darkestLum = getLuminance(darkest)
+                  const colorLum = getLuminance(color as string)
+                  return colorLum < darkestLum ? color : darkest
+                }) as string
+                
+                return {
+                  ...block,
+                  styles: [{
+                    id: 'auto-contrast-fix',
+                    name: 'Contrast Fix',
+                    category: 'color',
+                    properties: {
+                      color: darkestColor
+                    }
+                  }]
+                }
+              }
+              return block
+            })
+          }))
+        }
+      }
+      return section
+    })
+    return updatedDocument
+  }
+}
+
+const excessiveHyphenationRule: ValidationRule = {
+  id: 'excessive-hyphenation',
+  name: 'Excessive Hyphenation',
+  severity: 'warning',
+  enabled: true,
+  validate: (document) => {
+    const issues: ValidationIssue[] = []
+    
+    document.sections.forEach(section => {
+      section.flows.forEach(flow => {
+        flow.blocks.forEach(block => {
+          if (block.type === 'paragraph' && typeof block.content === 'string') {
+            const lines = block.content.split('\n')
+            const hyphenatedLines = lines.filter(line => line.includes('-')).length
+            const hyphenationRatio = hyphenatedLines / lines.length
+            
+            if (hyphenationRatio > 0.3) { // More than 30% of lines hyphenated
+              issues.push({
+                id: `hyphenation-${block.id}`,
+                ruleId: 'excessive-hyphenation',
+                severity: 'warning',
+                blockId: block.id,
+                sectionId: section.id,
+                message: `${Math.round(hyphenationRatio * 100)}% of lines are hyphenated`,
+                description: 'Excessive hyphenation can hurt readability. Consider adjusting text formatting.',
+                canFix: true,
+                fixLabel: 'Reduce hyphenation',
+                ignored: false,
+                snippet: block.content.substring(0, 50)
+              })
+            }
+          }
+        })
+      })
+    })
+    
+    return issues
+  },
+  fix: (document, issue) => {
+    const updatedDocument = { ...document }
+    updatedDocument.sections = document.sections.map(section => {
+      if (section.id === issue.sectionId) {
+        return {
+          ...section,
+          flows: section.flows.map(flow => ({
+            ...flow,
+            blocks: flow.blocks.map(block => {
+              if (block.id === issue.blockId) {
+                return {
+                  ...block,
+                  styles: [{
+                    id: 'auto-hyphenation-fix',
+                    name: 'Hyphenation Fix',
+                    category: 'typography',
+                    properties: {
+                      hyphens: 'manual'
+                    }
+                  }]
+                }
+              }
+              return block
+            })
+          }))
+        }
+      }
+      return section
+    })
+    return updatedDocument
+  }
+}
+
+// Helper functions for contrast calculation
+function getLuminance(color: string): number {
+  // Convert hex to RGB
+  const hex = color.replace('#', '')
+  const r = parseInt(hex.substr(0, 2), 16) / 255
+  const g = parseInt(hex.substr(2, 2), 16) / 255
+  const b = parseInt(hex.substr(4, 2), 16) / 255
+
+  // Calculate relative luminance
+  const getRGB = (c: number) => {
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+  }
+
+  return 0.2126 * getRGB(r) + 0.7152 * getRGB(g) + 0.0722 * getRGB(b)
+}
+
+function calculateContrastRatio(color1: string, color2: string): number {
+  const lum1 = getLuminance(color1)
+  const lum2 = getLuminance(color2)
+  const lighter = Math.max(lum1, lum2)
+  const darker = Math.min(lum1, lum2)
+  return (lighter + 0.05) / (darker + 0.05)
+}
+
 export const validationRules: ValidationRule[] = [
   strandedHeadingRule,
   figureWithoutCaptionRule,
@@ -575,6 +827,9 @@ export const validationRules: ValidationRule[] = [
   brokenCrossReferenceRule,
   blockOutsideFlowRule,
   longHeadingRule,
+  minFontSizeRule,
+  lowContrastAutoRule,
+  excessiveHyphenationRule,
   ...brandValidationRules
 ]
 

@@ -42,6 +42,9 @@ import {
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { SaveStatus, DocumentMetadata } from '@/hooks/useDocumentPersistence'
+import { DocumentActions } from './DocumentActions'
+import { ValidationButton } from './ValidationButton'
+import { PolishButton } from './PolishButton'
 import { ShareDialog } from './ShareDialog'
 import { DocumentBrandKitSelector } from './DocumentBrandKitSelector'
 import { WorkspaceSwitcher } from '@/components/layout/WorkspaceSwitcher'
@@ -295,6 +298,13 @@ export function DocumentHeader({
                 <History className="h-4 w-4" />
               </Button>
             )}
+            
+            {/* Document Actions */}
+            <DocumentActions />
+            
+            {/* Validation Actions */}
+            <ValidationButton />
+            <PolishButton />
             
             <Button
               variant="ghost"
