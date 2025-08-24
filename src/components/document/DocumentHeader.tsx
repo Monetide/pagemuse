@@ -43,6 +43,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { SaveStatus, DocumentMetadata } from '@/hooks/useDocumentPersistence'
 import { ShareDialog } from './ShareDialog'
+import { DocumentBrandKitSelector } from './DocumentBrandKitSelector'
 import { WorkspaceSwitcher } from '@/components/layout/WorkspaceSwitcher'
 
 interface DocumentHeaderProps {
@@ -260,6 +261,19 @@ export function DocumentHeader({
 
           {/* Action Buttons */}
           <div className="flex items-center gap-1">
+            {/* Brand Kit Selector */}
+            {documentId && (
+              <DocumentBrandKitSelector 
+                documentId={documentId}
+                // TODO: Pass current brand kit ID from document metadata
+                currentBrandKitId={undefined}
+                onBrandKitChange={(brandKit) => {
+                  // TODO: Handle brand kit change in parent component
+                  console.log('Brand kit changed:', brandKit);
+                }}
+              />
+            )}
+            
             <Toggle
               pressed={debugMode}
               onPressedChange={onDebugToggle}
