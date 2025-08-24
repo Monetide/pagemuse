@@ -13,8 +13,9 @@ export interface DocumentIR {
 export interface SectionIR {
   title?: string;
   blocks: BlockIR[];
-  id?: string;
+  id: string;
   notes?: any[];
+  order?: number;
 }
 
 // Document Metadata
@@ -225,6 +226,7 @@ export const validateBlockIR = (block: any): block is BlockIR => {
 
 // Example Document
 export const EXAMPLE_DOCUMENT_IR: DocumentIR = {
+  title: "Sample Document",
   metadata: {
     title: "Sample Document",
     author: "System",
@@ -233,7 +235,9 @@ export const EXAMPLE_DOCUMENT_IR: DocumentIR = {
   },
   sections: [
     {
+      id: "section-intro",
       title: "Introduction",
+      order: 0,
       blocks: [
         {
           type: 'heading',
@@ -253,7 +257,9 @@ export const EXAMPLE_DOCUMENT_IR: DocumentIR = {
       ]
     },
     {
+      id: "section-examples",
       title: "Content Examples",
+      order: 1,
       blocks: [
         {
           type: 'heading',

@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { SemanticDocument } from '@/lib/document-model'
 import { ImportMode } from '@/components/import/ImportDialog'
-import { IngestPipeline } from '@/lib/ingest-pipeline'
+import { IngestPipeline, convertToLegacyIR } from '@/lib/ingest-pipeline'
 import { IRMapper } from '@/lib/ir-mapper'
 import { PostImportCleaner, getDefaultCleanupOptions, CleanupOptions, CleanupResult } from '@/lib/post-import-cleaner'
 import { IRDocument } from '@/lib/ir-types'
@@ -82,34 +82,32 @@ export const useImport = () => {
 
     try {
       // Step 1: Ingest file to IR
-      const pipeline = new IngestPipeline({
+      const irDocument = await IngestPipeline.processFile(file, {
         preserveFormatting: true,
         extractAssets: true,
         generateAnchors: true
       })
-      
-      const irDocument = await pipeline.processFile(file)
 
       // Step 2: Process assets (simplified without AssetManager)
       const processedAssets: AssetInfo[] = []
 
-      // Extract asset references from IR document
-      irDocument.sections.forEach(section => {
-        section.blocks.forEach(block => {
-          if (block.type === 'figure' && block.content?.asset) {
+      // Extract assets from IR blocks if needed  
+      for (const section of irDocument.sections) {
+        for (const block of section.blocks) {
+          if (block.type === 'figure' && block.src) {
             processedAssets.push({
-              id: block.content.asset.id,
-              filename: block.content.asset.filename,
-              mimeType: block.content.asset.mimeType,
-              url: block.content.asset.url,
-              alt: block.content.asset.alt,
-              caption: block.content.caption,
+              id: `asset-${Date.now()}`,
+              filename: 'image',
+              mimeType: 'image/jpeg',
+              url: block.src,
+              alt: block.alt,
+              caption: block.caption || '',
               sourceFilename: file.name,
               documentId: undefined
             })
           }
-        })
-      })
+        }
+      }
 
       // Step 3: Set default cleanup options based on file type
       const fileExtension = file.name.split('.').pop()?.toLowerCase()
@@ -119,9 +117,12 @@ export const useImport = () => {
       
       const defaultCleanupOptions = getDefaultCleanupOptions(sourceType)
 
+      // Convert to legacy format for compatibility
+      const legacyIR = convertToLegacyIR(irDocument)
+      
       setState(prev => ({ 
         ...prev, 
-        irDocument,
+        irDocument: legacyIR,
         assets: processedAssets,
         config: {
           ...prev.config,

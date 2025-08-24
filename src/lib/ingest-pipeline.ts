@@ -18,16 +18,20 @@ import {
 
 export interface IngestOptions {
   preserveFormatting?: boolean;
-  coalesceConsecutiveParagraphs?: boolean;
   extractImages?: boolean;
   extractTables?: boolean;
+  coalesceConsecutiveParagraphs?: boolean;
+  generateAnchors?: boolean;
+  extractAssets?: boolean;
 }
 
 export const DEFAULT_INGEST_OPTIONS: IngestOptions = {
   preserveFormatting: false,
-  coalesceConsecutiveParagraphs: true,
   extractImages: true,
   extractTables: true,
+  coalesceConsecutiveParagraphs: true,
+  generateAnchors: false,
+  extractAssets: false
 };
 
 // Main ingest function
@@ -60,6 +64,7 @@ export function ingestToIR(
   const sections = organizeSections(blocks);
 
   return {
+    title: 'Imported Document',
     sections,
     metadata: {
       createdAt: new Date().toISOString(),
@@ -521,7 +526,11 @@ function postProcessBlocks(blocks: BlockIR[], options: IngestOptions): BlockIR[]
 
 function organizeSections(blocks: BlockIR[]): SectionIR[] {
   const sections: SectionIR[] = [];
-  let currentSection: SectionIR = { blocks: [] };
+  let currentSection: SectionIR = { 
+    id: 'section-0',
+    blocks: [] 
+  };
+  let sectionCounter = 0;
   
   for (const block of blocks) {
     if (block.type === 'heading' && block.level === 1) {
@@ -529,9 +538,12 @@ function organizeSections(blocks: BlockIR[]): SectionIR[] {
       if (currentSection.blocks.length > 0) {
         sections.push(currentSection);
       }
+      sectionCounter++;
       currentSection = {
+        id: `section-${sectionCounter}`,
         title: block.content,
-        blocks: [block]
+        blocks: [block],
+        order: sectionCounter
       };
     } else {
       currentSection.blocks.push(block);
@@ -545,7 +557,11 @@ function organizeSections(blocks: BlockIR[]): SectionIR[] {
   
   // If no sections were created (no h1), create a single section
   if (sections.length === 0 && blocks.length > 0) {
-    sections.push({ blocks });
+    sections.push({ 
+      id: 'section-main',
+      blocks,
+      order: 0
+    });
   }
   
   return sections;
@@ -627,12 +643,12 @@ export function testMarkdownParser(): DocumentIR {
 
 // Backward compatibility exports
 export class IngestPipeline {
-  static async ingest(content: string, format: 'paste' | 'txt' | 'markdown' | 'html' = 'txt'): Promise<DocumentIR> {
-    return ingestToIR(content, format);
+  static async ingest(content: string, format: 'paste' | 'txt' | 'markdown' | 'html' = 'txt', options?: IngestOptions): Promise<DocumentIR> {
+    return ingestToIR(content, format, options);
   }
   
-  static processFile(file: File): Promise<DocumentIR> {
-    return ingestFile(file);
+  static async processFile(file: File, options?: IngestOptions): Promise<DocumentIR> {
+    return ingestFile(file, options);
   }
 }
 
@@ -655,9 +671,11 @@ export interface IRDocument {
 }
 
 export interface IRSection {
+  id: string;
   title?: string;
   blocks: IRBlock[];
   notes?: any[];
+  order?: number;
   [key: string]: any;
 }
 
@@ -665,18 +683,22 @@ export interface IRBlock {
   type: string;
   content?: string | null;
   attrs?: any;
+  order?: number;
   [key: string]: any;
 }
 
 // Convert new IR to legacy format
 export function convertToLegacyIR(documentIR: DocumentIR): IRDocument {
   return {
-    title: documentIR.metadata?.title || 'Untitled',
-    sections: documentIR.sections.map(section => ({
+    title: documentIR.title || documentIR.metadata?.title || 'Untitled',
+    sections: documentIR.sections.map((section, index) => ({
+      id: section.id || `section-${index}`,
       title: section.title,
-      blocks: section.blocks.map(block => {
+      order: section.order || index,
+      blocks: section.blocks.map((block, blockIndex) => {
         const legacyBlock: IRBlock = {
           type: block.type,
+          order: blockIndex
         };
         
         switch (block.type) {
@@ -717,7 +739,7 @@ export function convertToLegacyIR(documentIR: DocumentIR): IRDocument {
         
         return legacyBlock;
       }),
-      notes: []
+      notes: section.notes || []
     }))
   };
 }

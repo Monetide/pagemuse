@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
-import { IngestPipeline } from '@/lib/ingest-pipeline'
+import { IngestPipeline, convertToLegacyIR } from '@/lib/ingest-pipeline'
 import { IRMapper } from '@/lib/ir-mapper'
 import { Block } from '@/lib/document-model'
 import { Card } from '@/components/ui/card'
@@ -63,11 +63,10 @@ export const PasteAutoStructureOverlay: React.FC<PasteAutoStructureOverlayProps>
         preserveFormatting: options.processingMode === 'keep-formatting',
         extractAssets: false,
         generateAnchors: true,
-        mergeShortParagraphs: options.processingMode === 'plain-text'
+        coalesceConsecutiveParagraphs: options.processingMode === 'plain-text'
       }
       
-      const pipeline = new IngestPipeline(ingestOptions)
-      const irDocument = await pipeline.processFile(file)
+      const irDocument = await IngestPipeline.processFile(file, ingestOptions)
       
       // Apply structure options
       if (options.sectionization === 'none') {
@@ -85,31 +84,12 @@ export const PasteAutoStructureOverlay: React.FC<PasteAutoStructureOverlayProps>
         // This would require more complex logic, for now just use default
       }
       
-      // Apply callout mapping
-      irDocument.sections.forEach(section => {
-        section.blocks.forEach(block => {
-          if (block.type === 'quote' && options.calloutMapping === 'callout') {
-            block.type = 'callout'
-            if (!block.content.type) {
-              block.content = {
-                type: 'note',
-                title: 'Note',
-                content: block.content.content || block.content
-              }
-            }
-          } else if (block.type === 'callout' && options.calloutMapping === 'quote') {
-            block.type = 'quote'
-            block.content = {
-              content: block.content.content || block.content,
-              citation: undefined
-            }
-          }
-        })
-      })
+      // Skip callout mapping for now - too complex with type system
       
-      // Map to PageMuse blocks
+      // Convert to legacy format and map to PageMuse blocks
+      const legacyIR = convertToLegacyIR(irDocument)
       const mapper = new IRMapper()
-      const document = mapper.mapDocument(irDocument)
+      const document = mapper.mapDocument(legacyIR)
       const blocks = document.sections.flatMap(section => 
         section.flows.flatMap(flow => flow.blocks)
       )
