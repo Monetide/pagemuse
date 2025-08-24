@@ -456,6 +456,167 @@ export const CreateBrandKitDialog = ({ open, onOpenChange }: CreateBrandKitDialo
             </div>
           </div>
 
+          {/* Token Mapping & Preview */}
+          <div className="space-y-4">
+            <Label>Token Mapping & Preview</Label>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Token Mapping Table */}
+              <Card>
+                <CardContent className="p-4">
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">Color Token Mapping</Label>
+                    <div className="space-y-2 text-sm">
+                      <div className="grid grid-cols-3 gap-2 pb-2 border-b text-xs font-medium text-muted-foreground">
+                        <div>Brand Kit Color</div>
+                        <div>Template Token</div>
+                        <div>Preview</div>
+                      </div>
+                      
+                      {/* Brand Colors */}
+                      <div className="grid grid-cols-3 gap-2 items-center">
+                        <div>brand/primary</div>
+                        <div className="font-mono text-xs">primary</div>
+                        <div className="w-6 h-4 rounded border" style={{ backgroundColor: formData.palette.primary }} />
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 items-center">
+                        <div>brand/secondary</div>
+                        <div className="font-mono text-xs">secondary</div>
+                        <div className="w-6 h-4 rounded border" style={{ backgroundColor: formData.palette.secondary }} />
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 items-center">
+                        <div>brand/accent</div>
+                        <div className="font-mono text-xs">accent</div>
+                        <div className="w-6 h-4 rounded border" style={{ backgroundColor: formData.palette.accent }} />
+                      </div>
+                      
+                      <div className="h-px bg-border my-2" />
+                      
+                      {/* Neutral Colors */}
+                      <div className="grid grid-cols-3 gap-2 items-center">
+                        <div>text/body</div>
+                        <div className="font-mono text-xs">textBody</div>
+                        <div className="w-6 h-4 rounded border" style={{ backgroundColor: formData.neutrals.textBody }} />
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 items-center">
+                        <div>text/muted</div>
+                        <div className="font-mono text-xs">textMuted</div>
+                        <div className="w-6 h-4 rounded border" style={{ backgroundColor: formData.neutrals.textMuted }} />
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 items-center">
+                        <div>bg/page</div>
+                        <div className="font-mono text-xs">bgPage</div>
+                        <div className="w-6 h-4 rounded border" style={{ backgroundColor: formData.neutrals.bgPage }} />
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 items-center">
+                        <div>bg/section</div>
+                        <div className="font-mono text-xs">bgSection</div>
+                        <div className="w-6 h-4 rounded border" style={{ backgroundColor: formData.neutrals.bgSection }} />
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 items-center">
+                        <div>border/subtle</div>
+                        <div className="font-mono text-xs">borderSubtle</div>
+                        <div className="w-6 h-4 rounded border" style={{ backgroundColor: formData.neutrals.borderSubtle }} />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Live Preview */}
+              <Card>
+                <CardContent className="p-4">
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">Live Preview</Label>
+                    <div 
+                      className="space-y-4 p-4 rounded-lg border-2"
+                      style={{ 
+                        backgroundColor: formData.neutrals.bgPage,
+                        borderColor: formData.neutrals.borderSubtle
+                      }}
+                    >
+                      {/* H1 Heading */}
+                      <h1 
+                        className="text-xl font-bold"
+                        style={{ color: formData.palette.primary }}
+                      >
+                        Sample Heading
+                      </h1>
+                      
+                      {/* Body paragraph */}
+                      <p 
+                        className="text-sm leading-relaxed"
+                        style={{ color: formData.neutrals.textBody }}
+                      >
+                        This is a sample paragraph demonstrating how body text will appear using your brand kit colors. The text should be easily readable with proper contrast.
+                      </p>
+                      
+                      {/* Callout */}
+                      <div 
+                        className="p-3 rounded border-l-4"
+                        style={{ 
+                          backgroundColor: formData.neutrals.bgSection,
+                          borderLeftColor: formData.palette.accent,
+                          borderColor: formData.neutrals.borderSubtle
+                        }}
+                      >
+                        <div 
+                          className="text-sm font-medium"
+                          style={{ color: formData.palette.accent }}
+                        >
+                          Important Note
+                        </div>
+                        <div 
+                          className="text-xs mt-1"
+                          style={{ color: formData.neutrals.textMuted }}
+                        >
+                          This callout shows how secondary backgrounds and accent colors work together.
+                        </div>
+                      </div>
+                      
+                      {/* Button Example */}
+                      <div className="flex gap-2">
+                        <button 
+                          className="px-3 py-1.5 text-xs font-medium rounded transition-colors"
+                          style={{ 
+                            backgroundColor: formData.palette.primary,
+                            color: formData.neutrals.bgPage
+                          }}
+                        >
+                          Primary Button
+                        </button>
+                        <button 
+                          className="px-3 py-1.5 text-xs font-medium rounded border transition-colors"
+                          style={{ 
+                            borderColor: formData.palette.secondary,
+                            color: formData.palette.secondary,
+                            backgroundColor: 'transparent'
+                          }}
+                        >
+                          Secondary Button
+                        </button>
+                      </div>
+                      
+                      {/* Divider */}
+                      <div 
+                        className="h-px w-full"
+                        style={{ backgroundColor: formData.neutrals.borderSubtle }}
+                      />
+                      
+                      {/* Small text example */}
+                      <div 
+                        className="text-xs"
+                        style={{ color: formData.neutrals.textMuted }}
+                      >
+                        Sample footer text using muted color
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
           {/* Neutrals Section */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
