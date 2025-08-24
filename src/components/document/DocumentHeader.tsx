@@ -48,6 +48,7 @@ import { PolishButton } from './PolishButton'
 import { ShareDialog } from './ShareDialog'
 import { DocumentBrandKitSelector } from './DocumentBrandKitSelector'
 import { WorkspaceSwitcher } from '@/components/layout/WorkspaceSwitcher'
+import { SemanticDocument } from '@/lib/document-model'
 
 interface DocumentHeaderProps {
   documentId?: string;
@@ -86,6 +87,7 @@ export function DocumentHeader({
   const [saveAsTitle, setSaveAsTitle] = useState('')
   const [saveAsOpen, setSaveAsOpen] = useState(false)
   const [workspaceSwitcherOpen, setWorkspaceSwitcherOpen] = useState(false)
+  const [shareDialogOpen, setShareDialogOpen] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -316,15 +318,21 @@ export function DocumentHeader({
             </Button>
             
             {documentId ? (
-              <ShareDialog documentId={documentId} documentTitle={title}>
+              <>
                 <Button
                   variant="ghost"
                   size="sm"
                   title="Share Document"
+                  onClick={() => setShareDialogOpen(true)}
                 >
                   <Share className="w-4 h-4" />
                 </Button>
-              </ShareDialog>
+                <ShareDialog 
+                  document={{ id: documentId, title: title } as SemanticDocument}
+                  open={shareDialogOpen}
+                  onOpenChange={setShareDialogOpen}
+                />
+              </>
             ) : (
               <Button
                 variant="ghost"
