@@ -323,6 +323,10 @@ export class SidebarFlowManager implements FlowManager {
     this.mainFlow.markColumnFull(reason)
   }
 
+  getColumnState(): ColumnState {
+    return this.mainFlow.getColumnState()
+  }
+
   private isSidebarBlock(block: Block): boolean {
     return block.type === 'callout' && block.metadata?.placement === 'sidebar'
   }

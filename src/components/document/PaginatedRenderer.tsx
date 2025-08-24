@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { FileText, Hash, MessageSquare, StickyNote } from 'lucide-react'
-import { LayoutResult, LayoutPageBox, LayoutColumnBox } from '@/lib/layout-engine/core'
+import { PourLayoutResult as LayoutResult, LayoutPageBox, LayoutColumnBox } from '@/lib/layout-engine/core'
 import { Block } from '@/lib/document-model'
 import { cn } from '@/lib/utils'
 
