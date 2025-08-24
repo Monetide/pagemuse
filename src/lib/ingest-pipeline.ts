@@ -12,15 +12,29 @@ import {
   ListItem
 } from './ir-schema';
 
+import { 
+  IRDocument as LegacyIRDocument,
+  IRSection as LegacyIRSection,
+  IRBlock as LegacyIRBlock,
+  IRHeading,
+  IRList,
+  IRTable,
+  IRFigure,
+  IRCallout,
+  IRQuote,
+  IRAssetRef
+} from './ir-types'
+
 /**
  * Ingest Pipeline: Convert various text formats to IR
  */
-
 export interface IngestOptions {
   preserveFormatting?: boolean;
   extractImages?: boolean;
   extractTables?: boolean;
   coalesceConsecutiveParagraphs?: boolean;
+  // Legacy alias accepted for backward compatibility
+  mergeShortParagraphs?: boolean;
   generateAnchors?: boolean;
   extractAssets?: boolean;
 }
@@ -40,25 +54,34 @@ export function ingestToIR(
   format: 'paste' | 'txt' | 'markdown' | 'html',
   options: IngestOptions = DEFAULT_INGEST_OPTIONS
 ): DocumentIR {
+  // Normalize options (support legacy alias)
+  const effectiveOptions: IngestOptions = {
+    ...DEFAULT_INGEST_OPTIONS,
+    ...options
+  }
+  if (options && typeof options.mergeShortParagraphs === 'boolean') {
+    effectiveOptions.coalesceConsecutiveParagraphs = options.mergeShortParagraphs
+  }
+
   let blocks: BlockIR[] = [];
 
   switch (format) {
     case 'paste':
     case 'txt':
-      blocks = parsePlainText(content, options);
+      blocks = parsePlainText(content, effectiveOptions);
       break;
     case 'markdown':
-      blocks = parseMarkdown(content, options);
+      blocks = parseMarkdown(content, effectiveOptions);
       break;
     case 'html':
-      blocks = parseHTML(content, options);
+      blocks = parseHTML(content, effectiveOptions);
       break;
     default:
       throw new Error(`Unsupported format: ${format}`);
   }
 
   // Post-process blocks
-  blocks = postProcessBlocks(blocks, options);
+  blocks = postProcessBlocks(blocks, effectiveOptions);
 
   // Organize into sections
   const sections = organizeSections(blocks);
