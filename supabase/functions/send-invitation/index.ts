@@ -8,8 +8,10 @@ const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+const appOrigin = Deno.env.get("APP_ORIGIN") || "https://pagemuse.ai";
+
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": appOrigin,
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
@@ -109,7 +111,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Create invitation link
-    const inviteUrl = `${req.headers.get('origin') || 'https://your-app.com'}/invite/${invitation.token}`;
+    const inviteUrl = `${appOrigin}/invite/${invitation.token}`;
 
     // Send email
     const emailResponse = await resend.emails.send({

@@ -3,8 +3,10 @@ import { Resend } from 'npm:resend@2.0.0';
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
 
+const appOrigin = Deno.env.get("APP_ORIGIN") || "https://pagemuse.ai";
+
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': appOrigin,
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
@@ -168,7 +170,7 @@ Deno.serve(async (req) => {
 
       // Send invitation email
       try {
-        const inviteUrl = `${Deno.env.get('SUPABASE_URL')?.replace('/rest/v1', '')}/invite?token=${invitation.token}`;
+        const inviteUrl = `${appOrigin}/invite/${invitation.token}`;
         
         await resend.emails.send({
           from: 'PageMuse <noreply@pagemuse.ai>',

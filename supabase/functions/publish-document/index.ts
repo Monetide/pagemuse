@@ -6,8 +6,10 @@ const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+const appOrigin = Deno.env.get("APP_ORIGIN") || "https://pagemuse.ai";
+
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": appOrigin,
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
@@ -94,7 +96,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Create public URL
-    const publicUrl = `${req.headers.get('origin') || 'https://your-app.com'}/published/${publishedDoc.public_url_token}`;
+    const publicUrl = `${appOrigin}/published/${publishedDoc.public_url_token}`;
 
     // Log activity
     await supabase.rpc('log_document_activity', {

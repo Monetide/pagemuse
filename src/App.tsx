@@ -55,7 +55,7 @@ const App = () => {
               <ErrorBoundary>
                 <Routes>
                   {/* Public routes - accessible without authentication */}
-                  <Route path="/invite" element={<InvitationAcceptance />} />
+                  <Route path="/invite/:token" element={<InvitationAcceptance />} />
                   <Route path="/shared/:token" element={<SharedDocumentViewer />} />
                   <Route path="/published/:token" element={<PublishedDocumentViewer />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
