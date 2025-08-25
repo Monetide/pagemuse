@@ -4,11 +4,12 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, CheckCircle, XCircle, AlertTriangle, Upload, Wand2 } from 'lucide-react'
+import { Loader2, CheckCircle, XCircle, AlertTriangle, Upload, Wand2, Shield } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { supabase } from '@/integrations/supabase/client'
 import { useParams } from 'react-router-dom'
+import { useToast } from '@/hooks/use-toast'
 
 interface ValidationResult {
   okCount: number
@@ -39,9 +40,11 @@ interface ComposeResult {
 
 export const SeedValidator = () => {
   const { workspaceId } = useParams()
+  const { toast } = useToast()
   const [seedsJson, setSeedsJson] = useState('')
   const [autoCreateMissing, setAutoCreateMissing] = useState(true)
   const [isValidating, setIsValidating] = useState(false)
+  const [isValidatingStored, setIsValidatingStored] = useState(false)
   const [isIngesting, setIsIngesting] = useState(false)
   const [isComposing, setIsComposing] = useState(false)
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null)
@@ -241,6 +244,84 @@ export const SeedValidator = () => {
       setError(err instanceof Error ? err.message : 'Validation failed')
     } finally {
       setIsValidating(false)
+    }
+  }
+
+  const handleValidateStored = async () => {
+    if (seeds.length === 0) {
+      toast({
+        title: "No seeds to validate",
+        description: "No stored seeds found in the database.",
+        variant: "destructive"
+      })
+      return
+    }
+
+    setIsValidatingStored(true)
+
+    try {
+      // Convert stored seeds to the format expected by the validation endpoint
+      const seedsForValidation = seeds.map(seed => ({
+        docType: seed.doc_type,
+        stylePack: seed.style_pack,
+        industry: seed.industry
+      }))
+
+      const SUPABASE_URL = 'https://dbrzfjekbfkjathotjcj.supabase.co'
+      const url = `${SUPABASE_URL}/functions/v1/template-gen-seeds-validate`
+      
+      const { data: session } = await supabase.auth.getSession()
+      const token = session.session?.access_token
+
+      if (!token) {
+        throw new Error('Authentication required')
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ seeds: seedsForValidation })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const result = await response.json()
+      
+      if (result.missingModules.length === 0 && result.badParams.length === 0) {
+        toast({
+          title: "All seeds valid",
+          description: `All ${result.okCount} stored seeds are valid and reference existing modules.`,
+          variant: "default"
+        })
+      } else {
+        const issues = []
+        if (result.missingModules.length > 0) {
+          issues.push(`${result.missingModules.length} missing modules: ${result.missingModules.join(', ')}`)
+        }
+        if (result.badParams.length > 0) {
+          issues.push(`${result.badParams.length} invalid seeds`)
+        }
+        
+        toast({
+          title: "Validation issues found",
+          description: issues.join('; '),
+          variant: "destructive"
+        })
+      }
+    } catch (err) {
+      toast({
+        title: "Validation failed",
+        description: err instanceof Error ? err.message : 'Unknown error occurred',
+        variant: "destructive"
+      })
+    } finally {
+      setIsValidatingStored(false)
     }
   }
 
@@ -467,24 +548,44 @@ export const SeedValidator = () => {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             Ingested Seeds
-            <Button 
-              onClick={handleCompose} 
-              disabled={isComposing || seeds.filter(s => s.status === 'ready').length === 0}
-              variant="default"
-              size="sm"
-            >
-              {isComposing ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Composing...
-                </>
-              ) : (
-                <>
-                  <Wand2 className="w-4 h-4 mr-2" />
-                  Compose all Ready ({seeds.filter(s => s.status === 'ready').length})
-                </>
-              )}
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={handleValidateStored} 
+                disabled={isValidatingStored || seeds.length === 0}
+                variant="outline"
+                size="sm"
+              >
+                {isValidatingStored ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Validating...
+                  </>
+                ) : (
+                  <>
+                    <Shield className="w-4 h-4 mr-2" />
+                    Validate ({seeds.length})
+                  </>
+                )}
+              </Button>
+              <Button 
+                onClick={handleCompose} 
+                disabled={isComposing || seeds.filter(s => s.status === 'ready').length === 0}
+                variant="default"
+                size="sm"
+              >
+                {isComposing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Composing...
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="w-4 h-4 mr-2" />
+                    Compose all Ready ({seeds.filter(s => s.status === 'ready').length})
+                  </>
+                )}
+              </Button>
+            </div>
           </CardTitle>
           <CardDescription>
             Template parameter sets that have been ingested and stored in the database.
