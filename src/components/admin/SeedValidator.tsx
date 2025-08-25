@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, CheckCircle, XCircle, AlertTriangle, Upload } from 'lucide-react'
+import { Loader2, CheckCircle, XCircle, AlertTriangle, Upload, Wand2 } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { supabase } from '@/integrations/supabase/client'
@@ -27,13 +27,25 @@ interface TemplateSeed {
   updated_at: string
 }
 
+interface ComposeResult {
+  success: boolean
+  templatesCreated: number
+  templates: Array<{
+    seedId: string
+    templateId: string
+    name: string
+  }>
+}
+
 export const SeedValidator = () => {
   const { workspaceId } = useParams()
   const [seedsJson, setSeedsJson] = useState('')
   const [autoCreateMissing, setAutoCreateMissing] = useState(true)
   const [isValidating, setIsValidating] = useState(false)
   const [isIngesting, setIsIngesting] = useState(false)
+  const [isComposing, setIsComposing] = useState(false)
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null)
+  const [composeResult, setComposeResult] = useState<ComposeResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [seeds, setSeeds] = useState<TemplateSeed[]>([])
   const [isLoadingSeeds, setIsLoadingSeeds] = useState(false)
@@ -63,6 +75,63 @@ export const SeedValidator = () => {
   useEffect(() => {
     loadSeeds()
   }, [workspaceId])
+
+  const handleCompose = async () => {
+    if (!workspaceId) {
+      setError('Workspace not loaded')
+      return
+    }
+
+    const readySeeds = seeds.filter(seed => seed.status === 'ready')
+    if (readySeeds.length === 0) {
+      setError('No ready seeds to compose')
+      return
+    }
+
+    setIsComposing(true)
+    setError(null)
+    setComposeResult(null)
+
+    try {
+      const SUPABASE_URL = 'https://dbrzfjekbfkjathotjcj.supabase.co'
+      const url = `${SUPABASE_URL}/functions/v1/template-gen-seeds-compose`
+      
+      const { data: session } = await supabase.auth.getSession()
+      const token = session.session?.access_token
+
+      if (!token) {
+        throw new Error('Authentication required')
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ workspaceId })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const result = await response.json()
+      console.log('Compose result:', result)
+      
+      setComposeResult(result)
+      
+      // Reload seeds to show updated statuses
+      await loadSeeds()
+      
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Composition failed')
+    } finally {
+      setIsComposing(false)
+    }
+  }
 
   const handleIngest = async () => {
     if (!seedsJson.trim() || !workspaceId) {
@@ -354,9 +423,69 @@ export const SeedValidator = () => {
         </Card>
       )}
 
+      {composeResult && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              Composition Results
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {composeResult.templatesCreated}
+                </div>
+                <div className="text-sm text-muted-foreground">Templates Created</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">
+                  {composeResult.templates?.length || 0}
+                </div>
+                <div className="text-sm text-muted-foreground">Draft Templates</div>
+              </div>
+            </div>
+
+            {composeResult.templates && composeResult.templates.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="font-medium text-sm">Created Templates:</h4>
+                <div className="space-y-1">
+                  {composeResult.templates.map((template) => (
+                    <div key={template.templateId} className="text-xs bg-muted p-2 rounded">
+                      <strong>{template.name}</strong> (from seed: {template.seedId})
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
-          <CardTitle>Ingested Seeds</CardTitle>
+          <CardTitle className="flex items-center justify-between">
+            Ingested Seeds
+            <Button 
+              onClick={handleCompose} 
+              disabled={isComposing || seeds.filter(s => s.status === 'ready').length === 0}
+              variant="default"
+              size="sm"
+            >
+              {isComposing ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Composing...
+                </>
+              ) : (
+                <>
+                  <Wand2 className="w-4 h-4 mr-2" />
+                  Compose all Ready ({seeds.filter(s => s.status === 'ready').length})
+                </>
+              )}
+            </Button>
+          </CardTitle>
           <CardDescription>
             Template parameter sets that have been ingested and stored in the database.
           </CardDescription>
@@ -392,7 +521,11 @@ export const SeedValidator = () => {
                       <TableCell>{seed.style_pack}</TableCell>
                       <TableCell>{seed.industry}</TableCell>
                       <TableCell>
-                        <Badge variant={seed.status === 'ready' ? 'default' : 'secondary'}>
+                        <Badge variant={
+                          seed.status === 'ready' ? 'default' : 
+                          seed.status === 'composed' ? 'secondary' : 
+                          'outline'
+                        }>
                           {seed.status}
                         </Badge>
                       </TableCell>
