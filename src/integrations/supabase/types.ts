@@ -55,6 +55,45 @@ export type Database = {
           },
         ]
       }
+      brand_kit_activities: {
+        Row: {
+          activity_type: string
+          brand_kit_id: string
+          created_at: string
+          description: string
+          diff_summary: Json | null
+          id: string
+          metadata: Json | null
+          target_id: string | null
+          target_type: string | null
+          user_id: string
+        }
+        Insert: {
+          activity_type: string
+          brand_kit_id: string
+          created_at?: string
+          description: string
+          diff_summary?: Json | null
+          id?: string
+          metadata?: Json | null
+          target_id?: string | null
+          target_type?: string | null
+          user_id: string
+        }
+        Update: {
+          activity_type?: string
+          brand_kit_id?: string
+          created_at?: string
+          description?: string
+          diff_summary?: Json | null
+          id?: string
+          metadata?: Json | null
+          target_id?: string | null
+          target_type?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       brand_kit_maps: {
         Row: {
           brand_kit_id: string
@@ -965,6 +1004,69 @@ export type Database = {
           },
         ]
       }
+      template_registry_doc_types: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      template_registry_industries: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      template_registry_style_packs: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       templates: {
         Row: {
           category: string
@@ -1271,6 +1373,19 @@ export type Database = {
       is_workspace_member: {
         Args: { p_user_id?: string; p_workspace_id: string }
         Returns: boolean
+      }
+      log_brand_kit_activity: {
+        Args: {
+          _activity_type: string
+          _brand_kit_id: string
+          _description: string
+          _diff_summary?: Json
+          _metadata?: Json
+          _target_id?: string
+          _target_type?: string
+          _user_id: string
+        }
+        Returns: string
       }
       log_document_activity: {
         Args: {

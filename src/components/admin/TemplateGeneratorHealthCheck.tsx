@@ -18,6 +18,7 @@ import { typographyPairings } from '@/components/admin/TypographySelector'
 import { generateMotifAssets } from '@/lib/svg-motif-generator'
 import { exportPageAsPNG } from '@/lib/page-composer'
 import { adjustForAACompliance, getContrastRatio } from '@/lib/colorway-generator'
+import { supabase } from '@/integrations/supabase/client'
 
 interface HealthCheckResult {
   id: string
@@ -214,6 +215,85 @@ export function TemplateGeneratorHealthCheck({ onComplete }: TemplateGeneratorHe
         message: 'PNG export pipeline error',
         icon: FileImage,
         suggestedFix: 'Install and configure html2canvas dependency for preview generation'
+      })
+    }
+
+    // 5. Check registry presence
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+      
+      if (!token) {
+        throw new Error('No authentication token available')
+      }
+
+      const registryChecks = await Promise.all([
+        fetch(`https://dbrzfjekbfkjathotjcj.supabase.co/functions/v1/template-gen-registry-list/docType`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).then(r => r.json()),
+        fetch(`https://dbrzfjekbfkjathotjcj.supabase.co/functions/v1/template-gen-registry-list/stylePack`, {  
+          headers: { Authorization: `Bearer ${token}` }
+        }).then(r => r.json()),
+        fetch(`https://dbrzfjekbfkjathotjcj.supabase.co/functions/v1/template-gen-registry-list/industry`, {
+          headers: { Authorization: `Bearer ${token}` }
+        }).then(r => r.json())
+      ])
+
+      const docTypeIds = registryChecks[0]?.ids || []
+      const stylePackIds = registryChecks[1]?.ids || []
+      const industryIds = registryChecks[2]?.ids || []
+
+      const expectedDocTypes = ["white-paper","report","ebook","case-study","proposal","annual-report"]
+      const expectedStylePacks = ["professional","editorial","minimal","bold","technical","friendly"]
+      const expectedIndustries = ["finance","insurance","real-estate","healthcare","manufacturing","tech-saas","consumer-goods","public-sector"]
+
+      const missingDocTypes = expectedDocTypes.filter(id => !docTypeIds.includes(id))
+      const missingStylePacks = expectedStylePacks.filter(id => !stylePackIds.includes(id))
+      const missingIndustries = expectedIndustries.filter(id => !industryIds.includes(id))
+
+      const totalExpected = expectedDocTypes.length + expectedStylePacks.length + expectedIndustries.length
+      const totalFound = docTypeIds.length + stylePackIds.length + industryIds.length
+      const totalMissing = missingDocTypes.length + missingStylePacks.length + missingIndustries.length
+
+      if (totalMissing === 0) {
+        checkResults.push({
+          id: 'registry-presence',
+          name: 'Registry Presence',
+          description: 'Template generator registries',
+          status: 'pass',
+          message: `All ${totalExpected} registry entries present (${docTypeIds.length} docTypes, ${stylePackIds.length} stylePacks, ${industryIds.length} industries)`,
+          icon: Image
+        })
+      } else if (totalFound > 0) {
+        checkResults.push({
+          id: 'registry-presence',
+          name: 'Registry Presence',
+          description: 'Template generator registries',
+          status: 'warning',
+          message: `${totalFound}/${totalExpected} registry entries present, ${totalMissing} missing`,
+          icon: Image,
+          suggestedFix: `Missing: ${[...missingDocTypes, ...missingStylePacks, ...missingIndustries].join(', ')}`
+        })
+      } else {
+        checkResults.push({
+          id: 'registry-presence',
+          name: 'Registry Presence',
+          description: 'Template generator registries',
+          status: 'fail',
+          message: 'No registry entries found',
+          icon: Image,
+          suggestedFix: 'Bootstrap registries with baseline IDs for docTypes, stylePacks, and industries'
+        })
+      }
+    } catch (error) {
+      checkResults.push({
+        id: 'registry-presence',
+        name: 'Registry Presence',
+        description: 'Template generator registries',
+        status: 'fail',
+        message: 'Registry check failed',
+        icon: Image,
+        suggestedFix: 'Ensure registry API endpoints are available'
       })
     }
 
