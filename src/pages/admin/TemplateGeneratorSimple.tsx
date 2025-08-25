@@ -1,5 +1,7 @@
 import { TemplateGeneratorHealthCheck } from '@/components/admin/TemplateGeneratorHealthCheck'
 import { SeedValidator } from '@/components/admin/SeedValidator'
+import { TemplatesList } from '@/components/admin/TemplatesList'
+import { AnalyticsViewer } from '@/components/admin/AnalyticsViewer'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
@@ -16,9 +18,11 @@ export default function TemplateGeneratorSimple() {
       </div>
 
       <Tabs defaultValue="health" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="health">System Health</TabsTrigger>
           <TabsTrigger value="seeds">Seeds</TabsTrigger>
+          <TabsTrigger value="templates">Templates</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="generate">Generate</TabsTrigger>
         </TabsList>
 
@@ -30,17 +34,26 @@ export default function TemplateGeneratorSimple() {
           <SeedValidator />
         </TabsContent>
 
+        <TabsContent value="templates">
+          <TemplatesList />
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <AnalyticsViewer />
+        </TabsContent>
+
         <TabsContent value="generate">
           <Card>
             <CardHeader>
-              <CardTitle>Template Generation</CardTitle>
+              <CardTitle>Advanced Template Generation</CardTitle>
               <CardDescription>
-                Generate templates using various document types, style packs, and industry settings.
+                Advanced template generation tools and bulk operations.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">
-                Template generation tools will be available here once the system is fully configured.
+                Advanced generation features will be available here once the core system is fully operational.
+                This includes bulk template generation, custom style pack creation, and template optimization tools.
               </p>
             </CardContent>
           </Card>
