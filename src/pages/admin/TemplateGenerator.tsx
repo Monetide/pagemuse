@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { SeedForm, type SeedFormData } from '@/components/admin/SeedForm'
 import { TemplatePreview } from '@/components/admin/TemplatePreview'
+import { TemplateGeneratorHealthCheck } from '@/components/admin/TemplateGeneratorHealthCheck'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -17,7 +18,8 @@ import {
   Eye,
   FileText,
   Palette,
-  Settings
+  Settings,
+  Shield
 } from 'lucide-react'
 
 type WizardStep = 'seed' | 'preview' | 'publish'
@@ -228,6 +230,11 @@ export default function TemplateGenerator() {
               Start Over
             </Button>
           </div>
+        </div>
+
+        {/* Health Check Section */}
+        <div className="mb-6">
+          <TemplateGeneratorHealthCheck />
         </div>
 
         <div className="flex gap-8">
