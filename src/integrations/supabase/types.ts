@@ -1382,6 +1382,10 @@ export type Database = {
         Args: { base_name: string }
         Returns: string
       }
+      get_current_user_email: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_folder_hierarchy: {
         Args: { folder_id: string }
         Returns: {
