@@ -18,6 +18,7 @@ import { typographyPairings } from '@/components/admin/TypographySelector'
 import { generateMotifAssets } from '@/lib/svg-motif-generator'
 import { exportPageAsPNG } from '@/lib/page-composer'
 import { adjustForAACompliance, getContrastRatio } from '@/lib/colorway-generator'
+import { getRegistryStatus, validateRegistries } from '@/lib/registries/registry-manager'
 
 interface HealthCheckResult {
   id: string
@@ -171,7 +172,48 @@ export function TemplateGeneratorHealthCheck({ onComplete }: TemplateGeneratorHe
       })
     }
 
-    // 4. Check PNG export pipeline
+    // 4. Check registries
+    try {
+      const registryStatus = getRegistryStatus()
+      const validation = validateRegistries()
+      
+      if (validation.isValid) {
+        const totalRegistered = registryStatus.docTypes.total + registryStatus.stylePacks.total + registryStatus.industries.total
+        const totalAutoCreated = registryStatus.docTypes.autoCreated + registryStatus.stylePacks.autoCreated + registryStatus.industries.autoCreated
+        
+        checkResults.push({
+          id: 'registries',
+          name: 'Template Registries',
+          description: 'DocType, StylePack, and Industry registries',
+          status: totalAutoCreated === 0 ? 'pass' : 'warning',
+          message: `${totalRegistered} total items registered (${totalAutoCreated} auto-created)`,
+          icon: Shield,
+          suggestedFix: totalAutoCreated > 0 ? `Consider registering proper definitions for auto-created items: ${validation.warnings.join(', ')}` : undefined
+        })
+      } else {
+        checkResults.push({
+          id: 'registries',
+          name: 'Template Registries',
+          description: 'DocType, StylePack, and Industry registries',
+          status: 'fail',
+          message: `Registry validation failed: ${validation.errors.join(', ')}`,
+          icon: Shield,
+          suggestedFix: 'Initialize registries with default document types, style packs, and industries'
+        })
+      }
+    } catch (error) {
+      checkResults.push({
+        id: 'registries',
+        name: 'Template Registries',
+        description: 'DocType, StylePack, and Industry registries',
+        status: 'fail',
+        message: 'Registry system error',
+        icon: Shield,
+        suggestedFix: 'Check registry manager and ensure all modules are properly imported'
+      })
+    }
+
+    // 5. Check PNG export pipeline
     try {
       // Create a temporary test element
       const testElement = document.createElement('div')

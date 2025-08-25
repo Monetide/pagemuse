@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { SeedForm, type SeedFormData } from '@/components/admin/SeedForm'
 import { TemplatePreview } from '@/components/admin/TemplatePreview'
 import { TemplateGeneratorHealthCheck } from '@/components/admin/TemplateGeneratorHealthCheck'
+import { RegistryDemo } from '@/components/admin/RegistryDemo'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -235,6 +236,11 @@ export default function TemplateGenerator() {
         {/* Health Check Section */}
         <div className="mb-6">
           <TemplateGeneratorHealthCheck />
+        </div>
+
+        {/* Registry Demo Section */}
+        <div className="mb-6">
+          <RegistryDemo />
         </div>
 
         <div className="flex gap-8">
