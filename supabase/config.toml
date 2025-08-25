@@ -1,1 +1,11 @@
 project_id = "dbrzfjekbfkjathotjcj"
+
+# Public functions that don't require JWT authentication
+[functions.handle-share-link]
+verify_jwt = false
+
+[functions.get-invitation]
+verify_jwt = false
+
+[functions.decline-invitation]
+verify_jwt = false

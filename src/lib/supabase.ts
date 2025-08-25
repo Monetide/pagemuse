@@ -1,9 +1,10 @@
-import { createClient } from '@supabase/supabase-js'
+// DEPRECATED: This file contains unsafe credentials and should not be used
+// Use @/integrations/supabase/client instead
+// This re-export is provided for compatibility only
 
-const supabaseUrl = 'https://api.pagemuse.ai'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRicnpmamVrYmZramF0aG90amNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1ODIxOTIsImV4cCI6MjA2NzE1ODE5Mn0.d96Oz9dS1nBffTdTzq33HZTVq0BJBy3Y3xmpvKgwCBI'
+import { supabase as safeSupabaseClient } from "@/integrations/supabase/client";
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = safeSupabaseClient;
 
 // Database types
 export interface Template {

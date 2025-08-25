@@ -31,7 +31,7 @@ const handler = async (req: Request): Promise<Response> => {
     const realIp = req.headers.get("x-real-ip");
     const ipAddress = forwardedFor?.split(',')[0] || realIp || "unknown";
 
-    console.log("Accessing share link:", { token, hasPassword: !!password });
+    console.log("Accessing share link:", { hasPassword: !!password });
 
     // Get share link details
     const { data: shareLink, error: linkError } = await supabase

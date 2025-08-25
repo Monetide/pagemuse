@@ -5,6 +5,41 @@ export interface TokenMap {
 }
 
 /**
+ * Sanitize color values to prevent XSS injection
+ * Only allows safe hex colors, hsl(), and CSS color names
+ */
+function sanitizeColor(color: string): string {
+  if (!color || typeof color !== 'string') return '#000000';
+  
+  const trimmed = color.trim();
+  
+  // Allow hex colors (3, 6, or 8 characters)
+  if (/^#[0-9A-Fa-f]{3}([0-9A-Fa-f]{3}([0-9A-Fa-f]{2})?)?$/.test(trimmed)) {
+    return trimmed;
+  }
+  
+  // Allow hsl() and hsla() functions
+  if (/^hsla?\(\s*\d+(\.\d+)?\s*,\s*\d+(\.\d+)?%\s*,\s*\d+(\.\d+)?%(\s*,\s*[01](\.\d+)?)?\s*\)$/.test(trimmed)) {
+    return trimmed;
+  }
+  
+  // Allow rgb() and rgba() functions
+  if (/^rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+(\s*,\s*[01](\.\d+)?)?\s*\)$/.test(trimmed)) {
+    return trimmed;
+  }
+  
+  // Allow safe CSS color keywords
+  const safeColors = ['transparent', 'currentColor', 'inherit', 'black', 'white', 'red', 'green', 'blue'];
+  if (safeColors.includes(trimmed.toLowerCase())) {
+    return trimmed;
+  }
+  
+  // Fallback to black for invalid colors
+  console.warn('Invalid color sanitized:', color);
+  return '#000000';
+}
+
+/**
  * Normalize SVG by tagging fills and strokes with token keys
  * This converts regular colors to data-token attributes for later recoloring
  */
@@ -53,19 +88,22 @@ export function recolorSvg(svgString: string, tokenMap: TokenMap): string {
   
   // Method 1: Replace data-token attributes
   Object.entries(tokenMap).forEach(([token, color]) => {
+    const sanitizedColor = sanitizeColor(color);
+    
     // Find elements with data-token attributes and update their fill/stroke
     const tokenRegex = new RegExp(`(fill|stroke)="[^"]*"\\s+data-token="${token}"`, 'gi');
-    recoloredSvg = recoloredSvg.replace(tokenRegex, `$1="${color}" data-token="${token}"`);
+    recoloredSvg = recoloredSvg.replace(tokenRegex, `$1="${sanitizedColor}" data-token="${token}"`);
     
     // Also handle the reverse order (data-token first)
     const reverseTokenRegex = new RegExp(`data-token="${token}"\\s+(fill|stroke)="[^"]*"`, 'gi');
-    recoloredSvg = recoloredSvg.replace(reverseTokenRegex, `data-token="${token}" $1="${color}"`);
+    recoloredSvg = recoloredSvg.replace(reverseTokenRegex, `data-token="${token}" $1="${sanitizedColor}"`);
   });
   
   // Method 2: Replace CSS variables
   Object.entries(tokenMap).forEach(([token, color]) => {
+    const sanitizedColor = sanitizeColor(color);
     const cssVarRegex = new RegExp(`var\\(--${token}[^)]*\\)`, 'gi');
-    recoloredSvg = recoloredSvg.replace(cssVarRegex, color);
+    recoloredSvg = recoloredSvg.replace(cssVarRegex, sanitizedColor);
   });
   
   return recoloredSvg;
