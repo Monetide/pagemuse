@@ -131,45 +131,32 @@ export async function getRegistryEntry<T = DocTypeData | StylePackData | Industr
   type: RegistryType, 
   id: string
 ): Promise<T | null> {
-  let query
+  let tableName: string
   
   switch (type) {
     case 'docType':
-      query = supabase
-        .from('template_registry_doc_types')
-        .select('data')
-        .eq('id', id)
-        .single()
+      tableName = 'template_registry_doc_types'
       break
     case 'stylePack':
-      query = supabase
-        .from('template_registry_style_packs')
-        .select('data')
-        .eq('id', id)
-        .single()
+      tableName = 'template_registry_style_packs'
       break
-    case 'industry':
-      query = supabase
-        .from('template_registry_industries')
-        .select('data')
-        .eq('id', id)
-        .single()
+    case 'industry':      
+      tableName = 'template_registry_industries'
       break
     default:
       throw new Error(`Invalid registry type: ${type}`)
   }
   
-  const { data, error } = await query
+  const { data, error } = await supabase.rpc('get_registry_entry', {
+    table_name: tableName,
+    entry_id: id
+  })
     
   if (error) {
-    if (error.code === 'PGRST116') {
-      // No rows returned
-      return null
-    }
     throw error
   }
   
-  return (data?.data as T) || null
+  return data as T || null
 }
 
 // Constants for the baseline IDs

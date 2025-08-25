@@ -1345,6 +1345,10 @@ export type Database = {
         Args: { doc_id: string }
         Returns: number
       }
+      get_registry_entry: {
+        Args: { entry_id: string; table_name: string }
+        Returns: Json
+      }
       get_user_roles: {
         Args: { _user_id: string }
         Returns: {
