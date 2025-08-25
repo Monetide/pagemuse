@@ -31,31 +31,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     let mounted = true
+    setLoading(true)
 
-    // Get initial session first
-    const getInitialSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession()
-        if (error) {
-          console.error('Error getting session:', error)
-        }
-        
-        if (mounted) {
-          setSession(session)
-          setUser(session?.user ?? null)
-          setLoading(false)
-        }
-      } catch (error) {
-        console.error('Error getting initial session:', error)
-        if (mounted) {
-          setLoading(false)
-        }
-      }
-    }
-
-    getInitialSession()
-
-    // Listen for auth changes
+    // Listen for auth changes FIRST to avoid missing the SIGNED_IN event
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
@@ -63,9 +41,50 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (mounted) {
         setSession(session)
         setUser(session?.user ?? null)
+        // Only clear loading when we know the state after possible OAuth exchange
         setLoading(false)
       }
     })
+
+    const completeOAuthIfNeeded = async () => {
+      try {
+        const url = new URL(window.location.href)
+        const hasCode = !!url.searchParams.get('code')
+        const hasError = !!url.searchParams.get('error_description')
+
+        if (hasCode || hasError) {
+          console.log('Detected OAuth redirect parameters. Exchanging code for session...')
+          const { error } = await supabase.auth.exchangeCodeForSession(window.location.href)
+          if (error) {
+            console.error('OAuth exchange error:', error)
+          }
+          // Clean up the URL params/hash after exchange to prevent re-processing
+          window.history.replaceState({}, document.title, url.origin + url.pathname + url.hash.replace(/^#?$/, ''))
+        }
+      } catch (e) {
+        console.error('Error completing OAuth:', e)
+      }
+    }
+
+    const getInitialSession = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession()
+        if (error) {
+          console.error('Error getting session:', error)
+        }
+        if (mounted) {
+          setSession(session)
+          setUser(session?.user ?? null)
+          setLoading(false)
+        }
+      } catch (error) {
+        console.error('Error getting initial session:', error)
+        if (mounted) setLoading(false)
+      }
+    }
+
+    // Run OAuth completion first, then check current session
+    completeOAuthIfNeeded().finally(getInitialSession)
 
     return () => {
       mounted = false
