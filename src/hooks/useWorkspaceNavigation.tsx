@@ -23,7 +23,7 @@ export const useWorkspaceNavigation = () => {
 
   const switchToWorkspace = (newWorkspaceId: string) => {
     const currentPath = getCurrentWorkspacePath();
-    switchWorkspace(newWorkspaceId);
+    navigateToWorkspace(newWorkspaceId, currentPath);
   };
 
   return {
