@@ -1067,6 +1067,60 @@ export type Database = {
         }
         Relationships: []
       }
+      template_seeds: {
+        Row: {
+          chart_defaults: Json
+          created_at: string
+          doc_type: string
+          id: string
+          industry: string
+          motifs: Json
+          palette_hints: Json
+          scale: Json
+          snippets: Json
+          status: string
+          style_pack: string
+          type_pairing: Json
+          updated_at: string
+          validation_preset: string | null
+          workspace_id: string
+        }
+        Insert: {
+          chart_defaults?: Json
+          created_at?: string
+          doc_type: string
+          id: string
+          industry: string
+          motifs?: Json
+          palette_hints?: Json
+          scale?: Json
+          snippets?: Json
+          status?: string
+          style_pack: string
+          type_pairing?: Json
+          updated_at?: string
+          validation_preset?: string | null
+          workspace_id: string
+        }
+        Update: {
+          chart_defaults?: Json
+          created_at?: string
+          doc_type?: string
+          id?: string
+          industry?: string
+          motifs?: Json
+          palette_hints?: Json
+          scale?: Json
+          snippets?: Json
+          status?: string
+          style_pack?: string
+          type_pairing?: Json
+          updated_at?: string
+          validation_preset?: string | null
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       templates: {
         Row: {
           category: string

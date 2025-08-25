@@ -1,12 +1,14 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, CheckCircle, XCircle, AlertTriangle } from 'lucide-react'
+import { Loader2, CheckCircle, XCircle, AlertTriangle, Upload } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { supabase } from '@/integrations/supabase/client'
+import { useParams } from 'react-router-dom'
 
 interface ValidationResult {
   okCount: number
@@ -15,12 +17,111 @@ interface ValidationResult {
   badParams: Array<{ index: number; error: string; item: any }>
 }
 
+interface TemplateSeed {
+  id: string
+  doc_type: string
+  style_pack: string
+  industry: string
+  status: string
+  created_at: string
+  updated_at: string
+}
+
 export const SeedValidator = () => {
+  const { workspaceId } = useParams()
   const [seedsJson, setSeedsJson] = useState('')
   const [autoCreateMissing, setAutoCreateMissing] = useState(true)
   const [isValidating, setIsValidating] = useState(false)
+  const [isIngesting, setIsIngesting] = useState(false)
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [seeds, setSeeds] = useState<TemplateSeed[]>([])
+  const [isLoadingSeeds, setIsLoadingSeeds] = useState(false)
+
+  // Load existing seeds
+  const loadSeeds = async () => {
+    if (!workspaceId) return
+    
+    setIsLoadingSeeds(true)
+    try {
+      const { data, error } = await supabase
+        .from('template_seeds')
+        .select('id, doc_type, style_pack, industry, status, created_at, updated_at')
+        .eq('workspace_id', workspaceId)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setSeeds(data || [])
+    } catch (err) {
+      console.error('Error loading seeds:', err)
+      setError('Failed to load seeds')
+    } finally {
+      setIsLoadingSeeds(false)
+    }
+  }
+
+  useEffect(() => {
+    loadSeeds()
+  }, [workspaceId])
+
+  const handleIngest = async () => {
+    if (!seedsJson.trim() || !workspaceId) {
+      setError('Please paste seed data and ensure workspace is loaded')
+      return
+    }
+
+    setIsIngesting(true)
+    setError(null)
+
+    try {
+      // Parse JSON to validate format
+      let seeds
+      try {
+        seeds = JSON.parse(seedsJson)
+      } catch (parseError) {
+        throw new Error('Invalid JSON format')
+      }
+
+      const SUPABASE_URL = 'https://dbrzfjekbfkjathotjcj.supabase.co'
+      const url = `${SUPABASE_URL}/functions/v1/template-gen-seeds-ingest`
+      
+      const { data: session } = await supabase.auth.getSession()
+      const token = session.session?.access_token
+
+      if (!token) {
+        throw new Error('Authentication required')
+      }
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ seeds, workspaceId })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      const result = await response.json()
+      console.log('Ingest result:', result)
+      
+      // Reload seeds to show the new ones
+      await loadSeeds()
+      
+      // Clear the input
+      setSeedsJson('')
+      
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Ingestion failed')
+    } finally {
+      setIsIngesting(false)
+    }
+  }
 
   const handleValidate = async () => {
     if (!seedsJson.trim()) {
@@ -122,20 +223,41 @@ export const SeedValidator = () => {
             </label>
           </div>
 
-          <Button 
-            onClick={handleValidate} 
-            disabled={isValidating || !seedsJson.trim()}
-            className="w-full"
-          >
-            {isValidating ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Validating...
-              </>
-            ) : (
-              'Validate Seeds (Dry-run)'
-            )}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleValidate} 
+              disabled={isValidating || !seedsJson.trim()}
+              variant="outline"
+              className="flex-1"
+            >
+              {isValidating ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Validating...
+                </>
+              ) : (
+                'Validate Seeds (Dry-run)'
+              )}
+            </Button>
+            
+            <Button 
+              onClick={handleIngest} 
+              disabled={isIngesting || !seedsJson.trim()}
+              className="flex-1"
+            >
+              {isIngesting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Ingesting...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Ingest Seeds
+                </>
+              )}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -231,6 +353,60 @@ export const SeedValidator = () => {
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Ingested Seeds</CardTitle>
+          <CardDescription>
+            Template parameter sets that have been ingested and stored in the database.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoadingSeeds ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin" />
+              <span className="ml-2">Loading seeds...</span>
+            </div>
+          ) : seeds.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No seeds have been ingested yet. Use the form above to ingest seeds.
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Doc Type</TableHead>
+                    <TableHead>Style Pack</TableHead>
+                    <TableHead>Industry</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Created</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {seeds.map((seed) => (
+                    <TableRow key={seed.id}>
+                      <TableCell className="font-mono text-sm">{seed.id}</TableCell>
+                      <TableCell>{seed.doc_type}</TableCell>
+                      <TableCell>{seed.style_pack}</TableCell>
+                      <TableCell>{seed.industry}</TableCell>
+                      <TableCell>
+                        <Badge variant={seed.status === 'ready' ? 'default' : 'secondary'}>
+                          {seed.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {new Date(seed.created_at).toLocaleDateString()}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
