@@ -1357,7 +1357,53 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      user_document_invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by_user_id: string | null
+          created_at: string | null
+          document_id: string | null
+          email: string | null
+          expires_at: string | null
+          id: string | null
+          invited_by_user_id: string | null
+          role: Database["public"]["Enums"]["document_role"] | null
+          token: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by_user_id?: string | null
+          created_at?: string | null
+          document_id?: string | null
+          email?: string | null
+          expires_at?: string | null
+          id?: string | null
+          invited_by_user_id?: never
+          role?: Database["public"]["Enums"]["document_role"] | null
+          token?: never
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by_user_id?: string | null
+          created_at?: string | null
+          document_id?: string | null
+          email?: string | null
+          expires_at?: string | null
+          id?: string | null
+          invited_by_user_id?: never
+          role?: Database["public"]["Enums"]["document_role"] | null
+          token?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_invitations_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       accept_workspace_invitation: {
