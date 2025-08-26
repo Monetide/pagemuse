@@ -100,7 +100,7 @@ const AuthDebug = () => {
     if (!link) document.head.appendChild(canonical)
   }, [])
 
-  const testRedirectTo = `${window.location.origin}/`
+  const testRedirectTo = `${window.location.origin}/auth/callback`
 
   const previewGoogleUrl = async () => {
     setProviderUrl(null)

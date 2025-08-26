@@ -19,6 +19,14 @@ export const AuthCallback = () => {
 
         if (data.session) {
           console.log('AuthCallback: OAuth exchange successful, redirecting to app')
+          
+          // Broadcast success for iframe scenarios (Lovable preview)
+          try {
+            window.postMessage({ type: 'AUTH_SUCCESS', session: data.session }, window.location.origin)
+          } catch (e) {
+            console.log('Could not broadcast auth success:', e)
+          }
+          
           navigate('/')
         } else {
           console.warn('AuthCallback: No session received')

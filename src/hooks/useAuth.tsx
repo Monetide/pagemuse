@@ -48,14 +48,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const completeOAuthIfNeeded = async () => {
       try {
-        // Prevent OAuth handling on foreign hosts (like Supabase callback URLs)
+        // Strict origin guard - only process OAuth on allowed app origins
         const currentHost = window.location.hostname
-        const isValidHost = currentHost.includes('lovable.dev') || 
-                           currentHost.includes('localhost') || 
-                           currentHost.includes('127.0.0.1')
+        const currentPath = window.location.pathname
         
-        if (!isValidHost) {
-          console.log('OAuth: Skipping callback processing on foreign host:', currentHost)
+        const isAllowedOrigin = currentHost.includes('pagemuse.ai') ||
+                               currentHost.includes('sandbox.lovable.dev') || 
+                               currentHost.includes('localhost') || 
+                               currentHost.includes('127.0.0.1')
+        
+        // Never process OAuth on auth subdomain - that's Supabase's territory
+        const isAuthSubdomain = currentHost.startsWith('auth.')
+        
+        // Only process OAuth code exchange on the /auth/callback path
+        const isCallbackPath = currentPath === '/auth/callback'
+        
+        if (isAuthSubdomain || !isAllowedOrigin || !isCallbackPath) {
+          console.log('OAuth: Skipping processing', { 
+            currentHost, 
+            currentPath, 
+            isAuthSubdomain, 
+            isAllowedOrigin, 
+            isCallbackPath 
+          })
           return
         }
 
@@ -67,7 +82,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Check if this is an OAuth callback with actual parameters
         console.log('OAuth callback check:', { hasCode: !!code, hasError: !!error, fullUrl: window.location.href })
         if (code || error) {
-          console.log('Processing OAuth callback...')
+          console.log('Processing OAuth callback on authorized origin and path...')
           
           if (code) {
             console.log('Exchanging OAuth code for session...')
@@ -182,9 +197,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       
       if (data?.url) {
-        // Always open in new tab to avoid iframe issues and ensure proper localStorage access
-        console.log('Opening OAuth in new tab:', data.url)
-        window.open(data.url, '_blank', 'noopener,noreferrer')
+        if (isInIframe) {
+          // Always open in new tab when in iframe (Lovable preview)
+          console.log('Opening OAuth in new tab (iframe detected):', data.url)
+          window.open(data.url, '_blank', 'noopener,noreferrer')
+        } else {
+          // Same window for normal usage
+          console.log('Redirecting to OAuth URL:', data.url)
+          window.location.href = data.url
+        }
       }
       
       return { error: null }
