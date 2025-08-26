@@ -125,8 +125,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     }
 
-    // Run OAuth completion first, then check current session
-    completeOAuthIfNeeded().finally(getInitialSession)
+    // Check current session (OAuth code exchange is handled by AuthCallback route)
+    getInitialSession()
 
     return () => {
       mounted = false
