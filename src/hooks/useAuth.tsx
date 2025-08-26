@@ -52,10 +52,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const code = url.searchParams.get('code')
         const error = url.searchParams.get('error')
         const errorDescription = url.searchParams.get('error_description')
+        
+        // Canonical domain guard
+        const canonicalDomain = 'https://pagemuse.ai'
+        const currentOrigin = window.location.origin
+        
+        console.log('OAuth callback check:', { 
+          currentOrigin, 
+          canonicalDomain, 
+          hasCode: !!code, 
+          hasError: !!error,
+          fullUrl: window.location.href 
+        })
 
         // Check if this is an OAuth callback with actual parameters
         if (code || error) {
-          console.log('Detected OAuth redirect parameters:', { hasCode: !!code, hasError: !!error })
+          console.log('Processing OAuth callback...')
           
           if (code) {
             console.log('Exchanging OAuth code for session...')
@@ -72,8 +84,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             console.error('OAuth error from provider:', error, errorDescription)
           }
           
-          // Clean up the URL after processing
-          const cleanUrl = url.origin + url.pathname
+          // Clean up the URL after processing - use canonical domain if available
+          const cleanUrl = currentOrigin === canonicalDomain ? 
+            `${canonicalDomain}/` : 
+            `${currentOrigin}${url.pathname}`
+          
+          console.log('Cleaning URL to:', cleanUrl)
           window.history.replaceState({}, document.title, cleanUrl)
         }
       } catch (e) {
@@ -151,12 +167,30 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }
 
   const signInWithGoogle = async () => {
+    // Force canonical domain for consistent OAuth flow
+    const canonicalDomain = 'https://pagemuse.ai'
+    const currentOrigin = window.location.origin
+    
+    console.log('Google OAuth initiated:', { currentOrigin, canonicalDomain })
+    
+    // Use canonical domain for redirect to prevent domain mismatch issues
+    const redirectTo = currentOrigin === canonicalDomain ? 
+      `${canonicalDomain}/` : 
+      `${canonicalDomain}${window.location.pathname}${window.location.search}`
+    
+    console.log('OAuth redirect URL:', redirectTo)
+    
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/`
+        redirectTo
       }
     })
+    
+    if (error) {
+      console.error('Google OAuth initiation error:', error)
+    }
+    
     return { error }
   }
 
