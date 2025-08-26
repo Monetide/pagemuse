@@ -61,6 +61,7 @@ export const WorkspaceProvider = ({ children }: WorkspaceProviderProps) => {
         location.pathname.startsWith('/published/') || 
         location.pathname.startsWith('/invite/') ||
         location.pathname.startsWith('/auth-debug') ||
+        location.pathname.startsWith('/auth/callback') ||
         location.pathname === '/reset-password') {
       return;
     }

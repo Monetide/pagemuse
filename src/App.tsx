@@ -31,6 +31,7 @@ import AuthDebug from "./pages/AuthDebug";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { HealthCheck } from "@/components/HealthCheck";
 import { InvitationAcceptance } from "@/pages/InvitationAcceptance";
+import { AuthCallback } from "@/pages/AuthCallback";
 import { WorkspaceMembers } from "@/components/workspace/WorkspaceMembers";
 import { WorkspaceSettings } from "@/components/workspace/WorkspaceSettings";
 import { WorkspaceBrandSettings } from "@/components/workspace/WorkspaceBrandSettings";
@@ -61,6 +62,7 @@ const App = () => {
                   <Route path="/published/:token" element={<PublishedDocumentViewer />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/auth-debug" element={<AuthDebug />} />
+                  <Route path="/auth/callback" element={<AuthCallback />} />
                   
                   {/* Legacy route redirects - redirect to workspace handler */}
                   <Route path="/dashboard" element={<Navigate to="/w/redirect/dashboard" replace />} />

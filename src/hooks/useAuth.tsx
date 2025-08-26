@@ -48,6 +48,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const completeOAuthIfNeeded = async () => {
       try {
+        // Prevent OAuth handling on foreign hosts (like Supabase callback URLs)
+        const currentHost = window.location.hostname
+        const isValidHost = currentHost.includes('lovable.dev') || 
+                           currentHost.includes('localhost') || 
+                           currentHost.includes('127.0.0.1')
+        
+        if (!isValidHost) {
+          console.log('OAuth: Skipping callback processing on foreign host:', currentHost)
+          return
+        }
+
         const url = new URL(window.location.href)
         const code = url.searchParams.get('code')
         const error = url.searchParams.get('error')
@@ -152,12 +163,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }
 
   const signInWithGoogle = async () => {
-    const redirectTo = `${window.location.origin}/`
+    const redirectTo = `${window.location.origin}/auth/callback`
     const isInIframe = window.self !== window.top
     console.log('Google OAuth initiated:', { redirectTo, isInIframe })
     
-    if (isInIframe) {
-      // In iframe context, use skipBrowserRedirect and handle manually
+    try {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { 
@@ -165,29 +175,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           skipBrowserRedirect: true 
         }
       })
+      
       if (error) {
         console.error('Google OAuth initiation error:', error)
         return { error }
       }
+      
       if (data?.url) {
-        // Redirect top window to avoid iframe issues
-        if (window.top) {
-          window.top.location.href = data.url
-        } else {
-          window.location.href = data.url
-        }
+        // Always open in new tab to avoid iframe issues and ensure proper localStorage access
+        console.log('Opening OAuth in new tab:', data.url)
+        window.open(data.url, '_blank', 'noopener,noreferrer')
       }
+      
       return { error: null }
-    } else {
-      // Normal context, proceed as usual
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo }
-      })
-      if (error) {
-        console.error('Google OAuth initiation error:', error)
-      }
-      return { error }
+    } catch (e) {
+      console.error('Google OAuth unexpected error:', e)
+      return { error: e }
     }
   }
 
