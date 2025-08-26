@@ -27,6 +27,7 @@ import DocumentSettings from "./pages/DocumentSettings";
 import DocumentModelRedirect from "./components/DocumentModelRedirect";
 import { Navigate } from "react-router-dom";
 import { WorkspaceRedirectHandler } from "@/components/workspace/WorkspaceRedirectHandler";
+import AuthDebug from "./pages/AuthDebug";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { HealthCheck } from "@/components/HealthCheck";
 import { InvitationAcceptance } from "@/pages/InvitationAcceptance";
@@ -59,6 +60,7 @@ const App = () => {
                   <Route path="/shared/:token" element={<SharedDocumentViewer />} />
                   <Route path="/published/:token" element={<PublishedDocumentViewer />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/auth-debug" element={<AuthDebug />} />
                   
                   {/* Legacy route redirects - redirect to workspace handler */}
                   <Route path="/dashboard" element={<Navigate to="/w/redirect/dashboard" replace />} />

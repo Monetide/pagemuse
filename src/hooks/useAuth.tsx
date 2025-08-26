@@ -53,26 +53,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const error = url.searchParams.get('error')
         const errorDescription = url.searchParams.get('error_description')
         
-        // Canonical domain guard
-        const canonicalDomain = 'https://pagemuse.ai'
-        const currentOrigin = window.location.origin
-        
-        console.log('OAuth callback check:', { 
-          currentOrigin, 
-          canonicalDomain, 
-          hasCode: !!code, 
-          hasError: !!error,
-          fullUrl: window.location.href 
-        })
-
         // Check if this is an OAuth callback with actual parameters
+        console.log('OAuth callback check:', { hasCode: !!code, hasError: !!error, fullUrl: window.location.href })
         if (code || error) {
           console.log('Processing OAuth callback...')
           
           if (code) {
             console.log('Exchanging OAuth code for session...')
             const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(window.location.href)
-            
             if (exchangeError) {
               console.error('OAuth exchange error:', exchangeError)
             } else {
@@ -84,11 +72,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             console.error('OAuth error from provider:', error, errorDescription)
           }
           
-          // Clean up the URL after processing - use canonical domain if available
-          const cleanUrl = currentOrigin === canonicalDomain ? 
-            `${canonicalDomain}/` : 
-            `${currentOrigin}${url.pathname}`
-          
+          // Clean up the URL after processing
+          const cleanUrl = url.origin + url.pathname
           console.log('Cleaning URL to:', cleanUrl)
           window.history.replaceState({}, document.title, cleanUrl)
         }
@@ -167,30 +152,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }
 
   const signInWithGoogle = async () => {
-    // Force canonical domain for consistent OAuth flow
-    const canonicalDomain = 'https://pagemuse.ai'
-    const currentOrigin = window.location.origin
-    
-    console.log('Google OAuth initiated:', { currentOrigin, canonicalDomain })
-    
-    // Use canonical domain for redirect to prevent domain mismatch issues
-    const redirectTo = currentOrigin === canonicalDomain ? 
-      `${canonicalDomain}/` : 
-      `${canonicalDomain}${window.location.pathname}${window.location.search}`
-    
-    console.log('OAuth redirect URL:', redirectTo)
-    
+    const redirectTo = `${window.location.origin}/`
+    console.log('Google OAuth initiated:', { redirectTo })
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        redirectTo
-      }
+      options: { redirectTo }
     })
-    
     if (error) {
       console.error('Google OAuth initiation error:', error)
     }
-    
     return { error }
   }
 
