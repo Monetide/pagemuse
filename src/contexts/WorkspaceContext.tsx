@@ -45,82 +45,99 @@ export const WorkspaceProvider = ({ children }: WorkspaceProviderProps) => {
     if (!user) {
       isRedirectingRef.current = false;
       hasBootstrappedRef.current = false;
+      setCurrentWorkspace(null);
     }
   }, [user]);
 
-  // Find current workspace based on URL parameter
+  // Main navigation logic - consolidate all workspace navigation in one effect
   useEffect(() => {
-    if (workspaceId && workspaces.length > 0 && !isRedirectingRef.current) {
-      const workspace = workspaces.find(w => w.id === workspaceId);
-      setCurrentWorkspace(workspace || null);
-      
-      // Save as last used workspace
-      if (workspace) {
-        setLastWorkspace(workspace.id);
-      }
-      
-      // If workspace not found and we have workspaces, redirect to preferred or first available
-      if (!workspace && workspaces.length > 0) {
-        isRedirectingRef.current = true;
-        const preferredWorkspace = preferences.lastWorkspaceId 
-          ? workspaces.find(w => w.id === preferences.lastWorkspaceId)
-          : null;
-        const targetWorkspace = preferredWorkspace || workspaces.find(w => w.name === 'Personal') || workspaces[0];
-        const currentPath = location.pathname.replace(`/w/${workspaceId}`, '');
-        navigate(`/w/${targetWorkspace.id}${currentPath}`, { replace: true });
-        // Reset flag after navigation
-        setTimeout(() => {
-          isRedirectingRef.current = false;
-        }, 100);
-      }
+    // Don't do anything if already redirecting or still loading
+    if (isRedirectingRef.current || loading || !user) {
+      return;
     }
-  }, [workspaceId, workspaces, preferences.lastWorkspaceId, setLastWorkspace]);
 
-  // Auto-redirect to workspace route if on old route format and bootstrap if needed
-  useEffect(() => {
-    if (user && !loading && !location.pathname.startsWith('/w/') && !isRedirectingRef.current) {
-      // Don't redirect if on public routes
-      if (location.pathname.startsWith('/shared/') || 
-          location.pathname.startsWith('/published/') || 
-          location.pathname.startsWith('/invite/') ||
-          location.pathname === '/reset-password') {
-        return;
-      }
+    // Don't redirect if on public routes
+    if (location.pathname.startsWith('/shared/') || 
+        location.pathname.startsWith('/published/') || 
+        location.pathname.startsWith('/invite/') ||
+        location.pathname.startsWith('/auth-debug') ||
+        location.pathname === '/reset-password') {
+      return;
+    }
 
-      // If no workspaces, bootstrap (but only once)
+    const handleNavigation = async () => {
+      // Case 1: No workspaces available, need to bootstrap
       if (workspaces.length === 0 && !hasBootstrappedRef.current) {
         hasBootstrappedRef.current = true;
         isRedirectingRef.current = true;
-        bootstrapWorkspace().then((workspaceId) => {
-          if (workspaceId) {
-            refetch().then(() => {
-              navigate(`/w/${workspaceId}${location.pathname}`, { replace: true });
-              setTimeout(() => {
-                isRedirectingRef.current = false;
-              }, 100);
-            });
-          } else {
-            isRedirectingRef.current = false;
+        
+        try {
+          const newWorkspaceId = await bootstrapWorkspace();
+          if (newWorkspaceId) {
+            await refetch();
+            const targetPath = location.pathname.startsWith('/w/') 
+              ? location.pathname.replace(/^\/w\/[^\/]+/, '') 
+              : location.pathname;
+            navigate(`/w/${newWorkspaceId}${targetPath}`, { replace: true });
           }
-        });
+        } catch (error) {
+          console.error('Bootstrap error:', error);
+        } finally {
+          setTimeout(() => {
+            isRedirectingRef.current = false;
+          }, 200);
+        }
         return;
       }
 
-      // Use preferred workspace if available, otherwise fall back to Personal or first
-      if (workspaces.length > 0) {
+      // Case 2: Have workspaces but not on workspace route
+      if (workspaces.length > 0 && !location.pathname.startsWith('/w/')) {
         isRedirectingRef.current = true;
+        
         const preferredWorkspace = preferences.lastWorkspaceId 
           ? workspaces.find(w => w.id === preferences.lastWorkspaceId)
           : null;
-        const targetWorkspace = preferredWorkspace || workspaces.find(w => w.name.includes('Personal')) || workspaces[0];
-        const newPath = `/w/${targetWorkspace.id}${location.pathname}`;
-        navigate(newPath, { replace: true });
+        const targetWorkspace = preferredWorkspace || 
+          workspaces.find(w => w.name.includes('Personal')) || 
+          workspaces[0];
+        
+        navigate(`/w/${targetWorkspace.id}${location.pathname}`, { replace: true });
         setTimeout(() => {
           isRedirectingRef.current = false;
-        }, 100);
+        }, 200);
+        return;
       }
-    }
-  }, [user, workspaces, loading, preferences.lastWorkspaceId]);
+
+      // Case 3: On workspace route but workspace doesn't exist
+      if (workspaceId && workspaces.length > 0) {
+        const workspace = workspaces.find(w => w.id === workspaceId);
+        
+        if (workspace) {
+          // Valid workspace - set it as current and save preference
+          setCurrentWorkspace(workspace);
+          setLastWorkspace(workspace.id);
+        } else {
+          // Invalid workspace - redirect to preferred or first available
+          isRedirectingRef.current = true;
+          
+          const preferredWorkspace = preferences.lastWorkspaceId 
+            ? workspaces.find(w => w.id === preferences.lastWorkspaceId)
+            : null;
+          const targetWorkspace = preferredWorkspace || 
+            workspaces.find(w => w.name === 'Personal') || 
+            workspaces[0];
+          
+          const currentPath = location.pathname.replace(`/w/${workspaceId}`, '');
+          navigate(`/w/${targetWorkspace.id}${currentPath}`, { replace: true });
+          setTimeout(() => {
+            isRedirectingRef.current = false;
+          }, 200);
+        }
+      }
+    };
+
+    handleNavigation();
+  }, [user, workspaces, loading, workspaceId, location.pathname, preferences.lastWorkspaceId])
 
   const switchWorkspace = (newWorkspaceId: string) => {
     if (!isRedirectingRef.current) {
