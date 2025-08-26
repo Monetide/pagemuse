@@ -153,15 +153,42 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signInWithGoogle = async () => {
     const redirectTo = `${window.location.origin}/`
-    console.log('Google OAuth initiated:', { redirectTo })
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo }
-    })
-    if (error) {
-      console.error('Google OAuth initiation error:', error)
+    const isInIframe = window.self !== window.top
+    console.log('Google OAuth initiated:', { redirectTo, isInIframe })
+    
+    if (isInIframe) {
+      // In iframe context, use skipBrowserRedirect and handle manually
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { 
+          redirectTo,
+          skipBrowserRedirect: true 
+        }
+      })
+      if (error) {
+        console.error('Google OAuth initiation error:', error)
+        return { error }
+      }
+      if (data?.url) {
+        // Redirect top window to avoid iframe issues
+        if (window.top) {
+          window.top.location.href = data.url
+        } else {
+          window.location.href = data.url
+        }
+      }
+      return { error: null }
+    } else {
+      // Normal context, proceed as usual
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo }
+      })
+      if (error) {
+        console.error('Google OAuth initiation error:', error)
+      }
+      return { error }
     }
-    return { error }
   }
 
   const value = {
