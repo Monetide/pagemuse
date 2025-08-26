@@ -27,7 +27,7 @@ export const AuthCallback = () => {
             console.log('Could not broadcast auth success:', e)
           }
           
-          navigate('/')
+          navigate('/', { replace: true })
         } else {
           console.warn('AuthCallback: No session received')
           navigate('/auth-debug?error=no_session')
