@@ -49,17 +49,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const completeOAuthIfNeeded = async () => {
       try {
         const url = new URL(window.location.href)
-        const hasCode = !!url.searchParams.get('code')
-        const hasError = !!url.searchParams.get('error_description')
+        const code = url.searchParams.get('code')
+        const error = url.searchParams.get('error')
+        const errorDescription = url.searchParams.get('error_description')
 
-        if (hasCode || hasError) {
-          console.log('Detected OAuth redirect parameters. Exchanging code for session...')
-          const { error } = await supabase.auth.exchangeCodeForSession(window.location.href)
-          if (error) {
-            console.error('OAuth exchange error:', error)
+        // Check if this is an OAuth callback with actual parameters
+        if (code || error) {
+          console.log('Detected OAuth redirect parameters:', { hasCode: !!code, hasError: !!error })
+          
+          if (code) {
+            console.log('Exchanging OAuth code for session...')
+            const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(window.location.href)
+            
+            if (exchangeError) {
+              console.error('OAuth exchange error:', exchangeError)
+            } else {
+              console.log('OAuth exchange successful:', !!data.session)
+            }
           }
-          // Clean up the URL params/hash after exchange to prevent re-processing
-          window.history.replaceState({}, document.title, url.origin + url.pathname + url.hash.replace(/^#?$/, ''))
+          
+          if (error) {
+            console.error('OAuth error from provider:', error, errorDescription)
+          }
+          
+          // Clean up the URL after processing
+          const cleanUrl = url.origin + url.pathname
+          window.history.replaceState({}, document.title, cleanUrl)
         }
       } catch (e) {
         console.error('Error completing OAuth:', e)
