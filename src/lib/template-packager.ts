@@ -414,6 +414,7 @@ export async function packageTemplate(
 
 export async function saveTemplateDraft(
   templatePackage: TemplatePackage,
+  workspaceId: string,
   brandName?: string
 ): Promise<string> {
   try {
@@ -431,6 +432,8 @@ export async function saveTemplateDraft(
         status: 'draft',
         metadata: templatePackage['template.json'] as any,
         category: 'generated',
+        scope: 'workspace',
+        workspace_id: workspaceId,
         user_id: (await supabase.auth.getUser()).data.user?.id
       })
       .select()

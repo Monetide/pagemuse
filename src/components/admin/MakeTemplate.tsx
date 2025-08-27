@@ -75,7 +75,17 @@ export function MakeTemplate({
 
     setIsPackaging(true)
     try {
-      const templateId = await saveTemplateDraft(packagedTemplate, seedData?.brandName)
+      // Get current workspace from URL params
+      const currentPath = window.location.pathname
+      const workspaceMatch = currentPath.match(/\/w\/([^\/]+)/)
+      const workspaceId = workspaceMatch?.[1]
+      
+      if (!workspaceId) {
+        toast.error('No workspace selected')
+        return
+      }
+
+      const templateId = await saveTemplateDraft(packagedTemplate, workspaceId, seedData?.brandName)
       
       toast.success('Template saved as draft!')
       setIsDialogOpen(false)
