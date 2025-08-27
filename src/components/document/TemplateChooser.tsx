@@ -19,6 +19,7 @@ import {
 import { SemanticDocument } from '@/lib/document-model'
 import { useDocuments, Template } from '@/hooks/useSupabaseData'
 import { useTemplateApplication } from '@/hooks/useTemplateApplication'
+import type { ScopedTemplate } from '@/hooks/useTemplatesScoped'
 import { TemplatePreview } from '@/components/template/TemplatePreview'
 
 interface TemplateChooserProps {
@@ -67,8 +68,15 @@ export const TemplateChooser = ({
     const template = templates.find(t => t.id === templateId)
     if (!template) return
 
+    // Convert Template to ScopedTemplate
+    const scopedTemplate: ScopedTemplate = {
+      ...template,
+      scope: template.is_global ? 'global' : 'workspace',
+      template_slug: template.name.toLowerCase().replace(/[^a-zA-Z0-9]+/g, '-')
+    }
+
     try {
-      await createFromTemplate(template, document.title)
+      await createFromTemplate(scopedTemplate, document.title)
       onTemplateApply(templateId)
     } catch (error) {
       console.error('Failed to apply template:', error)

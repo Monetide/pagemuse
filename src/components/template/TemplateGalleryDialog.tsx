@@ -1,6 +1,7 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useTemplates } from '@/hooks/useSupabaseData'
 import { useTemplateApplication } from '@/hooks/useTemplateApplication'
+import type { ScopedTemplate } from '@/hooks/useTemplatesScoped'
 import { TemplateGallery } from './TemplateGallery'
 import { Template } from '@/hooks/useSupabaseData'
 
@@ -23,17 +24,31 @@ export function TemplateGalleryDialog({
   const { createFromTemplate, applyToExisting } = useTemplateApplication()
 
   const handleUseTemplate = async (template: Template) => {
+    // Convert Template to ScopedTemplate
+    const scopedTemplate: ScopedTemplate = {
+      ...template,
+      scope: template.is_global ? 'global' : 'workspace',
+      template_slug: template.name.toLowerCase().replace(/[^a-zA-Z0-9]+/g, '-')
+    }
+    
     if (mode === 'new') {
-      await createFromTemplate(template, title)
+      await createFromTemplate(scopedTemplate, title)
     } else if (mode === 'apply' && documentId) {
-      await applyToExisting(template, documentId)
+      await applyToExisting(scopedTemplate, documentId)
     }
     onOpenChange(false)
   }
 
   const handleApplyTemplate = async (template: Template) => {
+    // Convert Template to ScopedTemplate
+    const scopedTemplate: ScopedTemplate = {
+      ...template,
+      scope: template.is_global ? 'global' : 'workspace',
+      template_slug: template.name.toLowerCase().replace(/[^a-zA-Z0-9]+/g, '-')
+    }
+    
     if (documentId) {
-      await applyToExisting(template, documentId)
+      await applyToExisting(scopedTemplate, documentId)
     }
     onOpenChange(false)
   }

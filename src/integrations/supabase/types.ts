@@ -963,6 +963,57 @@ export type Database = {
           },
         ]
       }
+      template_approval_requests: {
+        Row: {
+          created_at: string
+          document_id: string
+          id: string
+          packaged_snapshot: Json
+          proposed_category: string | null
+          proposed_name: string
+          proposed_slug: string | null
+          requested_by: string
+          response_message: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          document_id: string
+          id?: string
+          packaged_snapshot: Json
+          proposed_category?: string | null
+          proposed_name: string
+          proposed_slug?: string | null
+          requested_by: string
+          response_message?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          document_id?: string
+          id?: string
+          packaged_snapshot?: Json
+          proposed_category?: string | null
+          proposed_name?: string
+          proposed_slug?: string | null
+          requested_by?: string
+          response_message?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       template_pages: {
         Row: {
           content_scaffold: Json | null
@@ -1135,7 +1186,9 @@ export type Database = {
           metadata: Json | null
           name: string
           preview_image_url: string | null
+          scope: Database["public"]["Enums"]["template_scope"]
           status: string | null
+          template_slug: string | null
           tpkg_source: Json | null
           updated_at: string
           usage_count: number
@@ -1155,7 +1208,9 @@ export type Database = {
           metadata?: Json | null
           name: string
           preview_image_url?: string | null
+          scope?: Database["public"]["Enums"]["template_scope"]
           status?: string | null
+          template_slug?: string | null
           tpkg_source?: Json | null
           updated_at?: string
           usage_count?: number
@@ -1175,7 +1230,9 @@ export type Database = {
           metadata?: Json | null
           name?: string
           preview_image_url?: string | null
+          scope?: Database["public"]["Enums"]["template_scope"]
           status?: string | null
+          template_slug?: string | null
           tpkg_source?: Json | null
           updated_at?: string
           usage_count?: number
@@ -1514,6 +1571,7 @@ export type Database = {
       app_role: "user" | "admin"
       document_role: "owner" | "editor" | "commenter" | "viewer"
       share_status: "pending" | "accepted" | "declined"
+      template_scope: "global" | "workspace"
       workspace_role: "owner" | "admin" | "member"
     }
     CompositeTypes: {
@@ -1645,6 +1703,7 @@ export const Constants = {
       app_role: ["user", "admin"],
       document_role: ["owner", "editor", "commenter", "viewer"],
       share_status: ["pending", "accepted", "declined"],
+      template_scope: ["global", "workspace"],
       workspace_role: ["owner", "admin", "member"],
     },
   },

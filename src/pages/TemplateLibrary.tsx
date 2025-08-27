@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { DesignFromContentDialog } from '@/components/document/DesignFromContentDialog'
 import { useTemplates } from '@/hooks/useSupabaseData'
 import { useTemplateApplication } from '@/hooks/useTemplateApplication'
+import type { ScopedTemplate } from '@/hooks/useTemplatesScoped'
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext'
 import { TemplateGallery } from '@/components/template/TemplateGallery'
 import { Template } from '@/hooks/useSupabaseData'
@@ -39,7 +40,13 @@ export default function TemplateLibrary() {
   )
 
   const handleUseTemplate = async (template: Template) => {
-    await createFromTemplate(template)
+    // Convert Template to ScopedTemplate
+    const scopedTemplate: ScopedTemplate = {
+      ...template,
+      scope: template.is_global ? 'global' : 'workspace',
+      template_slug: template.name.toLowerCase().replace(/[^a-zA-Z0-9]+/g, '-')
+    }
+    await createFromTemplate(scopedTemplate)
   }
 
   const handleDuplicateTemplate = async (template: Template) => {

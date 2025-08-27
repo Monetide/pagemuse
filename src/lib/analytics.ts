@@ -73,36 +73,40 @@ export const clearStoredAnalyticsEvents = (): void => {
 }
 
 // Template-specific analytics events
-export const trackTemplateOpened = (templateId: string, facets: any, workspaceId: string) => {
+export const trackTemplateOpened = (templateId: string, facets: any, workspaceId?: string) => {
   emitAnalyticsEvent('template_opened', {
     templateId,
-    facets,
-    workspaceId
+    scope: facets.scope,
+    workspaceId: facets.scope === 'workspace' ? workspaceId : null,
+    facets
   })
 }
 
-export const trackTemplateSelected = (templateId: string, facets: any, workspaceId: string, docId?: string) => {
+export const trackTemplateSelected = (templateId: string, facets: any, workspaceId?: string, docId?: string) => {
   emitAnalyticsEvent('template_selected', {
     templateId,
-    facets,
-    workspaceId,
-    docId
+    scope: facets.scope,
+    workspaceId: facets.scope === 'workspace' ? workspaceId : null,
+    docId,
+    facets
   })
 }
 
-export const trackTemplateExported = (templateId: string, facets: any, workspaceId: string, format: string) => {
+export const trackTemplateExported = (templateId: string, facets: any, workspaceId?: string, format?: string) => {
   emitAnalyticsEvent('template_exported', {
     templateId,
-    facets,
-    workspaceId,
-    format
+    scope: facets.scope,
+    workspaceId: facets.scope === 'workspace' ? workspaceId : null,
+    format,
+    facets
   })
 }
 
-export const trackTemplateRetargeted = (fromTemplateId: string, toTemplateId: string, workspaceId: string) => {
+export const trackTemplateRetargeted = (fromTemplateId: string, toTemplateId: string, workspaceId?: string, scope?: string) => {
   emitAnalyticsEvent('template_retargeted', {
     fromTemplateId,
     toTemplateId,
-    workspaceId
+    scope,
+    workspaceId: scope === 'workspace' ? workspaceId : null
   })
 }

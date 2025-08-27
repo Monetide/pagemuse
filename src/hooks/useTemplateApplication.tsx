@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Template } from './useSupabaseData'
+import { ScopedTemplate } from './useTemplatesScoped'
 import { TemplateEngine } from '@/lib/template-engine'
 import { createTemplate } from '@/lib/template-model'
 import { useToast } from '@/hooks/use-toast'
@@ -14,7 +14,7 @@ export function useTemplateApplication() {
   const { saveDocument } = useDocumentPersistence()
   const [loading, setLoading] = useState(false)
 
-  const createFromTemplate = async (template: Template, title?: string) => {
+  const createFromTemplate = async (template: ScopedTemplate, title?: string) => {
     setLoading(true)
     try {
       console.log('Creating from template:', template.name, template)
@@ -23,11 +23,21 @@ export function useTemplateApplication() {
       const templateModel = convertSupabaseTemplate(template)
       console.log('Converted template model:', templateModel)
       
-      // Apply template to create new document
+      // Apply template to create new document with snapshot
       const document = await TemplateEngine.applyTemplate(templateModel, {
         title: title || `New ${template.name}`,
         replaceContent: true
       })
+      
+      // Add template snapshot to document metadata
+      if (document.metadata) {
+        document.metadata.__templateSnapshot = templateModel
+      }
+      
+      // Apply current workspace's default brand kit
+      if (currentWorkspace?.default_brand_kit_id) {
+        // TODO: Apply brand kit to document styling
+      }
       
       console.log('Generated document:', document)
 
@@ -60,7 +70,7 @@ export function useTemplateApplication() {
     }
   }
 
-  const applyToExisting = async (template: Template, documentId: string) => {
+  const applyToExisting = async (template: ScopedTemplate, documentId: string) => {
     setLoading(true)
     try {
       // Convert Supabase template to our template model
@@ -96,8 +106,8 @@ export function useTemplateApplication() {
   }
 }
 
-// Helper function to convert Supabase template to our template model
-function convertSupabaseTemplate(supabaseTemplate: Template) {
+// Helper function to convert Scoped template to our template model
+function convertSupabaseTemplate(supabaseTemplate: ScopedTemplate) {
   const template = createTemplate(
     supabaseTemplate.name,
     supabaseTemplate.description || '',
@@ -110,7 +120,7 @@ function convertSupabaseTemplate(supabaseTemplate: Template) {
     ...template.metadata,
     previewImage: supabaseTemplate.preview_image_url,
     usageCount: supabaseTemplate.usage_count,
-    isPublic: supabaseTemplate.is_global,
+    isPublic: supabaseTemplate.scope === 'global',
     permissions: []
   }
 
