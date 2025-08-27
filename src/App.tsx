@@ -36,6 +36,7 @@ import { WorkspaceMembers } from "@/components/workspace/WorkspaceMembers";
 import { WorkspaceSettings } from "@/components/workspace/WorkspaceSettings";
 import { WorkspaceBrandSettings } from "@/components/workspace/WorkspaceBrandSettings";
 import { WorkspaceBrandActivity } from "@/components/workspace/WorkspaceBrandActivity";
+import { WorkspaceAdminGuard } from "@/components/auth/WorkspaceAdminGuard";
 import { SharedDocumentViewer } from "@/components/document/SharedDocumentViewer";
 import { PublishedDocumentViewer } from "@/components/document/PublishedDocumentViewer";
 
@@ -115,24 +116,24 @@ const App = () => {
                                 <Route path="/templates" element={<TemplateLibrary />} />
                                 <Route path="/media" element={<MediaLibrary />} />
                                 <Route path="/admin" element={
-                                  <AdminGuard>
+                                  <WorkspaceAdminGuard>
                                     <AdminPanel />
-                                  </AdminGuard>
+                                  </WorkspaceAdminGuard>
                                 } />
                                 <Route path="/admin/templates" element={
-                                  <AdminGuard>
+                                  <WorkspaceAdminGuard>
                                     <AdminTemplates />
-                                  </AdminGuard>
+                                  </WorkspaceAdminGuard>
                                 } />
                                 <Route path="/admin/templates/:id/edit" element={
-                                  <AdminGuard>
+                                  <WorkspaceAdminGuard>
                                     <AdminTemplateEdit />
-                                  </AdminGuard>
+                                  </WorkspaceAdminGuard>
                                 } />
                                 <Route path="/admin/template-generator" element={
-                                  <AdminGuard>
+                                  <WorkspaceAdminGuard>
                                     <TemplateGenerator />
-                                  </AdminGuard>
+                                  </WorkspaceAdminGuard>
                                 } />
                                  <Route path="/members" element={<WorkspaceMembers />} />
                                  <Route path="/settings" element={<WorkspaceSettings />} />
