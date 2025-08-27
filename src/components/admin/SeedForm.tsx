@@ -152,19 +152,25 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
     mode: 'onChange',
   })
 
-  const { watch, setValue, formState } = form
+  const { watch, setValue, formState, getValues } = form
 
-  // Watch form changes to validate
+  // Watch form changes to trigger validations locally
   const watchedValues = watch()
   
-  // Notify parent of validation state changes
+  // Keep a stable reference to the callback to avoid effect loops
+  const onValidChangeRef = React.useRef(onValidChange)
+  React.useEffect(() => {
+    onValidChangeRef.current = onValidChange
+  }, [onValidChange])
+  
+  // Notify parent only when validity flips to avoid render loops
   React.useEffect(() => {
     if (formState.isValid) {
-      onValidChange(true, watchedValues)
+      onValidChangeRef.current(true, getValues())
     } else {
-      onValidChange(false)
+      onValidChangeRef.current(false)
     }
-  }, [formState.isValid, watchedValues, onValidChange])
+  }, [formState.isValid])
 
   const handleFileUpload = useCallback((
     file: File,
