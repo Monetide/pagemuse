@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -17,13 +18,19 @@ interface MotifSelectorProps {
   onSelectionChange: (selection: MotifSelection, assets: MotifAsset[]) => void
 }
 
-export function MotifSelector({ colors, selectedMotifs, onSelectionChange }: MotifSelectorProps) {
+const MotifSelector = React.memo(function MotifSelector({ colors, selectedMotifs, onSelectionChange }: MotifSelectorProps) {
   const [motifAssets, setMotifAssets] = useState<MotifAsset[]>([])
   const [selection, setSelection] = useState<MotifSelection>({
     'body-bg': 'geometric-grid',
     'divider': 'solid-line',
     'cover-shape': 'circle-gradient'
   })
+
+  // Keep a stable reference to the callback
+  const onSelectionChangeRef = useRef(onSelectionChange)
+  useEffect(() => {
+    onSelectionChangeRef.current = onSelectionChange
+  }, [onSelectionChange])
 
   // Generate motifs when colors change
   useEffect(() => {
@@ -43,12 +50,12 @@ export function MotifSelector({ colors, selectedMotifs, onSelectionChange }: Mot
     }
   }, [selectedMotifs])
 
-  // Notify parent when selection changes
+  // Notify parent when selection changes - using ref to avoid dependency loops
   useEffect(() => {
     if (motifAssets.length > 0) {
-      onSelectionChange(selection, motifAssets)
+      onSelectionChangeRef.current(selection, motifAssets)
     }
-  }, [selection, motifAssets, onSelectionChange])
+  }, [selection, motifAssets]) // Removed onSelectionChange from deps
 
   const handleVariantSelect = (assetType: keyof MotifSelection, variantId: string) => {
     const newSelection = { ...selection, [assetType]: variantId }
@@ -249,6 +256,7 @@ export function MotifSelector({ colors, selectedMotifs, onSelectionChange }: Mot
       </CardContent>
     </Card>
   )
-}
+})
 
+export { MotifSelector }
 export type { MotifSelection, MotifAsset }

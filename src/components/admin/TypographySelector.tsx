@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -89,7 +90,7 @@ interface TypographySelectorProps {
   onSelectionChange: (pairing: TypographyPairing) => void
 }
 
-export function TypographySelector({ selectedPairing, onSelectionChange }: TypographySelectorProps) {
+const TypographySelector = React.memo(function TypographySelector({ selectedPairing, onSelectionChange }: TypographySelectorProps) {
   const [activePairing, setActivePairing] = useState<string>(selectedPairing || 'inter-source')
 
   const handlePairingSelect = (pairing: TypographyPairing) => {
@@ -199,6 +200,6 @@ export function TypographySelector({ selectedPairing, onSelectionChange }: Typog
       </CardContent>
     </Card>
   )
-}
+})
 
-export { typographyPairings }
+export { TypographySelector, typographyPairings }

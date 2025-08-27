@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -11,24 +12,30 @@ interface ColorwaySelectorProps {
   onSelectionChange: (colorway: Colorway) => void
 }
 
-export function ColorwaySelector({ brandColor, selectedColorway, onSelectionChange }: ColorwaySelectorProps) {
+const ColorwaySelector = React.memo(function ColorwaySelector({ brandColor, selectedColorway, onSelectionChange }: ColorwaySelectorProps) {
   const [colorways, setColorways] = useState<Colorway[]>([])
   const [activeColorway, setActiveColorway] = useState<string>(selectedColorway || 'primary')
+  
+  // Keep a stable reference to the callback
+  const onSelectionChangeRef = useRef(onSelectionChange)
+  useEffect(() => {
+    onSelectionChangeRef.current = onSelectionChange
+  }, [onSelectionChange])
 
-  // Generate colorways when brand color changes
+  // Generate colorways when brand color changes - removed callback from deps
   useEffect(() => {
     if (brandColor && brandColor.match(/^#[0-9A-F]{6}$/i)) {
       const generated = generateColorways(brandColor)
       setColorways(generated)
       
-      // Auto-select first compliant colorway or fallback to primary
+      // Auto-select first compliant colorway only if no selectedColorway exists
       const compliantColorway = generated.find(c => c.isCompliant) || generated[0]
       if (compliantColorway && !selectedColorway) {
         setActiveColorway(compliantColorway.id)
-        onSelectionChange(compliantColorway)
+        onSelectionChangeRef.current(compliantColorway)
       }
     }
-  }, [brandColor, selectedColorway, onSelectionChange])
+  }, [brandColor, selectedColorway]) // Removed onSelectionChange from deps
 
   const handleColorwaySelect = (colorway: Colorway) => {
     setActiveColorway(colorway.id)
@@ -207,7 +214,8 @@ export function ColorwaySelector({ brandColor, selectedColorway, onSelectionChan
       </CardContent>
     </Card>
   )
-}
+})
 
+export { ColorwaySelector }
 export type { Colorway }
 export { generateColorways }

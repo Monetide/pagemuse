@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -19,7 +20,7 @@ interface PageMasterSelectorProps {
   className?: string
 }
 
-export function PageMasterSelector({ 
+const PageMasterSelector = React.memo(function PageMasterSelector({ 
   selection = { cover: null, body: null }, 
   onSelectionChange, 
   className 
@@ -221,5 +222,7 @@ export function PageMasterSelector({
       </CardContent>
     </Card>
   )
-}
+})
+
+export { PageMasterSelector }
 

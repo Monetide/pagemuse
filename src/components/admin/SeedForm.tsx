@@ -195,15 +195,16 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
     onValidChangeRef.current = onValidChange
   }, [onValidChange])
   
-  // Notify parent only when validity flips to avoid render loops
+  // Notify parent only when validity changes or debounced data updates
   React.useEffect(() => {
-    if (formState.isValid) {
-      onValidChangeRef.current(true, getValues())
-    } else {
+    if (formState.isValid && debouncedSeedData) {
+      onValidChangeRef.current(true, debouncedSeedData)
+    } else if (!formState.isValid) {
       onValidChangeRef.current(false)
     }
-  }, [formState.isValid, getValues])
+  }, [formState.isValid, debouncedSeedData])
 
+  // Stabilize all callback identities to prevent child re-renders
   const handleFileUpload = useCallback((
     file: File,
     type: 'logo' | 'referenceImage'
@@ -232,16 +233,16 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
     reader.readAsDataURL(file)
   }, [setValue])
 
-  const handleVibeToggle = (vibeId: string) => {
+  const handleVibeToggle = useCallback((vibeId: string) => {
     const currentVibes = vibes || []
     const newVibes = currentVibes.includes(vibeId)
       ? currentVibes.filter(v => v !== vibeId)
       : [...currentVibes, vibeId].slice(0, 3) // Max 3 vibes
     
     setValue('vibes', newVibes, { shouldValidate: true })
-  }
+  }, [vibes, setValue])
 
-  const handleTypographyChange = (pairing: TypographyPairing) => {
+  const handleTypographyChange = useCallback((pairing: TypographyPairing) => {
     setValue('typography', {
       id: pairing.id,
       name: pairing.name,
@@ -254,49 +255,49 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
         family: pairing.serif.family,
       },
     }, { shouldValidate: true })
-  }
+  }, [setValue])
 
-  const handleColorwayChange = (colorway: Colorway) => {
+  const handleColorwayChange = useCallback((colorway: Colorway) => {
     setValue('colorway', {
       id: colorway.id,
       name: colorway.name,
       colors: colorway.colors,
       isCompliant: colorway.isCompliant,
     }, { shouldValidate: true })
-  }
+  }, [setValue])
 
-  const handleMotifChange = (selection: MotifSelection, assets: MotifAsset[]) => {
+  const handleMotifChange = useCallback((selection: MotifSelection, assets: MotifAsset[]) => {
     setValue('motifs', {
       selection,
       assets
     }, { shouldValidate: true })
-  }
+  }, [setValue])
 
-  const handlePageMasterChange = (selection: PageMasterSelection) => {
+  const handlePageMasterChange = useCallback((selection: PageMasterSelection) => {
     setValue('pageMasters', selection, { shouldValidate: true })
-  }
+  }, [setValue])
 
-  const handleObjectStyleChange = (selection: ObjectStyleSelection) => {
+  const handleObjectStyleChange = useCallback((selection: ObjectStyleSelection) => {
     setValue('objectStyles', selection, { shouldValidate: true })
-  }
+  }, [setValue])
 
-  const handleMotifShuffle = (newMotifs: any) => {
+  const handleMotifShuffle = useCallback((newMotifs: any) => {
     setValue('motifs', newMotifs, { shouldValidate: true })
-  }
+  }, [setValue])
 
-  const handleQualityFixes = (updatedData: SeedFormData) => {
+  const handleQualityFixes = useCallback((updatedData: SeedFormData) => {
     // Apply all the fixes to the form
     Object.entries(updatedData).forEach(([key, value]) => {
       setValue(key as keyof SeedFormData, value, { shouldValidate: true })
     })
-  }
+  }, [setValue])
 
-  const handleTemplateSaved = (templateId: string) => {
+  const handleTemplateSaved = useCallback((templateId: string) => {
     // Could navigate to the template or show success message
     console.log('Template saved with ID:', templateId)
-  }
+  }, [])
 
-  const removeFile = (type: 'logo' | 'referenceImage') => {
+  const removeFile = useCallback((type: 'logo' | 'referenceImage') => {
     if (type === 'logo') {
       setLogoPreview(null)
       setValue('logo', undefined)
@@ -304,7 +305,7 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
       setReferencePreview(null)
       setValue('referenceImage', undefined)
     }
-  }
+  }, [setValue])
 
   return (
     <Form {...form}>

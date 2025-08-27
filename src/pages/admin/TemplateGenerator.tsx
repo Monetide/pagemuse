@@ -125,21 +125,14 @@ export default function TemplateGenerator({ scope = 'workspace' }: TemplateGener
   }
 
   const handleSeedValidChange = (isValid: boolean, data?: SeedFormData) => {
-    setState(prev => {
-      // Prevent unnecessary state updates that cause render loops
-      if (prev.seedData.isValid === isValid && 
-          JSON.stringify(prev.seedData.formData) === JSON.stringify(data)) {
-        return prev
+    // Simplified - rely on SeedForm's debounced updates to prevent excessive calls
+    setState(prev => ({
+      ...prev,
+      seedData: {
+        isValid,
+        formData: data
       }
-      
-      return {
-        ...prev,
-        seedData: {
-          isValid,
-          formData: data
-        }
-      }
-    })
+    }))
   }
 
   const renderStepContent = () => {
