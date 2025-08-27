@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -30,7 +30,7 @@ interface QualityCheckerProps {
   className?: string
 }
 
-export function QualityChecker({ 
+const QualityChecker = React.memo(function QualityChecker({ 
   seedData, 
   onFixesApplied, 
   className = '' 
@@ -337,6 +337,7 @@ export function QualityChecker({
       </CardContent>
     </Card>
   )
-}
+})
 
+export { QualityChecker }
 export default QualityChecker

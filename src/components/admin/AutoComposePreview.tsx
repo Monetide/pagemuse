@@ -29,7 +29,7 @@ interface AutoComposePreviewProps {
   className?: string
 }
 
-export function AutoComposePreview({ 
+const AutoComposePreview = React.memo(function AutoComposePreview({ 
   seedData, 
   onMotifShuffle, 
   className = '' 
@@ -261,6 +261,7 @@ export function AutoComposePreview({
       </CardContent>
     </Card>
   )
-}
+})
 
+export { AutoComposePreview }
 export default AutoComposePreview

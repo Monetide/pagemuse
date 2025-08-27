@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import React from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
@@ -152,10 +152,42 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
     mode: 'onChange',
   })
 
-  const { watch, setValue, formState, getValues } = form
+  const { setValue, formState, getValues } = form
 
-  // Watch form changes to trigger validations locally
-  const watchedValues = watch()
+  // Watch specific fields efficiently
+  const brandName = useWatch({ control: form.control, name: 'brandName' })
+  const primaryColor = useWatch({ control: form.control, name: 'primaryColor' })
+  const vibes = useWatch({ control: form.control, name: 'vibes' })
+  const usage = useWatch({ control: form.control, name: 'usage' })
+  const typography = useWatch({ control: form.control, name: 'typography' })
+  const colorway = useWatch({ control: form.control, name: 'colorway' })
+  const motifs = useWatch({ control: form.control, name: 'motifs' })
+  const pageMasters = useWatch({ control: form.control, name: 'pageMasters' })
+  const objectStyles = useWatch({ control: form.control, name: 'objectStyles' })
+  const logo = useWatch({ control: form.control, name: 'logo' })
+  const referenceImage = useWatch({ control: form.control, name: 'referenceImage' })
+
+  // Check if we have minimum data for heavy components
+  const hasMinimumSeed = useMemo(() => {
+    return brandName && brandName.length >= 2 && 
+           vibes && vibes.length >= 1 && 
+           primaryColor && /^#[0-9A-F]{6}$/i.test(primaryColor)
+  }, [brandName, vibes, primaryColor])
+
+  // Create debounced seed data for heavy components
+  const [debouncedSeedData, setDebouncedSeedData] = useState<SeedFormData | undefined>()
+
+  // Debounce seedData updates to prevent excessive re-renders
+  React.useEffect(() => {
+    if (formState.isValid && hasMinimumSeed) {
+      const timer = setTimeout(() => {
+        setDebouncedSeedData(getValues())
+      }, 250) // 250ms debounce
+      return () => clearTimeout(timer)
+    } else {
+      setDebouncedSeedData(undefined)
+    }
+  }, [formState.isValid, hasMinimumSeed, brandName, primaryColor, vibes, usage, typography, colorway, motifs, pageMasters, objectStyles, logo, referenceImage, getValues])
   
   // Keep a stable reference to the callback to avoid effect loops
   const onValidChangeRef = React.useRef(onValidChange)
@@ -170,7 +202,7 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
     } else {
       onValidChangeRef.current(false)
     }
-  }, [formState.isValid])
+  }, [formState.isValid, getValues])
 
   const handleFileUpload = useCallback((
     file: File,
@@ -201,7 +233,7 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
   }, [setValue])
 
   const handleVibeToggle = (vibeId: string) => {
-    const currentVibes = watch('vibes')
+    const currentVibes = vibes || []
     const newVibes = currentVibes.includes(vibeId)
       ? currentVibes.filter(v => v !== vibeId)
       : [...currentVibes, vibeId].slice(0, 3) // Max 3 vibes
@@ -406,8 +438,8 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {vibeOptions.map((vibe) => {
-                const isSelected = watch('vibes').includes(vibe.id)
+                {vibeOptions.map((vibe) => {
+                const isSelected = (vibes || []).includes(vibe.id)
                 return (
                   <Button
                     key={vibe.id}
@@ -492,63 +524,69 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
 
         {/* Colorways */}
         <ColorwaySelector 
-          brandColor={watch('primaryColor')}
-          selectedColorway={watch('colorway')?.id}
+          brandColor={primaryColor}
+          selectedColorway={colorway?.id}
           onSelectionChange={handleColorwayChange}
         />
 
         {/* SVG Motifs */}
         <MotifSelector 
-          colors={watch('colorway') ? {
-            brand: watch('colorway')!.colors.brand,
-            brandSecondary: watch('colorway')!.colors.brandSecondary,
-            borderSubtle: watch('colorway')!.colors.borderSubtle,
-            textMuted: watch('colorway')!.colors.textMuted,
+          colors={colorway ? {
+            brand: colorway.colors.brand,
+            brandSecondary: colorway.colors.brandSecondary,
+            borderSubtle: colorway.colors.borderSubtle,
+            textMuted: colorway.colors.textMuted,
           } : undefined}
-          selectedMotifs={watch('motifs')?.selection}
+          selectedMotifs={motifs?.selection}
           onSelectionChange={handleMotifChange}
         />
 
         {/* Typography Pairing */}
         <TypographySelector 
-          selectedPairing={watch('typography')?.id}
+          selectedPairing={typography?.id}
           onSelectionChange={handleTypographyChange}
         />
 
         {/* Page Masters */}
         <PageMasterSelector 
-          selection={watch('pageMasters')}
+          selection={pageMasters}
           onSelectionChange={handlePageMasterChange}
         />
 
         {/* Object Styles & Snippets */}
         <ObjectStyleSelector 
-          selection={watch('objectStyles')}
+          selection={objectStyles}
           onSelectionChange={handleObjectStyleChange}
         />
 
-        {/* Auto-Compose Preview */}
-        <AutoComposePreview 
-          seedData={formState.isValid ? watchedValues : undefined}
-          onMotifShuffle={handleMotifShuffle}
-        />
+        {/* Auto-Compose Preview - Only render when we have minimum seed data */}
+        {hasMinimumSeed && (
+          <AutoComposePreview 
+            seedData={debouncedSeedData}
+            onMotifShuffle={handleMotifShuffle}
+          />
+        )}
 
-        {/* Quality Checker */}
-        <QualityChecker 
-          seedData={formState.isValid ? watchedValues : undefined}
-          onFixesApplied={handleQualityFixes}
-        />
+        {/* Quality Checker - Only render when we have minimum seed data */}
+        {hasMinimumSeed && (
+          <QualityChecker 
+            seedData={debouncedSeedData}
+            onFixesApplied={handleQualityFixes}
+          />
+        )}
 
         {/* Make Template */}
         <MakeTemplate 
-          seedData={formState.isValid ? watchedValues : undefined}
+          seedData={debouncedSeedData}
           onTemplateSaved={handleTemplateSaved}
         />
 
-        {/* Figma Export */}
-        <FigmaExporter 
-          seedData={formState.isValid ? watchedValues : {}}
-        />
+        {/* Figma Export - Only render when we have valid complete data */}
+        {formState.isValid && hasMinimumSeed && (
+          <FigmaExporter 
+            seedData={debouncedSeedData || {}}
+          />
+        )}
 
         {/* Reference Image */}
         <Card>
