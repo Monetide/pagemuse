@@ -9,3 +9,13 @@ verify_jwt = false
 
 [functions.decline-invitation]
 verify_jwt = false
+
+# System template generator functions require admin authentication
+[functions.system-template-gen-health]
+verify_jwt = true
+
+[functions.system-template-gen-seeds-ingest]
+verify_jwt = true
+
+[functions.system-template-gen-seeds-compose]
+verify_jwt = true
