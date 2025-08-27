@@ -74,6 +74,21 @@ const App = () => {
                   <Route path="/admin/templates" element={<Navigate to="/w/redirect/admin/templates" replace />} />
                   <Route path="/admin/template-generator" element={<Navigate to="/w/redirect/admin/template-generator" replace />} />
                   
+                  {/* Global system routes - require SystemAdmin authentication */}
+                  <Route path="/system/*" element={
+                    <AuthGate>
+                      <AdminGuard>
+                        <AppLayout>
+                          <Routes>
+                            <Route path="/template-generator" element={<TemplateGenerator scope="global" />} />
+                            <Route path="/templates" element={<AdminTemplates scope="global" />} />
+                            <Route path="*" element={<NotFound />} />
+                          </Routes>
+                        </AppLayout>
+                      </AdminGuard>
+                    </AuthGate>
+                  } />
+                  
                   {/* Workspace redirect handler */}
                   <Route path="/w/redirect/*" element={
                     <AuthGate>

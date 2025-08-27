@@ -21,7 +21,9 @@ import {
   Image, 
   Settings,
   Crown,
-  Palette as PaletteIcon
+  Palette as PaletteIcon,
+  Globe,
+  Sparkles
 } from 'lucide-react'
 import { useAccessibility } from '@/components/accessibility/AccessibilityProvider'
 import { useKeyboardNavigation, useFocusManagement } from '@/hooks/useKeyboardNavigation'
@@ -37,6 +39,11 @@ const getMainItems = (canManageTemplates: boolean, canUploadMedia: boolean) => [
 
 const adminItems = [
   { title: 'Admin Panel', url: '/admin', icon: Crown },
+]
+
+const systemItems = [
+  { title: 'Global Template Generator', url: '/system/template-generator', icon: Sparkles },
+  { title: 'Global Templates', url: '/system/templates', icon: Globe },
 ]
 
 const bottomItems = [
@@ -148,6 +155,35 @@ export function AppSidebar() {
                     <SidebarMenuButton asChild>
                       <NavLink 
                         to={currentWorkspaceId ? `/w/${currentWorkspaceId}${item.url}` : item.url}
+                        className={getNavCls}
+                        title={isCollapsed ? item.title : undefined}
+                        aria-label={item.title}
+                        role="menuitem"
+                      >
+                        <item.icon className="h-4 w-4" />
+                        {!isCollapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
+        {/* System Section - Only show for SystemAdmin users */}
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-sidebar-foreground/60 text-xs font-medium">
+              {!isCollapsed && 'SYSTEM'}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {systemItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink 
+                        to={item.url}
                         className={getNavCls}
                         title={isCollapsed ? item.title : undefined}
                         aria-label={item.title}

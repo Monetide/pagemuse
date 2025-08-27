@@ -33,7 +33,11 @@ import { ImportTemplateDialog } from '@/components/admin/ImportTemplateDialog'
 
 type Template = Tables<'templates'>
 
-export default function AdminTemplates() {
+interface AdminTemplatesProps {
+  scope?: 'workspace' | 'global'
+}
+
+export default function AdminTemplates({ scope = 'workspace' }: AdminTemplatesProps) {
   const { templates, loading } = useTemplates()
   const [searchTerm, setSearchTerm] = useState('')
 
@@ -108,7 +112,7 @@ export default function AdminTemplates() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link to="/admin">
+          <Link to={scope === 'global' ? '/system/templates' : '/admin'}>
             <Button variant="ghost" size="icon">
               <ArrowLeft className="w-4 h-4" />
             </Button>
@@ -116,17 +120,20 @@ export default function AdminTemplates() {
           <div>
             <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
               <Palette className="w-8 h-8 text-primary" />
-              Template Management
+              {scope === 'global' ? 'Global Template Management' : 'Template Management'}
             </h1>
             <p className="text-muted-foreground mt-1">
-              Create, manage, and publish document templates
+              {scope === 'global' 
+                ? 'Manage global templates available to all users'
+                : 'Create, manage, and publish document templates'
+              }
             </p>
           </div>
         </div>
         
         <div className="flex items-center gap-3">
           <ImportTemplateDialog onImportComplete={refetchTemplates} />
-          <Link to="/admin/template-generator">
+          <Link to={scope === 'global' ? '/system/template-generator' : '/admin/template-generator'}>
             <Button className="bg-gradient-primary hover:shadow-glow transition-all duration-200">
               <Plus className="w-4 h-4 mr-2" />
               Generate Template

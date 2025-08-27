@@ -38,7 +38,11 @@ interface TemplateGeneratorState {
   }
 }
 
-export default function TemplateGenerator() {
+interface TemplateGeneratorProps {
+  scope?: 'workspace' | 'global'
+}
+
+export default function TemplateGenerator({ scope = 'workspace' }: TemplateGeneratorProps) {
   const [state, setState] = useState<TemplateGeneratorState>({
     currentStep: 'seed',
     seedData: { isValid: false },
@@ -204,7 +208,7 @@ export default function TemplateGenerator() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
-            <Link to="/admin/templates">
+            <Link to={scope === 'global' ? '/system/templates' : '/admin/templates'}>
               <Button variant="ghost" size="icon">
                 <ArrowLeft className="w-4 h-4" />
               </Button>
@@ -212,10 +216,13 @@ export default function TemplateGenerator() {
             <div>
               <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
                 <Sparkles className="w-8 h-8 text-primary" />
-                Template Generator
+                {scope === 'global' ? 'Global Template Generator' : 'Template Generator'}
               </h1>
               <p className="text-muted-foreground mt-1">
-                Create intelligent templates with AI-powered generation
+                {scope === 'global' 
+                  ? 'Create global templates available to all users'
+                  : 'Create intelligent templates with AI-powered generation'
+                }
               </p>
             </div>
           </div>
