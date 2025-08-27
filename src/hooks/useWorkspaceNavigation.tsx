@@ -5,7 +5,16 @@ export const useWorkspaceNavigation = () => {
   const navigate = useNavigate();
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const location = useLocation();
-  const { switchWorkspace } = useWorkspaceContext();
+  
+  // Handle case where hook is used outside WorkspaceProvider (e.g., system routes)
+  let switchWorkspace: ((workspaceId: string) => void) | undefined;
+  try {
+    const context = useWorkspaceContext();
+    switchWorkspace = context.switchWorkspace;
+  } catch {
+    // Not within WorkspaceProvider, that's ok for system routes
+    switchWorkspace = undefined;
+  }
 
   const navigateWithinWorkspace = (path: string) => {
     if (!workspaceId) return;

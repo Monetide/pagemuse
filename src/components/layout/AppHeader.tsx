@@ -30,6 +30,9 @@ export function AppHeader() {
   const userDisplayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'User'
   const userInitials = userDisplayName.slice(0, 2).toUpperCase()
 
+  // Determine if we're on a system route
+  const isSystemRoute = location.pathname.startsWith('/system')
+  
   const navigationItems = [
     { name: 'Dashboard', path: '/dashboard' },
     { name: 'Documents', path: '/documents' },
@@ -48,11 +51,11 @@ export function AppHeader() {
               PageMuse
             </span>
           </NavLink>
-          <WorkspaceSwitcher />
+          {!isSystemRoute && <WorkspaceSwitcher />}
         </div>
         {/* Navigation Links */}
         <nav className="flex items-center space-x-6">
-          {navigationItems.map((item) => (
+          {!isSystemRoute && navigationItems.map((item) => (
             <NavLink
               key={item.path}
               to={currentWorkspaceId ? `/w/${currentWorkspaceId}${item.path}` : item.path}
@@ -65,6 +68,11 @@ export function AppHeader() {
               {item.name}
             </NavLink>
           ))}
+          {isSystemRoute && (
+            <span className="text-sm font-medium text-muted-foreground">
+              System Administration
+            </span>
+          )}
         </nav>
 
         {/* View Mode Toggle and Validation - only show on document pages */}
@@ -109,9 +117,9 @@ export function AppHeader() {
               <>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <NavLink to={currentWorkspaceId ? `/w/${currentWorkspaceId}/admin` : '/admin'}>
+                  <NavLink to={isSystemRoute ? '/system/template-generator' : (currentWorkspaceId ? `/w/${currentWorkspaceId}/admin` : '/admin')}>
                     <Shield className="mr-2 h-4 w-4" />
-                    Admin Panel
+                    {isSystemRoute ? 'System Admin' : 'Admin Panel'}
                   </NavLink>
                 </DropdownMenuItem>
               </>
