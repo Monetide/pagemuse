@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useToast } from '@/hooks/use-toast'
 import { 
   Shield, 
   CheckCircle, 
@@ -12,13 +13,15 @@ import {
   Type,
   Palette,
   Image,
-  FileImage
+  FileImage,
+  Database
 } from 'lucide-react'
 import { typographyPairings } from '@/components/admin/TypographySelector'
 import { generateMotifAssets } from '@/lib/svg-motif-generator'
 import { exportPageAsPNG } from '@/lib/page-composer'
 import { adjustForAACompliance, getContrastRatio } from '@/lib/colorway-generator'
 import { supabase } from '@/integrations/supabase/client'
+import { bootstrapRegistries } from '@/lib/template-gen-registry'
 
 interface HealthCheckResult {
   id: string
@@ -38,6 +41,8 @@ export function TemplateGeneratorHealthCheck({ onComplete }: TemplateGeneratorHe
   const [isRunning, setIsRunning] = useState(false)
   const [results, setResults] = useState<HealthCheckResult[]>([])
   const [hasRun, setHasRun] = useState(false)
+  const [isBootstrapping, setIsBootstrapping] = useState(false)
+  const { toast } = useToast()
 
   const runHealthCheck = async () => {
     setIsRunning(true)
@@ -328,10 +333,38 @@ export function TemplateGeneratorHealthCheck({ onComplete }: TemplateGeneratorHe
     }
   }
 
+  const handleBootstrapRegistries = async () => {
+    setIsBootstrapping(true)
+    try {
+      const result = await bootstrapRegistries()
+      if (result.success) {
+        toast({
+          title: "Registries Bootstrapped",
+          description: `Successfully created ${result.bootstrapped.docTypes} docTypes, ${result.bootstrapped.stylePacks} stylePacks, and ${result.bootstrapped.industries} industries`,
+        })
+        // Auto re-run health check after successful bootstrap
+        await runHealthCheck()
+      } else {
+        throw new Error('Bootstrap operation failed')
+      }
+    } catch (error) {
+      toast({
+        title: "Bootstrap Failed", 
+        description: error instanceof Error ? error.message : 'Unknown error occurred',
+        variant: "destructive",
+      })
+    } finally {
+      setIsBootstrapping(false)
+    }
+  }
+
   const overallStatus = hasRun ? (
     results.some(r => r.status === 'fail') ? 'fail' :
     results.some(r => r.status === 'warning') ? 'warning' : 'pass'
   ) : null
+
+  const registryResult = results.find(r => r.id === 'registry-presence')
+  const shouldShowBootstrapButton = hasRun && registryResult && registryResult.status === 'fail'
 
   return (
     <Card>
@@ -406,11 +439,36 @@ export function TemplateGeneratorHealthCheck({ onComplete }: TemplateGeneratorHe
                         </Badge>
                       </div>
                       <p className="text-sm opacity-80 mb-2">{result.message}</p>
-                      {result.suggestedFix && (
-                        <div className="text-xs opacity-70 mt-2 p-2 bg-white/50 rounded border border-current/20">
-                          <strong>Suggested fix:</strong> {result.suggestedFix}
-                        </div>
-                      )}
+                       {result.suggestedFix && (
+                         <div className="text-xs opacity-70 mt-2 p-2 bg-white/50 rounded border border-current/20">
+                           <strong>Suggested fix:</strong> {result.suggestedFix}
+                         </div>
+                       )}
+                       {result.id === 'registry-presence' && result.status === 'fail' && (
+                         <div className="mt-3">
+                           <Button
+                             size="sm"
+                             onClick={handleBootstrapRegistries}
+                             disabled={isBootstrapping}
+                             className="bg-background text-foreground border border-current hover:bg-current/10"
+                           >
+                             {isBootstrapping ? (
+                               <>
+                                 <RefreshCw className="w-3 h-3 mr-2 animate-spin" />
+                                 Bootstrapping...
+                               </>
+                             ) : (
+                               <>
+                                 <Database className="w-3 h-3 mr-2" />
+                                 Bootstrap Registries
+                               </>
+                             )}
+                           </Button>
+                           <p className="text-xs opacity-60 mt-1">
+                             This will create all baseline registry entries required for template generation.
+                           </p>
+                         </div>
+                       )}
                     </div>
                   </div>
                 </div>
