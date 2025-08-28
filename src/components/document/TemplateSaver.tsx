@@ -102,7 +102,25 @@ export const TemplateSaver = ({
 
     setIsSaving(true)
     try {
-      const templateId = await saveTemplateDraft(packagedTemplate, document.title)
+      // Get current workspace ID from URL
+      const currentPath = window.location.pathname
+      const workspaceMatch = currentPath.match(/\/w\/([^\/]+)/)
+      const workspaceId = workspaceMatch?.[1]
+      
+      if (!workspaceId) {
+        toast({
+          title: 'Error',
+          description: 'No workspace found. Please navigate from a workspace.',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      const templateId = await saveTemplateDraft(packagedTemplate, {
+        scope: 'workspace',
+        workspaceId,
+        brandName: document.title
+      })
       
       onTemplateSaved(templateId)
       

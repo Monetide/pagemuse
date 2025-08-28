@@ -414,28 +414,42 @@ export async function packageTemplate(
 
 export async function saveTemplateDraft(
   templatePackage: TemplatePackage,
-  workspaceId: string,
-  brandName?: string
+  options: {
+    scope: 'workspace' | 'global'
+    workspaceId?: string
+    brandName?: string
+  }
 ): Promise<string> {
   try {
     const { supabase } = await import('@/integrations/supabase/client')
     
     const templateId = templatePackage['template.json'].id
     
+    // Prepare template data based on scope
+    const templateData: any = {
+      id: templateId,
+      name: templatePackage['template.json'].name,
+      description: templatePackage['template.json'].description,
+      status: 'draft',
+      metadata: templatePackage['template.json'] as any,
+      category: 'generated',
+      scope: options.scope,
+      is_global: false, // All drafts start as non-global
+      user_id: (await supabase.auth.getUser()).data.user?.id
+    }
+
+    // Add workspace_id only for workspace-scoped templates
+    if (options.scope === 'workspace') {
+      if (!options.workspaceId) {
+        throw new Error('Workspace ID is required for workspace-scoped templates')
+      }
+      templateData.workspace_id = options.workspaceId
+    }
+    
     // Save template to database
     const { data: template, error: templateError } = await supabase
       .from('templates')
-      .insert({
-        id: templateId,
-        name: templatePackage['template.json'].name,
-        description: templatePackage['template.json'].description,
-        status: 'draft',
-        metadata: templatePackage['template.json'] as any,
-        category: 'generated',
-        scope: 'workspace',
-        workspace_id: workspaceId,
-        user_id: (await supabase.auth.getUser()).data.user?.id
-      })
+      .insert(templateData)
       .select()
       .single()
 

@@ -123,11 +123,12 @@ const usageOptions = [
 
 interface SeedFormProps {
   onValidChange: (isValid: boolean, data?: SeedFormData) => void
+  scope?: 'workspace' | 'global'
 }
 
 export type { SeedFormData }
 
-export function SeedForm({ onValidChange }: SeedFormProps) {
+export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) {
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [referencePreview, setReferencePreview] = useState<string | null>(null)
 
@@ -580,6 +581,7 @@ export function SeedForm({ onValidChange }: SeedFormProps) {
         <MakeTemplate 
           seedData={debouncedSeedData}
           onTemplateSaved={handleTemplateSaved}
+          scope={scope}
         />
 
         {/* Figma Export - Only render when we have valid complete data */}

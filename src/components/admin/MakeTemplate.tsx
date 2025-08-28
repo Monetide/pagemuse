@@ -30,12 +30,14 @@ interface MakeTemplateProps {
   seedData?: SeedFormData
   onTemplateSaved?: (templateId: string) => void
   className?: string
+  scope?: 'workspace' | 'global'
 }
 
 export function MakeTemplate({ 
   seedData, 
   onTemplateSaved, 
-  className = '' 
+  className = '',
+  scope = 'workspace'
 }: MakeTemplateProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [templateName, setTemplateName] = useState('')
@@ -75,17 +77,31 @@ export function MakeTemplate({
 
     setIsPackaging(true)
     try {
-      // Get current workspace from URL params
-      const currentPath = window.location.pathname
-      const workspaceMatch = currentPath.match(/\/w\/([^\/]+)/)
-      const workspaceId = workspaceMatch?.[1]
-      
-      if (!workspaceId) {
-        toast.error('No workspace selected')
-        return
-      }
+      let templateId: string
 
-      const templateId = await saveTemplateDraft(packagedTemplate, workspaceId, seedData?.brandName)
+      if (scope === 'workspace') {
+        // Get current workspace from URL params
+        const currentPath = window.location.pathname
+        const workspaceMatch = currentPath.match(/\/w\/([^\/]+)/)
+        const workspaceId = workspaceMatch?.[1]
+        
+        if (!workspaceId) {
+          toast.error('No workspace selected')
+          return
+        }
+
+        templateId = await saveTemplateDraft(packagedTemplate, {
+          scope: 'workspace',
+          workspaceId,
+          brandName: seedData?.brandName
+        })
+      } else {
+        // Global template - no workspace ID needed
+        templateId = await saveTemplateDraft(packagedTemplate, {
+          scope: 'global',
+          brandName: seedData?.brandName
+        })
+      }
       
       toast.success('Template saved as draft!')
       setIsDialogOpen(false)
@@ -98,7 +114,7 @@ export function MakeTemplate({
       }
     } catch (error) {
       console.error('Error saving template:', error)
-      toast.error('Failed to save template')
+      toast.error(error instanceof Error ? error.message : 'Failed to save template')
     } finally {
       setIsPackaging(false)
     }
@@ -226,6 +242,11 @@ export function MakeTemplate({
                   <DialogDescription>
                     Package your design into a reusable TPKG template with assets and previews.
                   </DialogDescription>
+                  {scope === 'global' && (
+                    <Badge variant="secondary" className="w-fit">
+                      Scope: Global
+                    </Badge>
+                  )}
                 </DialogHeader>
 
                 <div className="space-y-4">

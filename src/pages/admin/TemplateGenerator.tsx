@@ -148,7 +148,7 @@ export default function TemplateGenerator({ scope = 'workspace' }: TemplateGener
               </p>
             </div>
             
-            <SeedForm onValidChange={handleSeedValidChange} />
+            <SeedForm onValidChange={handleSeedValidChange} scope={scope} />
           </div>
         )
       
