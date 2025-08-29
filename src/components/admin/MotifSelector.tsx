@@ -21,9 +21,9 @@ interface MotifSelectorProps {
 const MotifSelector = React.memo(function MotifSelector({ colors, selectedMotifs, onSelectionChange }: MotifSelectorProps) {
   const [motifAssets, setMotifAssets] = useState<MotifAsset[]>([])
   const [selection, setSelection] = useState<MotifSelection>({
-    'body-bg': 'geometric-grid',
-    'divider': 'solid-line',
-    'cover-shape': 'circle-gradient'
+    'body-bg': 'isometric-grid-faint',
+    'divider': 'thin-rule',
+    'cover-shape': 'tilted-ribbon'
   })
 
   // Keep a stable reference to the callback
@@ -159,8 +159,7 @@ const MotifSelector = React.memo(function MotifSelector({ colors, selectedMotifs
                 </Badge>
               </div>
               
-              <div className="grid grid-cols-3 gap-3">
-                {asset.variants.map((variant) => {
+          <div className="grid grid-cols-4 gap-3">{asset.variants.map((variant) => {
                   const isSelected = selection[asset.type] === variant.id
                   
                   return (
@@ -175,7 +174,7 @@ const MotifSelector = React.memo(function MotifSelector({ colors, selectedMotifs
                       onClick={() => handleVariantSelect(asset.type as keyof MotifSelection, variant.id)}
                     >
                       {/* SVG Preview */}
-                      <div className="w-full h-12 bg-background rounded border overflow-hidden flex items-center justify-center">
+                      <div className="w-full h-16 bg-background rounded border overflow-hidden flex items-center justify-center">
                         <img 
                           src={variant.preview}
                           alt={variant.name}
@@ -229,7 +228,7 @@ const MotifSelector = React.memo(function MotifSelector({ colors, selectedMotifs
         {/* Preview All Selected */}
         <div className="mt-6 pt-4 border-t border-border">
           <div className="text-sm font-medium mb-3">Selected Motifs Preview</div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-4">
             {Object.entries(selection).map(([type, variantId]) => {
               const asset = motifAssets.find(a => a.type === type)
               const variant = asset?.variants.find(v => v.id === variantId)
@@ -238,15 +237,18 @@ const MotifSelector = React.memo(function MotifSelector({ colors, selectedMotifs
               
               return (
                 <div key={type} className="space-y-2">
-                  <div className="text-xs text-muted-foreground text-center">
+                  <div className="text-xs text-muted-foreground text-center font-medium">
                     {getAssetLabel(type)}
                   </div>
-                  <div className="h-16 bg-muted/20 rounded border flex items-center justify-center">
+                  <div className="h-20 bg-muted/20 rounded border flex items-center justify-center">
                     <img 
                       src={variant.preview}
                       alt={variant.name}
                       className="max-w-full max-h-full object-contain"
                     />
+                  </div>
+                  <div className="text-xs text-center text-muted-foreground">
+                    {variant.name}
                   </div>
                 </div>
               )
