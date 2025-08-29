@@ -192,8 +192,8 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
       usage: 'ebook',
       industry: 'tech-saas',
       typography: {
-        id: 'inter-source',
-        name: 'Inter × Source Serif',
+        id: 'inter-source-serif',
+        name: 'Inter × Source Serif Pro',
         sans: { name: 'Inter', family: 'font-inter' },
         serif: { name: 'Source Serif 4', family: 'font-source-serif' }
       },
@@ -908,6 +908,7 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
         <TypographySelector 
           selectedPairing={typography?.id}
           onSelectionChange={handleTypographyChange}
+          usageType={usage}
         />
 
         {/* Page Masters */}

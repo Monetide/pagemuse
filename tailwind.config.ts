@@ -73,7 +73,7 @@ export default {
 				}
 			},
 			fontFamily: {
-				// Typography Pairing 1: Inter + Source Serif
+				// Typography Pairing 1: Inter + Source Serif Pro
 				'inter': ['Inter', 'system-ui', 'sans-serif'],
 				'source-serif': ['Source Serif 4', 'Georgia', 'serif'],
 				// Typography Pairing 2: IBM Plex Sans + Lora  
@@ -82,6 +82,16 @@ export default {
 				// Typography Pairing 3: Libre Franklin + Crimson Pro
 				'libre-franklin': ['Libre Franklin', 'system-ui', 'sans-serif'],
 				'crimson': ['Crimson Pro', 'Georgia', 'serif'],
+				// Typography Pairing 4: Source Sans 3 + Merriweather
+				'source-sans-3': ['Source Sans 3', 'system-ui', 'sans-serif'],
+				'merriweather': ['Merriweather', 'Georgia', 'serif'],
+				// Typography Pairing 5: Manrope + Spectral
+				'manrope': ['Manrope', 'system-ui', 'sans-serif'],
+				'spectral': ['Spectral', 'Georgia', 'serif'],
+				// Typography Pairing 6: Plus Jakarta Sans + Lora
+				'plus-jakarta': ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+				// Typography Pairing 7: Playfair Display + Inter (Editorial)
+				'playfair': ['Playfair Display', 'Georgia', 'serif'],
 			},
 			fontSize: {
 				// Template Typography Scale

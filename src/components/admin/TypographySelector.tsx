@@ -27,8 +27,8 @@ export interface TypographyPairing {
 
 const typographyPairings: TypographyPairing[] = [
   {
-    id: 'inter-source',
-    name: 'Inter × Source Serif',
+    id: 'inter-source-serif',
+    name: 'Inter × Source Serif Pro',
     description: 'Clean modern sans with elegant serif',
     sans: {
       name: 'Inter',
@@ -46,7 +46,7 @@ const typographyPairings: TypographyPairing[] = [
     }
   },
   {
-    id: 'ibm-lora',
+    id: 'ibm-plex-lora',
     name: 'IBM Plex Sans × Lora',
     description: 'Technical precision meets warm readability',
     sans: {
@@ -65,7 +65,7 @@ const typographyPairings: TypographyPairing[] = [
     }
   },
   {
-    id: 'libre-crimson',
+    id: 'libre-franklin-crimson',
     name: 'Libre Franklin × Crimson Pro',
     description: 'Editorial style with academic authority',
     sans: {
@@ -82,16 +82,130 @@ const typographyPairings: TypographyPairing[] = [
       sansSample: 'Editorial headlines & captions',
       serifSample: 'Academic text with scholarly feel'
     }
+  },
+  {
+    id: 'source-sans-merriweather',
+    name: 'Source Sans 3 × Merriweather',
+    description: 'Clean utility font with traditional serif',
+    sans: {
+      name: 'Source Sans 3',
+      family: 'font-source-sans-3',
+      weights: '400, 500, 600, 700'
+    },
+    serif: {
+      name: 'Merriweather',
+      family: 'font-merriweather',
+      weights: '400, 600, 700'
+    },
+    preview: {
+      sansSample: 'Clear & functional headers',
+      serifSample: 'Highly readable body text for long documents'
+    }
+  },
+  {
+    id: 'manrope-spectral',
+    name: 'Manrope × Spectral',
+    description: 'Geometric sans with optical serif design',
+    sans: {
+      name: 'Manrope',
+      family: 'font-manrope',
+      weights: '400, 500, 600, 700'
+    },
+    serif: {
+      name: 'Spectral',
+      family: 'font-spectral',
+      weights: '400, 500, 600, 700'
+    },
+    preview: {
+      sansSample: 'Geometric precision',
+      serifSample: 'Optically optimized serif for digital reading'
+    }
+  },
+  {
+    id: 'plus-jakarta-lora',
+    name: 'Plus Jakarta Sans × Lora',
+    description: 'Contemporary rounded sans with warm serif',
+    sans: {
+      name: 'Plus Jakarta Sans',
+      family: 'font-plus-jakarta',
+      weights: '400, 500, 600, 700'
+    },
+    serif: {
+      name: 'Lora',
+      family: 'font-lora',
+      weights: '400, 500, 600, 700'
+    },
+    preview: {
+      sansSample: 'Modern & approachable',
+      serifSample: 'Warm, calligraphic touch'
+    }
+  },
+  {
+    id: 'playfair-inter-editorial',
+    name: 'Playfair Display × Inter',
+    description: 'Dramatic serif headlines with clean sans body',
+    sans: {
+      name: 'Inter',
+      family: 'font-inter',
+      weights: '400, 500, 600, 700'
+    },
+    serif: {
+      name: 'Playfair Display',
+      family: 'font-playfair',
+      weights: '400, 500, 600, 700'
+    },
+    preview: {
+      sansSample: 'Clean, modern interface text',
+      serifSample: 'Elegant display headlines with high contrast'
+    }
+  },
+  {
+    id: 'ibm-plex-merriweather',
+    name: 'IBM Plex Sans × Merriweather',
+    description: 'Industrial precision for manufacturing docs',
+    sans: {
+      name: 'IBM Plex Sans',
+      family: 'font-ibm-plex',
+      weights: '400, 500, 600, 700'
+    },
+    serif: {
+      name: 'Merriweather',
+      family: 'font-merriweather',
+      weights: '400, 600, 700'
+    },
+    preview: {
+      sansSample: 'Technical specifications',
+      serifSample: 'Detailed technical documentation'
+    }
   }
 ]
 
 interface TypographySelectorProps {
   selectedPairing?: string
   onSelectionChange: (pairing: TypographyPairing) => void
+  usageType?: string // Add usage type to determine default pairing
 }
 
-const TypographySelector = React.memo(function TypographySelector({ selectedPairing, onSelectionChange }: TypographySelectorProps) {
-  const [activePairing, setActivePairing] = useState<string>(selectedPairing || 'inter-source')
+const TypographySelector = React.memo(function TypographySelector({ selectedPairing, onSelectionChange, usageType }: TypographySelectorProps) {
+  
+  // Get safe default pairing based on usage type
+  const getDefaultPairing = (usage?: string): string => {
+    switch (usage) {
+      case 'white-paper':
+      case 'case-study': 
+        return 'playfair-inter-editorial' // Editorial style
+      case 'report':
+      case 'annual-report':
+        return 'ibm-plex-merriweather' // Manufacturing/technical style
+      case 'proposal':
+        return 'source-sans-merriweather' // Professional style
+      case 'ebook':
+      default:
+        return 'inter-source-serif' // Safe default
+    }
+  }
+
+  const [activePairing, setActivePairing] = useState<string>(selectedPairing || getDefaultPairing(usageType))
 
   const handlePairingSelect = (pairing: TypographyPairing) => {
     setActivePairing(pairing.id)
