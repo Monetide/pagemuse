@@ -46,6 +46,7 @@ const seedFormSchema = z.object({
   primaryColor: z.string().regex(/^#[0-9A-F]{6}$/i, 'Please enter a valid hex color'),
   vibes: z.array(z.string()).min(1, 'Please select at least one vibe').max(3, 'Please select no more than 3 vibes'),
   usage: z.string().min(1, 'Please select a usage type'),
+  industry: z.string().min(1, 'Please select an industry'),
   typography: z.object({
     id: z.string(),
     name: z.string(),
@@ -104,7 +105,41 @@ const vibeOptions = [
   { id: 'minimal', label: 'Minimal', description: 'Simple, focused approach' },
 ]
 
-// Usage type labels mapping from registry IDs
+// Industry labels mapping from registry IDs
+const industryLabels: Record<string, { label: string; description: string }> = {
+  'finance': { 
+    label: 'Finance', 
+    description: 'Financial services, banking, and investment documents'
+  },
+  'insurance': { 
+    label: 'Insurance', 
+    description: 'Insurance policies, claims, and risk management'
+  },
+  'real-estate': { 
+    label: 'Real Estate', 
+    description: 'Property, construction, and real estate documents'
+  },
+  'healthcare': {
+    label: 'Healthcare',
+    description: 'Medical, pharmaceutical, and healthcare documents'
+  },
+  'manufacturing': {
+    label: 'Manufacturing',
+    description: 'Industrial, production, and supply chain documents'
+  },
+  'tech-saas': {
+    label: 'Tech & SaaS',
+    description: 'Technology, software, and digital service documents'
+  },
+  'consumer-goods': {
+    label: 'Consumer Goods',
+    description: 'Retail, FMCG, and consumer product documents'
+  },
+  'public-sector': {
+    label: 'Public Sector',
+    description: 'Government, non-profit, and public service documents'
+  },
+}
 const usageLabels: Record<string, { label: string; description: string }> = {
   'ebook': { 
     label: 'E-book', 
@@ -143,7 +178,9 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [referencePreview, setReferencePreview] = useState<string | null>(null)
   const [usageOptions, setUsageOptions] = useState<{ id: string; label: string; description: string }[]>([])
+  const [industryOptions, setIndustryOptions] = useState<{ id: string; label: string; description: string }[]>([])
   const [loadingUsageTypes, setLoadingUsageTypes] = useState(true)
+  const [loadingIndustries, setLoadingIndustries] = useState(true)
 
   const form = useForm<SeedFormData>({
     resolver: zodResolver(seedFormSchema),
@@ -152,6 +189,7 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
       primaryColor: '#8B5CF6', // Default to our primary purple
       vibes: [],
       usage: 'ebook',
+      industry: 'tech-saas',
       typography: {
         id: 'inter-source',
         name: 'Inter × Source Serif',
@@ -173,6 +211,7 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
   const primaryColor = useWatch({ control: form.control, name: 'primaryColor' })
   const vibes = useWatch({ control: form.control, name: 'vibes' })
   const usage = useWatch({ control: form.control, name: 'usage' })
+  const industry = useWatch({ control: form.control, name: 'industry' })
   const typography = useWatch({ control: form.control, name: 'typography' })
   const colorway = useWatch({ control: form.control, name: 'colorway' })
   const motifs = useWatch({ control: form.control, name: 'motifs' })
@@ -201,7 +240,7 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
     } else {
       setDebouncedSeedData(undefined)
     }
-  }, [formState.isValid, hasMinimumSeed, brandName, primaryColor, vibes, usage, typography, colorway, motifs, pageMasters, objectStyles, logo, referenceImage, getValues])
+  }, [formState.isValid, hasMinimumSeed, brandName, primaryColor, vibes, usage, industry, typography, colorway, motifs, pageMasters, objectStyles, logo, referenceImage, getValues])
   
   // Keep a stable reference to the callback to avoid effect loops
   const onValidChangeRef = React.useRef(onValidChange)
@@ -352,6 +391,130 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
 
     loadUsageTypes()
   }, [])
+
+  // Load industries from registry
+  useEffect(() => {
+    const loadIndustries = async () => {
+      try {
+        setLoadingIndustries(true)
+        const industryIds = await listRegistryIds('industry')
+        
+        const options = industryIds
+          .filter(id => industryLabels[id]) // Only include IDs we have labels for
+          .map(id => ({
+            id,
+            label: industryLabels[id].label,
+            description: industryLabels[id].description
+          }))
+        
+        setIndustryOptions(options)
+      } catch (error) {
+        console.error('Failed to load industries:', error)
+        // Fallback to basic options if registry fails
+        setIndustryOptions([
+          { id: 'tech-saas', label: 'Tech & SaaS', description: 'Technology, software, and digital service documents' },
+          { id: 'finance', label: 'Finance', description: 'Financial services, banking, and investment documents' },
+          { id: 'healthcare', label: 'Healthcare', description: 'Medical, pharmaceutical, and healthcare documents' }
+        ])
+      } finally {
+        setLoadingIndustries(false)
+      }
+    }
+
+    loadIndustries()
+  }, [])
+
+  // Handle industry change effects
+  useEffect(() => {
+    if (industry) {
+      // Set chart defaults based on industry
+      const chartDefaults = getChartDefaultsForIndustry(industry)
+      // This would be handled by the ColorwaySelector when it receives the industry prop
+      console.log('Industry changed to:', industry, 'Chart defaults:', chartDefaults)
+    }
+  }, [industry])
+
+  // Get chart defaults for industry
+  const getChartDefaultsForIndustry = (industryId: string) => {
+    switch (industryId) {
+      case 'finance':
+      case 'insurance':
+        return { numberFormat: 'currency' }
+      case 'real-estate':
+      case 'consumer-goods':
+        return { numberFormat: 'percent' }
+      case 'manufacturing':
+        return { numberFormat: 'unit' }
+      case 'tech-saas':
+      case 'public-sector':
+      case 'healthcare':
+      default:
+        return { numberFormat: 'plain' }
+    }
+  }
+
+  // Get snippet hints for industry
+  const getSnippetHintsForIndustry = (industryId: string): string[] => {
+    switch (industryId) {
+      case 'finance':
+        return ['disclaimer-finance', 'forward-looking-statement', 'risk-disclosure']
+      case 'insurance':
+        return ['disclaimer-finance', 'risk-disclosure', 'regulatory-notice']
+      case 'healthcare':
+        return ['hipaa-note', 'medical-disclaimer', 'regulatory-notice']
+      case 'real-estate':
+        return ['property-disclaimer', 'market-conditions', 'regulatory-notice']
+      case 'manufacturing':
+        return ['safety-notice', 'environmental-disclaimer', 'quality-standards']
+      case 'tech-saas':
+        return ['data-privacy', 'terms-of-service', 'security-notice']
+      case 'consumer-goods':
+        return ['product-disclaimer', 'safety-notice', 'warranty-info']
+      case 'public-sector':
+        return ['public-disclosure', 'accessibility-statement', 'privacy-policy']
+      default:
+        return []
+    }
+  }
+
+  // Get palette hints for industry
+  const getPaletteHintsForIndustry = (industryId: string) => {
+    switch (industryId) {
+      case 'finance':
+      case 'insurance':
+        return {
+          neutrals: 'cool',
+          accentSaturation: 'low'
+        }
+      case 'healthcare':
+        return {
+          neutrals: 'cool', 
+          accentSaturation: 'medium'
+        }
+      case 'tech-saas':
+        return {
+          neutrals: 'cool',
+          accentSaturation: 'high'
+        }
+      case 'manufacturing':
+      case 'public-sector':
+        return {
+          neutrals: 'cool',
+          accentSaturation: 'medium'
+        }
+      case 'real-estate':
+      case 'consumer-goods':
+        return {
+          neutrals: 'warm',
+          accentSaturation: 'medium'
+        }
+      default:
+        return {
+          neutrals: 'cool',
+          accentSaturation: 'medium'
+        }
+    }
+  }
 
   return (
     <Form {...form}>
@@ -576,11 +739,77 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
           </CardContent>
         </Card>
 
+        {/* Industry */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Industry</CardTitle>
+            <CardDescription>
+              Select your industry to optimize chart formats and content snippets
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loadingIndustries ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-muted-foreground">Loading industries...</span>
+              </div>
+            ) : (
+              <FormField
+                control={form.control}
+                name="industry"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        className="grid grid-cols-1 gap-4"
+                      >
+                        {industryOptions.map((option) => (
+                          <FormItem key={option.id} className="flex items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <RadioGroupItem value={option.id} />
+                            </FormControl>
+                            <div className="flex-1">
+                              <FormLabel className="font-medium">
+                                {option.label}
+                              </FormLabel>
+                              <FormDescription className="mt-1">
+                                {option.description}
+                              </FormDescription>
+                              {industry === option.id && (
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                  <Badge variant="secondary" className="text-xs">
+                                    Charts: {getChartDefaultsForIndustry(option.id).numberFormat}
+                                  </Badge>
+                                  {getSnippetHintsForIndustry(option.id).length > 0 && (
+                                    <Badge variant="outline" className="text-xs">
+                                      +{getSnippetHintsForIndustry(option.id).length} snippets
+                                    </Badge>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </FormItem>
+                        ))}
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+          </CardContent>
+        </Card>
+
         {/* Colorways */}
         <ColorwaySelector 
           brandColor={primaryColor}
           selectedColorway={colorway?.id}
           onSelectionChange={handleColorwayChange}
+          industryHints={industry ? {
+            paletteHints: getPaletteHintsForIndustry(industry)
+          } : undefined}
         />
 
         {/* SVG Motifs */}

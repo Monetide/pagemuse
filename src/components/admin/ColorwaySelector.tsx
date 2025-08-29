@@ -10,9 +10,15 @@ interface ColorwaySelectorProps {
   brandColor: string
   selectedColorway?: string
   onSelectionChange: (colorway: Colorway) => void
+  industryHints?: {
+    paletteHints: {
+      neutrals: string
+      accentSaturation: string
+    }
+  }
 }
 
-const ColorwaySelector = React.memo(function ColorwaySelector({ brandColor, selectedColorway, onSelectionChange }: ColorwaySelectorProps) {
+const ColorwaySelector = React.memo(function ColorwaySelector({ brandColor, selectedColorway, onSelectionChange, industryHints }: ColorwaySelectorProps) {
   const [colorways, setColorways] = useState<Colorway[]>([])
   const [activeColorway, setActiveColorway] = useState<string>(selectedColorway || 'primary')
   
@@ -25,7 +31,7 @@ const ColorwaySelector = React.memo(function ColorwaySelector({ brandColor, sele
   // Generate colorways when brand color changes - removed callback from deps
   useEffect(() => {
     if (brandColor && brandColor.match(/^#[0-9A-F]{6}$/i)) {
-      const generated = generateColorways(brandColor)
+      const generated = generateColorways(brandColor, industryHints?.paletteHints)
       setColorways(generated)
       
       // Auto-select first compliant colorway only if no selectedColorway exists
@@ -35,7 +41,7 @@ const ColorwaySelector = React.memo(function ColorwaySelector({ brandColor, sele
         onSelectionChangeRef.current(compliantColorway)
       }
     }
-  }, [brandColor, selectedColorway]) // Removed onSelectionChange from deps
+  }, [brandColor, selectedColorway, industryHints]) // Added industryHints to deps
 
   const handleColorwaySelect = (colorway: Colorway) => {
     setActiveColorway(colorway.id)

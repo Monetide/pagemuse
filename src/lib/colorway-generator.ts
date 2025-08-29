@@ -140,14 +140,22 @@ export function adjustForAACompliance(textColor: string, bgColor: string, target
 }
 
 // Generate colorway variations
-export function generateColorways(brandHex: string): Colorway[] {
+export function generateColorways(brandHex: string, industryHints?: { neutrals: string; accentSaturation: string }): Colorway[] {
   const [h, s, l] = hexToHsl(brandHex)
   
-  // Base neutrals
-  const baseTextBody = "#1a1a1a"  // ~#111-#222 range
-  const baseTextMuted = "#666666"  // ~#6 grey
+  // Apply industry hints for neutral tone
+  const neutralTone = industryHints?.neutrals === 'warm' ? 'warm' : 'cool'
+  const accentSatLevel = industryHints?.accentSaturation || 'medium'
+  
+  // Adjust saturation based on industry hints
+  const satMultiplier = accentSatLevel === 'high' ? 1.2 : accentSatLevel === 'low' ? 0.7 : 1.0
+  const adjustedSaturation = Math.min(s * satMultiplier, 100)
+  
+  // Base neutrals - adjust based on industry tone preference
+  const baseTextBody = neutralTone === 'warm' ? "#2C1810" : "#1a1a1a"
+  const baseTextMuted = neutralTone === 'warm' ? "#8B6F47" : "#666666"
   const baseBgPage = "#ffffff"
-  const baseBorderSubtle = "#e5e5e5"  // ~15% grey
+  const baseBorderSubtle = neutralTone === 'warm' ? "#E8DDD2" : "#e5e5e5"
 
   const colorways: Colorway[] = [
     {
@@ -156,12 +164,12 @@ export function generateColorways(brandHex: string): Colorway[] {
       description: 'Original brand color with complementary tones',
       colors: {
         brand: brandHex,
-        brandSecondary: hslToHex((h + 30) % 360, Math.max(20, s - 20), Math.min(90, l + 10)),
-        brandAccent: hslToHex(h, Math.min(100, s + 10), Math.max(20, l - 15)),
+        brandSecondary: hslToHex((h + 30) % 360, Math.max(20, adjustedSaturation - 20), Math.min(90, l + 10)),
+        brandAccent: hslToHex(h, Math.min(100, adjustedSaturation + 10), Math.max(20, l - 15)),
         textBody: baseTextBody,
         textMuted: baseTextMuted,
         bgPage: baseBgPage,
-        bgSection: hslToHex(h, Math.max(10, s - 70), Math.min(98, l + 30)),
+        bgSection: hslToHex(h, Math.max(10, adjustedSaturation - 70), Math.min(98, l + 30)),
         borderSubtle: baseBorderSubtle,
         contrastRatios: { bodyOnPage: 0, bodyOnSection: 0, mutedOnPage: 0, mutedOnSection: 0 }
       },
@@ -172,13 +180,13 @@ export function generateColorways(brandHex: string): Colorway[] {
       name: 'Warm',
       description: 'Warmer tones with orange undertones',
       colors: {
-        brand: hslToHex((h + 15) % 360, s, l),
-        brandSecondary: hslToHex((h + 45) % 360, Math.max(20, s - 15), Math.min(85, l + 15)),
-        brandAccent: hslToHex((h + 30) % 360, Math.min(100, s + 5), Math.max(25, l - 10)),
+        brand: hslToHex((h + 15) % 360, adjustedSaturation, l),
+        brandSecondary: hslToHex((h + 45) % 360, Math.max(20, adjustedSaturation - 15), Math.min(85, l + 15)),
+        brandAccent: hslToHex((h + 30) % 360, Math.min(100, adjustedSaturation + 5), Math.max(25, l - 10)),
         textBody: baseTextBody,
         textMuted: baseTextMuted,
         bgPage: baseBgPage,
-        bgSection: hslToHex((h + 15) % 360, Math.max(8, s - 75), Math.min(97, l + 35)),
+        bgSection: hslToHex((h + 15) % 360, Math.max(8, adjustedSaturation - 75), Math.min(97, l + 35)),
         borderSubtle: baseBorderSubtle,
         contrastRatios: { bodyOnPage: 0, bodyOnSection: 0, mutedOnPage: 0, mutedOnSection: 0 }
       },
@@ -189,13 +197,13 @@ export function generateColorways(brandHex: string): Colorway[] {
       name: 'Cool',
       description: 'Cooler tones with blue undertones',
       colors: {
-        brand: hslToHex((h - 20 + 360) % 360, s, l),
-        brandSecondary: hslToHex((h - 50 + 360) % 360, Math.max(25, s - 10), Math.min(88, l + 12)),
-        brandAccent: hslToHex((h - 35 + 360) % 360, Math.min(95, s + 8), Math.max(22, l - 12)),
+        brand: hslToHex((h - 20 + 360) % 360, adjustedSaturation, l),
+        brandSecondary: hslToHex((h - 50 + 360) % 360, Math.max(25, adjustedSaturation - 10), Math.min(88, l + 12)),
+        brandAccent: hslToHex((h - 35 + 360) % 360, Math.min(95, adjustedSaturation + 8), Math.max(22, l - 12)),
         textBody: baseTextBody,
         textMuted: baseTextMuted,
         bgPage: baseBgPage,
-        bgSection: hslToHex((h - 20 + 360) % 360, Math.max(12, s - 65), Math.min(96, l + 32)),
+        bgSection: hslToHex((h - 20 + 360) % 360, Math.max(12, adjustedSaturation - 65), Math.min(96, l + 32)),
         borderSubtle: baseBorderSubtle,
         contrastRatios: { bodyOnPage: 0, bodyOnSection: 0, mutedOnPage: 0, mutedOnSection: 0 }
       },
