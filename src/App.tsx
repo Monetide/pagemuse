@@ -19,6 +19,7 @@ import AdminPanel from "./pages/AdminPanel";
 import AdminTemplates from "./pages/admin/AdminTemplates";
 import AdminTemplateEdit from "./pages/admin/AdminTemplateEdit";
 import TemplateGenerator from "./pages/admin/TemplateGenerator";
+import SystemTemplateGenerator from "./pages/admin/SystemTemplateGenerator";
 import { AdminGuard } from "./components/auth/AdminGuard";
 import NotFound from "./pages/NotFound";
 import ResetPassword from "./pages/ResetPassword";
@@ -81,7 +82,7 @@ const App = () => {
                       <AdminGuard>
                         <AppLayout>
                           <Routes>
-                            <Route path="/template-generator" element={<TemplateGenerator scope="global" />} />
+                            <Route path="/template-generator" element={<SystemTemplateGenerator />} />
                             <Route path="/templates" element={<AdminTemplates scope="global" />} />
                             <Route path="*" element={<NotFound />} />
                           </Routes>

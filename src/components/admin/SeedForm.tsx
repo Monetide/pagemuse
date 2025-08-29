@@ -514,8 +514,8 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
     return uniqueStylePacks.length > 0 ? uniqueStylePacks : ['professional']
   }
 
-  // Get palette hints for industry
-  const getPaletteHintsForIndustry = (industryId: string) => {
+  // Get palette hints for industry - memoized to prevent infinite loops
+  const getPaletteHintsForIndustry = useCallback((industryId: string) => {
     switch (industryId) {
       case 'finance':
       case 'insurance':
@@ -551,7 +551,15 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
           accentSaturation: 'medium'
         }
     }
-  }
+  }, [])
+
+  // Memoize industry hints to prevent unnecessary re-renders
+  const industryHints = useMemo(() => {
+    if (!industry) return undefined
+    return {
+      paletteHints: getPaletteHintsForIndustry(industry)
+    }
+  }, [industry, getPaletteHintsForIndustry])
 
   // Compute template ID from form values
   const computedTemplateId = useMemo(() => {
@@ -984,9 +992,7 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
           brandColor={primaryColor}
           selectedColorway={colorway?.id}
           onSelectionChange={handleColorwayChange}
-          industryHints={industry ? {
-            paletteHints: getPaletteHintsForIndustry(industry)
-          } : undefined}
+          industryHints={industryHints}
         />
 
         {/* SVG Motifs */}
