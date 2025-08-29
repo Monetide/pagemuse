@@ -98,11 +98,12 @@ const seedFormSchema = z.object({
 type SeedFormData = z.infer<typeof seedFormSchema>
 
 const vibeOptions = [
-  { id: 'modern', label: 'Modern', description: 'Clean, contemporary design' },
-  { id: 'classic', label: 'Classic', description: 'Timeless, traditional elegance' },
-  { id: 'editorial', label: 'Editorial', description: 'Magazine-style layouts' },
-  { id: 'bold', label: 'Bold', description: 'Strong, impactful visuals' },
-  { id: 'minimal', label: 'Minimal', description: 'Simple, focused approach' },
+  { id: 'modern', label: 'Modern', description: 'Clean, contemporary design', stylePack: 'professional' },
+  { id: 'classic', label: 'Classic', description: 'Timeless, traditional elegance', stylePack: 'professional' },
+  { id: 'editorial', label: 'Editorial', description: 'Magazine-style layouts', stylePack: 'editorial' },
+  { id: 'bold', label: 'Bold', description: 'Strong, impactful visuals', stylePack: 'bold' },
+  { id: 'minimal', label: 'Minimal', description: 'Simple, focused approach', stylePack: 'minimal' },
+  { id: 'technical', label: 'Technical', description: 'Precise, data-focused with tight spacing', stylePack: 'technical' },
 ]
 
 // Industry labels mapping from registry IDs
@@ -288,9 +289,22 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
 
   const handleVibeToggle = useCallback((vibeId: string) => {
     const currentVibes = vibes || []
-    const newVibes = currentVibes.includes(vibeId)
-      ? currentVibes.filter(v => v !== vibeId)
-      : [...currentVibes, vibeId].slice(0, 3) // Max 3 vibes
+    let newVibes: string[]
+    
+    // Technical is exclusive - if selected, clear others; if others exist, clear them when adding Technical
+    if (vibeId === 'technical') {
+      newVibes = currentVibes.includes('technical') ? [] : ['technical']
+    } else {
+      // If Technical is currently selected, replace it with the new vibe
+      if (currentVibes.includes('technical')) {
+        newVibes = [vibeId]
+      } else {
+        // Normal toggle logic for non-Technical vibes
+        newVibes = currentVibes.includes(vibeId)
+          ? currentVibes.filter(v => v !== vibeId)
+          : [...currentVibes, vibeId].slice(0, 3) // Max 3 vibes
+      }
+    }
     
     setValue('vibes', newVibes, { shouldValidate: true })
   }, [vibes, setValue])
@@ -477,6 +491,25 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
     }
   }
 
+  // Get style packs from selected vibes
+  const getStylePacksFromVibes = (selectedVibes: string[]): string[] => {
+    if (!selectedVibes || selectedVibes.length === 0) return ['professional']
+    
+    // Map vibes to style packs, handling special cases
+    const stylePacks = selectedVibes.map(vibe => {
+      const vibeOption = vibeOptions.find(v => v.id === vibe)
+      if (!vibeOption) return 'professional'
+      
+      // Handle Classic -> professional with serif variant
+      if (vibe === 'classic') return 'professional-serif'
+      return vibeOption.stylePack
+    })
+    
+    // Remove duplicates and ensure we have at least one
+    const uniqueStylePacks = [...new Set(stylePacks)]
+    return uniqueStylePacks.length > 0 ? uniqueStylePacks : ['professional']
+  }
+
   // Get palette hints for industry
   const getPaletteHintsForIndustry = (industryId: string) => {
     switch (industryId) {
@@ -650,30 +683,64 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {vibeOptions.map((vibe) => {
                 const isSelected = (vibes || []).includes(vibe.id)
+                const isTechnical = vibe.id === 'technical'
+                const hasNonTechnical = (vibes || []).some(v => v !== 'technical')
+                const hasTechnical = (vibes || []).includes('technical')
+                
+                // Show different styling for Technical when it's exclusive
+                const isExclusive = isTechnical && hasNonTechnical
+                const isDisabled = hasTechnical && !isTechnical
+                
                 return (
                   <Button
                     key={vibe.id}
                     type="button"
                     variant="outline"
+                    disabled={isDisabled}
                     className={`h-auto p-4 justify-start text-left transition-all ${
                       isSelected 
-                        ? 'border-primary bg-primary/5 text-primary' 
-                        : 'hover:border-primary/50'
+                        ? isTechnical
+                          ? 'border-amber-500 bg-amber-50 text-amber-700' 
+                          : 'border-primary bg-primary/5 text-primary'
+                        : isDisabled
+                          ? 'opacity-50 cursor-not-allowed'
+                          : 'hover:border-primary/50'
                     }`}
-                    onClick={() => handleVibeToggle(vibe.id)}
+                    onClick={() => !isDisabled && handleVibeToggle(vibe.id)}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`
                         w-5 h-5 rounded-full border-2 flex items-center justify-center
-                        ${isSelected ? 'border-primary bg-primary' : 'border-muted-foreground'}
+                        ${isSelected 
+                          ? isTechnical 
+                            ? 'border-amber-500 bg-amber-500' 
+                            : 'border-primary bg-primary'
+                          : isDisabled
+                            ? 'border-muted'
+                            : 'border-muted-foreground'
+                        }
                       `}>
-                        {isSelected && <Check className="w-3 h-3 text-primary-foreground" />}
+                        {isSelected && <Check className={`w-3 h-3 ${isTechnical ? 'text-white' : 'text-primary-foreground'}`} />}
                       </div>
                       <div>
-                        <div className="font-medium">{vibe.label}</div>
+                        <div className="font-medium flex items-center gap-2">
+                          {vibe.label}
+                          {isTechnical && (
+                            <Badge variant="outline" className="text-xs px-1 py-0 bg-amber-100 text-amber-800 border-amber-200">
+                              Exclusive
+                            </Badge>
+                          )}
+                        </div>
                         <div className="text-xs text-muted-foreground mt-1">
                           {vibe.description}
                         </div>
+                        {isSelected && (
+                          <div className="mt-2">
+                            <Badge variant="secondary" className="text-xs">
+                              Style: {vibe.stylePack}
+                            </Badge>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </Button>
@@ -684,6 +751,19 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
               <p className="text-sm font-medium text-destructive mt-2">
                 {form.formState.errors.vibes.message}
               </p>
+            )}
+            
+            {(vibes || []).length > 0 && (
+              <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+                <div className="text-sm font-medium mb-2">Selected Style Packs:</div>
+                <div className="flex flex-wrap gap-2">
+                  {getStylePacksFromVibes(vibes || []).map(stylePack => (
+                    <Badge key={stylePack} variant="outline" className="text-xs">
+                      {stylePack}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
