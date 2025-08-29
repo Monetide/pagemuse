@@ -28,7 +28,7 @@ export function TemplatePreview({ data }: TemplatePreviewProps) {
   
   // Get selected page masters
   const coverMaster = data.pageMasters?.cover ? getPageMasterPreset(data.pageMasters.cover) : null
-  const bodyMaster = data.pageMasters?.body ? getPageMasterPreset(data.pageMasters.body) : null
+  const bodyMaster = data.pageMasters?.selected?.[0]?.id ? getPageMasterPreset(data.pageMasters.selected[0].id) : null
   
   // Get object styles and snippets
   const objectStyles = data.objectStyles?.styles || {}

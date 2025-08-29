@@ -5,7 +5,7 @@ export interface PageMasterPreset {
   name: string
   description: string
   pageSize: 'Letter' | 'A4'
-  layoutType: 'cover-fullbleed' | 'body-1col' | 'body-2col' | 'body-1col-sidebar' | 'body-2col-sidebar' | 'data-appendix'
+  layoutType: 'cover-fullbleed' | 'body-1col' | 'body-2col' | 'body-1col-sidebar' | 'body-2col-sidebar' | 'data-portrait' | 'data-appendix'
   pageMaster: PageMaster
   sidebarConfig?: {
     width: number // Points
@@ -238,6 +238,120 @@ export const PAGE_MASTER_PRESETS: PageMasterPreset[] = [
     }
   },
 
+  // Letter Body 2-column with Sidebar
+  {
+    id: 'body-2col-sidebar-letter',
+    name: 'Body 2-Column + Sidebar (Letter)',
+    description: 'Two column body layout with sidebar for Letter size',
+    pageSize: 'Letter',
+    layoutType: 'body-2col-sidebar',
+    pageMaster: {
+      pageSize: 'Letter',
+      orientation: 'portrait',
+      margins: { 
+        top: 1 * INCH_TO_PT, 
+        right: 1 * INCH_TO_PT, 
+        bottom: 1 * INCH_TO_PT, 
+        left: 1 * INCH_TO_PT 
+      },
+      columns: 2,
+      columnGap: 0.25 * INCH_TO_PT, // 0.25in gutter
+      hasHeader: true,
+      hasFooter: true,
+      baselineGrid: true,
+      gridSpacing: 12, // 12pt baseline
+      allowTableRotation: false
+    },
+    sidebarConfig: {
+      width: 2 * INCH_TO_PT, // 2 inch sidebar
+      position: 'right',
+      gap: 0.25 * INCH_TO_PT // 0.25in gap
+    }
+  },
+
+  // A4 Body 2-column with Sidebar
+  {
+    id: 'body-2col-sidebar-a4',
+    name: 'Body 2-Column + Sidebar (A4)',
+    description: 'Two column body layout with sidebar for A4 size',
+    pageSize: 'A4',
+    layoutType: 'body-2col-sidebar',
+    pageMaster: {
+      pageSize: 'A4',
+      orientation: 'portrait',
+      margins: { 
+        top: 25.4 * MM_TO_PT, 
+        right: 25.4 * MM_TO_PT, 
+        bottom: 25.4 * MM_TO_PT, 
+        left: 25.4 * MM_TO_PT 
+      },
+      columns: 2,
+      columnGap: 6.35 * MM_TO_PT, // ~0.25in equivalent in mm
+      hasHeader: true,
+      hasFooter: true,
+      baselineGrid: true,
+      gridSpacing: 12, // 12pt baseline
+      allowTableRotation: false
+    },
+    sidebarConfig: {
+      width: 50.8 * MM_TO_PT, // ~2 inch equivalent in mm
+      position: 'right',
+      gap: 6.35 * MM_TO_PT // ~0.25in equivalent in mm
+    }
+  },
+
+  // Letter Data Portrait
+  {
+    id: 'data-portrait-letter',
+    name: 'Data (Portrait) (Letter)',
+    description: 'Portrait data layout optimized for tables and charts for Letter size',
+    pageSize: 'Letter',
+    layoutType: 'data-portrait',
+    pageMaster: {
+      pageSize: 'Letter',
+      orientation: 'portrait',
+      margins: { 
+        top: 0.75 * INCH_TO_PT, 
+        right: 0.5 * INCH_TO_PT, 
+        bottom: 0.75 * INCH_TO_PT, 
+        left: 0.5 * INCH_TO_PT 
+      },
+      columns: 1,
+      columnGap: 0,
+      hasHeader: true,
+      hasFooter: true,
+      baselineGrid: true,
+      gridSpacing: 12, // 12pt baseline
+      allowTableRotation: false
+    }
+  },
+
+  // A4 Data Portrait
+  {
+    id: 'data-portrait-a4',
+    name: 'Data (Portrait) (A4)',
+    description: 'Portrait data layout optimized for tables and charts for A4 size',
+    pageSize: 'A4',
+    layoutType: 'data-portrait',
+    pageMaster: {
+      pageSize: 'A4',
+      orientation: 'portrait',
+      margins: { 
+        top: 19 * MM_TO_PT, 
+        right: 12.7 * MM_TO_PT, 
+        bottom: 19 * MM_TO_PT, 
+        left: 12.7 * MM_TO_PT 
+      },
+      columns: 1,
+      columnGap: 0,
+      hasHeader: true,
+      hasFooter: true,
+      baselineGrid: true,
+      gridSpacing: 12, // 12pt baseline
+      allowTableRotation: false
+    }
+  },
+
   // Letter Data Appendix
   {
     id: 'data-appendix-letter',
@@ -299,6 +413,6 @@ export function getPageMastersBySize(pageSize: 'Letter' | 'A4'): PageMasterPrese
   return PAGE_MASTER_PRESETS.filter(preset => preset.pageSize === pageSize)
 }
 
-export function getPageMastersByType(layoutType: 'cover-fullbleed' | 'body-1col' | 'body-2col' | 'body-1col-sidebar' | 'body-2col-sidebar' | 'data-appendix'): PageMasterPreset[] {
+export function getPageMastersByType(layoutType: 'cover-fullbleed' | 'body-1col' | 'body-2col' | 'body-1col-sidebar' | 'body-2col-sidebar' | 'data-portrait' | 'data-appendix'): PageMasterPreset[] {
   return PAGE_MASTER_PRESETS.filter(preset => preset.layoutType === layoutType)
 }

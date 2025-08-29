@@ -1,29 +1,37 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { FileText, Columns, Columns2, Palette } from 'lucide-react'
+import { 
+  FileText, 
+  Columns, 
+  Columns2, 
+  Palette, 
+  GripVertical,
+  Plus,
+  Database
+} from 'lucide-react'
 import { PAGE_MASTER_PRESETS, type PageMasterPreset } from '@/lib/page-masters'
+import { DragDropProvider, useDragDropContext } from '@/contexts/DragDropContext'
 
 export interface PageMasterSelection {
   cover?: string | null
-  body?: string | null
-  dataAppendix?: string | null
+  selected?: { id: string; order: number }[]
 }
 
 interface PageMasterSelectorProps {
   selection?: PageMasterSelection
   onSelectionChange: (selection: PageMasterSelection) => void
   className?: string
-  usageType?: string // Add usage type to control which masters to show
+  usageType?: string
 }
 
 const PageMasterSelector = React.memo(function PageMasterSelector({ 
-  selection = { cover: null, body: null, dataAppendix: null }, 
+  selection = { cover: null, selected: [] }, 
   onSelectionChange, 
   className,
   usageType
@@ -31,16 +39,81 @@ const PageMasterSelector = React.memo(function PageMasterSelector({
   const [pageSize, setPageSize] = useState<'Letter' | 'A4'>('Letter')
 
   const coverPresets = PAGE_MASTER_PRESETS.filter(p => p.layoutType === 'cover-fullbleed' && p.pageSize === pageSize)
-  const bodyPresets = PAGE_MASTER_PRESETS.filter(p => p.layoutType.startsWith('body-') && p.pageSize === pageSize)
-  const appendixPresets = PAGE_MASTER_PRESETS.filter(p => p.layoutType === 'data-appendix' && p.pageSize === pageSize)
   
-  // Show appendix section only for report and annual-report
-  const showAppendix = usageType === 'report' || usageType === 'annual-report'
+  // Available layout options for multi-select
+  const availableLayouts = [
+    {
+      id: 'body-1col',
+      name: 'Body — 1-column',
+      description: 'Single column body layout',
+      presets: PAGE_MASTER_PRESETS.filter(p => p.layoutType === 'body-1col' && p.pageSize === pageSize)
+    },
+    {
+      id: 'body-2col',
+      name: 'Body — 2-column',
+      description: 'Two column body layout',
+      presets: PAGE_MASTER_PRESETS.filter(p => p.layoutType === 'body-2col' && p.pageSize === pageSize)
+    },
+    {
+      id: 'body-2col-sidebar',
+      name: 'Body — 2-column + Sidebar',
+      description: 'Two column body layout with sidebar',
+      presets: PAGE_MASTER_PRESETS.filter(p => p.layoutType === 'body-2col-sidebar' && p.pageSize === pageSize)
+    },
+    {
+      id: 'data-portrait',
+      name: 'Data (portrait)',
+      description: 'Portrait data layout for tables and charts',
+      presets: PAGE_MASTER_PRESETS.filter(p => p.layoutType === 'data-portrait' && p.pageSize === pageSize)
+    }
+  ]
 
-  const updateSelection = (type: 'cover' | 'body' | 'dataAppendix', presetId: string) => {
+  const updateSelection = useCallback((type: 'cover', presetId: string) => {
     const newSelection = { ...selection, [type]: presetId }
     onSelectionChange(newSelection)
-  }
+  }, [selection, onSelectionChange])
+
+  const toggleLayoutSelection = useCallback((layoutType: string) => {
+    const currentSelected = selection.selected || []
+    const isSelected = currentSelected.some(item => item.id.includes(layoutType))
+    
+    if (isSelected) {
+      // Remove this layout type
+      const newSelected = currentSelected.filter(item => !item.id.includes(layoutType))
+      onSelectionChange({
+        ...selection,
+        selected: newSelected.map((item, index) => ({ ...item, order: index }))
+      })
+    } else {
+      // Add this layout type - use the first preset of this type
+      const layout = availableLayouts.find(l => l.id === layoutType)
+      if (layout && layout.presets.length > 0) {
+        const newSelected = [
+          ...currentSelected,
+          { id: layout.presets[0].id, order: currentSelected.length }
+        ]
+        onSelectionChange({
+          ...selection,
+          selected: newSelected
+        })
+      }
+    }
+  }, [selection, onSelectionChange, availableLayouts])
+
+  const moveSelectedItem = useCallback((fromIndex: number, toIndex: number) => {
+    const currentSelected = selection.selected || []
+    const newSelected = [...currentSelected]
+    const [movedItem] = newSelected.splice(fromIndex, 1)
+    newSelected.splice(toIndex, 0, movedItem)
+    
+    // Update order values
+    const reorderedSelected = newSelected.map((item, index) => ({ ...item, order: index }))
+    
+    onSelectionChange({
+      ...selection,
+      selected: reorderedSelected
+    })
+  }, [selection, onSelectionChange])
 
   const getLayoutIcon = (layoutType: string) => {
     switch (layoutType) {
@@ -50,6 +123,10 @@ const PageMasterSelector = React.memo(function PageMasterSelector({
         return <Columns className="w-4 h-4" />
       case 'body-2col':
         return <Columns2 className="w-4 h-4" />
+      case 'body-2col-sidebar':
+        return <Columns2 className="w-4 h-4" />
+      case 'data-portrait':
+        return <Database className="w-4 h-4" />
       case 'data-appendix':
         return <Palette className="w-4 h-4" />
       default:
@@ -57,92 +134,125 @@ const PageMasterSelector = React.memo(function PageMasterSelector({
     }
   }
 
-  const renderPresetCard = (preset: PageMasterPreset, type: 'cover' | 'body' | 'dataAppendix', isSelected: boolean) => (
-    <div
-      key={preset.id}
-      className={`relative border rounded-lg p-3 cursor-pointer transition-all hover:border-primary/50 ${
-        isSelected ? 'border-primary bg-primary/5' : 'border-border'
-      }`}
-      onClick={() => updateSelection(type, preset.id)}
-    >
-      <div className="flex items-start gap-3">
-        <div className={`p-2 rounded-md ${isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-          {getLayoutIcon(preset.layoutType)}
-        </div>
-        
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between">
-            <h4 className="font-medium text-sm">{preset.name}</h4>
-            <RadioGroupItem 
-              value={preset.id} 
-              id={preset.id}
-              className="ml-2"
-            />
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">{preset.description}</p>
-          
-          <div className="flex flex-wrap gap-1 mt-2">
-            <Badge variant="outline" className="text-xs">
-              {preset.pageMaster.columns === 1 ? '1 Column' : `${preset.pageMaster.columns} Columns`}
-            </Badge>
-            {preset.pageMaster.hasHeader && (
-              <Badge variant="outline" className="text-xs">Header</Badge>
-            )}
-            {preset.pageMaster.hasFooter && (
-              <Badge variant="outline" className="text-xs">Footer</Badge>
-            )}
-            {preset.pageMaster.baselineGrid && (
-              <Badge variant="outline" className="text-xs">Grid</Badge>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Visual preview */}
-      <div className="mt-3 bg-muted/30 rounded p-2">
-        <div className="bg-card border rounded h-16 relative overflow-hidden">
-          {/* Margins visualization */}
-          <div 
-            className="absolute inset-0 border border-dashed border-muted-foreground/30"
-            style={{
-              margin: '4px'
-            }}
-          >
-            {/* Header/Footer areas */}
-            {preset.pageMaster.hasHeader && (
-              <div className="absolute top-0 left-0 right-0 h-2 bg-primary/10" />
-            )}
-            {preset.pageMaster.hasFooter && (
-              <div className="absolute bottom-0 left-0 right-0 h-2 bg-primary/10" />
-            )}
-            
-            {/* Column guides */}
-            <div className="absolute inset-2 flex gap-1">
-              {Array.from({ length: preset.pageMaster.columns }).map((_, i) => (
-                <div 
-                  key={i} 
-                  className="flex-1 bg-primary/5 border border-primary/20 rounded-sm"
-                />
-              ))}
-            </div>
-            
-            {/* Baseline grid */}
-            {preset.pageMaster.baselineGrid && (
-              <div className="absolute inset-2 opacity-20">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <div 
-                    key={i} 
-                    className="border-b border-primary/30"
-                    style={{ height: '6px' }}
-                  />
-                ))}
+  const renderCoverSelection = () => (
+    <div>
+      <Label className="text-sm font-medium mb-3 block">
+        Cover (full-bleed) — <Badge variant="secondary" className="text-xs">Always ON</Badge>
+      </Label>
+      <div className="space-y-2">
+        {coverPresets.map(preset => {
+          const isSelected = selection.cover === preset.id
+          return (
+            <div
+              key={preset.id}
+              className={`relative border rounded-lg p-3 cursor-pointer transition-all hover:border-primary/50 ${
+                isSelected ? 'border-primary bg-primary/5' : 'border-border'
+              }`}
+              onClick={() => updateSelection('cover', preset.id)}
+            >
+              <div className="flex items-start gap-3">
+                <div className={`p-2 rounded-md ${isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                  {getLayoutIcon(preset.layoutType)}
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium text-sm">{preset.name}</h4>
+                    <div className={`w-4 h-4 rounded border-2 ${
+                      isSelected ? 'bg-primary border-primary' : 'border-muted-foreground'
+                    }`}>
+                      {isSelected && <div className="w-2 h-2 bg-white rounded-full m-0.5" />}
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">{preset.description}</p>
+                </div>
               </div>
-            )}
-          </div>
-        </div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
+
+  const renderLayoutCheckboxes = () => {
+    const currentSelected = selection.selected || []
+    
+    return (
+      <div>
+        <Label className="text-sm font-medium mb-3 block">
+          Body & Data Layouts — Multi-select + Drag to Order
+        </Label>
+        <div className="space-y-3">
+          {availableLayouts.map((layout) => {
+            const isSelected = currentSelected.some(item => item.id.includes(layout.id))
+            
+            return (
+              <div key={layout.id} className="flex items-center space-x-3">
+                <Checkbox
+                  id={layout.id}
+                  checked={isSelected}
+                  onCheckedChange={() => toggleLayoutSelection(layout.id)}
+                />
+                <div className="flex-1">
+                  <Label htmlFor={layout.id} className="font-medium cursor-pointer">
+                    {layout.name}
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {layout.description}
+                  </p>
+                </div>
+                <div className={`p-2 rounded-md ${isSelected ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                  {getLayoutIcon(layout.id)}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  const renderSelectedOrder = () => {
+    const currentSelected = selection.selected || []
+    if (currentSelected.length === 0) return null
+
+    const sortedSelected = [...currentSelected].sort((a, b) => a.order - b.order)
+
+    return (
+      <div>
+        <Label className="text-sm font-medium mb-3 block">
+          Selected Order — Drag to Reorder
+        </Label>
+        <div className="space-y-2">
+          {sortedSelected.map((item, index) => {
+            const preset = PAGE_MASTER_PRESETS.find(p => p.id === item.id)
+            if (!preset) return null
+
+            return (
+              <div
+                key={item.id}
+                className="flex items-center gap-3 p-3 border border-primary/20 bg-primary/5 rounded-lg"
+              >
+                <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab" />
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">
+                    {index + 1}
+                  </Badge>
+                  <div className="p-1.5 rounded bg-primary text-primary-foreground">
+                    {getLayoutIcon(preset.layoutType)}
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <div className="font-medium text-sm">{preset.name}</div>
+                  <div className="text-xs text-muted-foreground">{preset.description}</div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <Card className={className}>
@@ -152,11 +262,11 @@ const PageMasterSelector = React.memo(function PageMasterSelector({
           Page Masters
         </CardTitle>
         <CardDescription>
-          Select layout templates for different document sections
+          Select layout templates with multi-select checkboxes and drag-to-order priority
         </CardDescription>
       </CardHeader>
       
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
         {/* Page Size Selector */}
         <div>
           <Label className="text-sm font-medium mb-2 block">Page Size</Label>
@@ -168,87 +278,25 @@ const PageMasterSelector = React.memo(function PageMasterSelector({
           </Tabs>
         </div>
 
-        {/* Cover Master Selection */}
-        <div>
-          <Label className="text-sm font-medium mb-3 block">Cover Master</Label>
-          <RadioGroup 
-            value={selection.cover || ''} 
-            onValueChange={(value) => updateSelection('cover', value)}
-          >
-            <div className="space-y-2">
-              {coverPresets.map(preset => 
-                renderPresetCard(preset, 'cover', selection.cover === preset.id)
-              )}
-            </div>
-          </RadioGroup>
-        </div>
+        {/* Cover Master Selection - Always ON */}
+        {renderCoverSelection()}
 
-        {/* Body Master Selection */}
-        <div>
-          <Label className="text-sm font-medium mb-3 block">Body Master</Label>
-          <RadioGroup 
-            value={selection.body || ''} 
-            onValueChange={(value) => updateSelection('body', value)}
-          >
-            <div className="space-y-2">
-              {bodyPresets.map(preset => 
-                renderPresetCard(preset, 'body', selection.body === preset.id)
-              )}
-            </div>
-          </RadioGroup>
-        </div>
+        {/* Multi-select Layout Checkboxes */}
+        {renderLayoutCheckboxes()}
 
-        {/* Data Appendix Master Selection - Only show for reports */}
-        {showAppendix && (
-          <div>
-            <Label className="text-sm font-medium mb-3 block">Data Appendix Master</Label>
-            <RadioGroup 
-              value={selection.dataAppendix || ''} 
-              onValueChange={(value) => updateSelection('dataAppendix', value)}
-            >
-              <div className="space-y-2">
-                {appendixPresets.map(preset => 
-                  renderPresetCard(preset, 'dataAppendix', selection.dataAppendix === preset.id)
-                )}
-              </div>
-            </RadioGroup>
-          </div>
-        )}
-
-        {/* Quick Selection Buttons */}
-        <div className="pt-4 border-t">
-          <Label className="text-sm font-medium mb-2 block">Quick Select</Label>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                onSelectionChange({
-                  cover: `cover-fullbleed-${pageSize.toLowerCase()}`,
-                  body: `body-1col-${pageSize.toLowerCase()}`
-                })
-              }}
-            >
-              Single Column Set
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                onSelectionChange({
-                  cover: `cover-fullbleed-${pageSize.toLowerCase()}`,
-                  body: `body-2col-${pageSize.toLowerCase()}`
-                })
-              }}
-            >
-              Two Column Set
-            </Button>
-          </div>
-        </div>
+        {/* Selected Items Order */}
+        {renderSelectedOrder()}
       </CardContent>
     </Card>
   )
 })
 
-export { PageMasterSelector }
+const PageMasterSelectorWithDragDrop = (props: PageMasterSelectorProps) => {
+  return (
+    <DragDropProvider>
+      <PageMasterSelector {...props} />
+    </DragDropProvider>
+  )
+}
 
+export { PageMasterSelectorWithDragDrop as PageMasterSelector }

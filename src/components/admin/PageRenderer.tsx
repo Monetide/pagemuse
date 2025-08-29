@@ -28,7 +28,7 @@ export function PageRenderer({ composition, seedData, className = '', scale = 1 
 
   // Get page masters
   const coverMaster = seedData.pageMasters?.cover ? getPageMasterPreset(seedData.pageMasters.cover) : null
-  const bodyMaster = seedData.pageMasters?.body ? getPageMasterPreset(seedData.pageMasters.body) : null
+  const bodyMaster = seedData.pageMasters?.selected?.[0]?.id ? getPageMasterPreset(seedData.pageMasters.selected[0].id) : null
 
   // Get object styles
   const objectStyles = seedData.objectStyles?.styles || {}

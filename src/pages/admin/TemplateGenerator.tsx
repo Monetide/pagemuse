@@ -454,7 +454,7 @@ export default function TemplateGenerator({ scope = 'workspace' }: TemplateGener
                              state.seedData.formData.pageMasters.cover?.includes('a4') ? 'A4' : 'Not set'}
                           </span>
                           <span className="text-xs text-muted-foreground">
-                            {state.seedData.formData.pageMasters.body?.includes('2col') ? '2-Column' : '1-Column'}
+                            {state.seedData.formData.pageMasters.selected?.[0]?.id?.includes('2col') ? '2-Column' : '1-Column'}
                           </span>
                         </div>
                       </div>

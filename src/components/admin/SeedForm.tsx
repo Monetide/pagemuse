@@ -86,8 +86,10 @@ const seedFormSchema = z.object({
   }).optional(),
       pageMasters: z.object({
         cover: z.string().nullable(),
-        body: z.string().nullable(),
-        dataAppendix: z.string().nullable().optional(),
+        selected: z.array(z.object({
+          id: z.string(),
+          order: z.number()
+        })).optional(),
       }).optional(),
   objectStyles: z.object({
     styles: z.record(z.any()).optional(),
@@ -202,7 +204,10 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
         serif: { name: 'Source Serif 4', family: 'font-source-serif' }
       },
       colorway: undefined,
-      motifs: undefined,
+      pageMasters: {
+        cover: null,
+        selected: []
+      },
       logo: undefined,
       referenceImage: undefined,
     },
@@ -1016,7 +1021,7 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
 
         {/* Page Masters */}
         <PageMasterSelector 
-          selection={pageMasters}
+          selection={pageMasters as PageMasterSelection}
           onSelectionChange={handlePageMasterChange}
           usageType={usage}
         />

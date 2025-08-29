@@ -178,7 +178,7 @@ export function MakeTemplate({
                 <div>
                   <span className="text-muted-foreground">Page Masters:</span>{' '}
                   <span className="font-medium">
-                    {seedData.pageMasters?.cover && seedData.pageMasters?.body ? 'Configured' : 'Default'}
+                    {seedData.pageMasters?.cover && seedData.pageMasters?.selected?.length ? 'Configured' : 'Default'}
                   </span>
                 </div>
                 <div>
