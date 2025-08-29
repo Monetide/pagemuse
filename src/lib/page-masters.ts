@@ -5,7 +5,7 @@ export interface PageMasterPreset {
   name: string
   description: string
   pageSize: 'Letter' | 'A4'
-  layoutType: 'cover-fullbleed' | 'body-1col' | 'body-2col' | 'body-1col-sidebar' | 'body-2col-sidebar'
+  layoutType: 'cover-fullbleed' | 'body-1col' | 'body-2col' | 'body-1col-sidebar' | 'body-2col-sidebar' | 'data-appendix'
   pageMaster: PageMaster
   sidebarConfig?: {
     width: number // Points
@@ -236,6 +236,58 @@ export const PAGE_MASTER_PRESETS: PageMasterPreset[] = [
       position: 'right',
       gap: 6.35 * MM_TO_PT // ~0.25in equivalent in mm
     }
+  },
+
+  // Letter Data Appendix
+  {
+    id: 'data-appendix-letter',
+    name: 'Data Appendix (Letter)',
+    description: 'Appendix layout optimized for tables and data for Letter size',
+    pageSize: 'Letter',
+    layoutType: 'data-appendix',
+    pageMaster: {
+      pageSize: 'Letter',
+      orientation: 'portrait',
+      margins: { 
+        top: 0.75 * INCH_TO_PT, 
+        right: 0.5 * INCH_TO_PT, 
+        bottom: 0.75 * INCH_TO_PT, 
+        left: 0.5 * INCH_TO_PT 
+      },
+      columns: 1,
+      columnGap: 0,
+      hasHeader: true,
+      hasFooter: true,
+      baselineGrid: true,
+      gridSpacing: 12, // 12pt baseline
+      allowTableRotation: true // Allow landscape tables in appendix
+    }
+  },
+
+  // A4 Data Appendix
+  {
+    id: 'data-appendix-a4',
+    name: 'Data Appendix (A4)',
+    description: 'Appendix layout optimized for tables and data for A4 size',
+    pageSize: 'A4',
+    layoutType: 'data-appendix',
+    pageMaster: {
+      pageSize: 'A4',
+      orientation: 'portrait',
+      margins: { 
+        top: 19 * MM_TO_PT, 
+        right: 12.7 * MM_TO_PT, 
+        bottom: 19 * MM_TO_PT, 
+        left: 12.7 * MM_TO_PT 
+      },
+      columns: 1,
+      columnGap: 0,
+      hasHeader: true,
+      hasFooter: true,
+      baselineGrid: true,
+      gridSpacing: 12, // 12pt baseline
+      allowTableRotation: true // Allow landscape tables in appendix
+    }
   }
 ]
 
@@ -247,6 +299,6 @@ export function getPageMastersBySize(pageSize: 'Letter' | 'A4'): PageMasterPrese
   return PAGE_MASTER_PRESETS.filter(preset => preset.pageSize === pageSize)
 }
 
-export function getPageMastersByType(layoutType: 'cover-fullbleed' | 'body-1col' | 'body-2col' | 'body-1col-sidebar' | 'body-2col-sidebar'): PageMasterPreset[] {
+export function getPageMastersByType(layoutType: 'cover-fullbleed' | 'body-1col' | 'body-2col' | 'body-1col-sidebar' | 'body-2col-sidebar' | 'data-appendix'): PageMasterPreset[] {
   return PAGE_MASTER_PRESETS.filter(preset => preset.layoutType === layoutType)
 }

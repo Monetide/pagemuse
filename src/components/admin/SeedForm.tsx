@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import React from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -33,8 +33,10 @@ import {
   Palette, 
   Sparkles,
   X,
-  Check
+  Check,
+  Loader2
 } from 'lucide-react'
+import { listRegistryIds } from '@/lib/template-gen-registry'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
@@ -43,9 +45,7 @@ const seedFormSchema = z.object({
   brandName: z.string().min(2, 'Brand name must be at least 2 characters').max(50, 'Brand name must be less than 50 characters'),
   primaryColor: z.string().regex(/^#[0-9A-F]{6}$/i, 'Please enter a valid hex color'),
   vibes: z.array(z.string()).min(1, 'Please select at least one vibe').max(3, 'Please select no more than 3 vibes'),
-  usage: z.enum(['ebook', 'whitepaper', 'casestudy'], {
-    required_error: 'Please select a usage type',
-  }),
+  usage: z.string().min(1, 'Please select a usage type'),
   typography: z.object({
     id: z.string(),
     name: z.string(),
@@ -81,10 +81,11 @@ const seedFormSchema = z.object({
     }),
     assets: z.array(z.any()),
   }).optional(),
-  pageMasters: z.object({
-    cover: z.string().nullable(),
-    body: z.string().nullable(),
-  }).optional(),
+      pageMasters: z.object({
+        cover: z.string().nullable(),
+        body: z.string().nullable(),
+        dataAppendix: z.string().nullable().optional(),
+      }).optional(),
   objectStyles: z.object({
     styles: z.record(z.any()).optional(),
     snippets: z.array(z.string()).optional(),
@@ -103,23 +104,33 @@ const vibeOptions = [
   { id: 'minimal', label: 'Minimal', description: 'Simple, focused approach' },
 ]
 
-const usageOptions = [
-  { 
-    id: 'ebook', 
+// Usage type labels mapping from registry IDs
+const usageLabels: Record<string, { label: string; description: string }> = {
+  'ebook': { 
     label: 'E-book', 
     description: 'Long-form digital publication with chapters and sections'
   },
-  { 
-    id: 'whitepaper', 
+  'white-paper': { 
     label: 'White Paper', 
     description: 'Authoritative report or guide on a specific topic'
   },
-  { 
-    id: 'casestudy', 
+  'case-study': { 
     label: 'Case Study', 
     description: 'Detailed analysis of a project or business scenario'
   },
-]
+  'report': {
+    label: 'Report',
+    description: 'Structured document presenting findings and analysis'
+  },
+  'proposal': {
+    label: 'Proposal',
+    description: 'Business proposal or project plan document'
+  },
+  'annual-report': {
+    label: 'Annual Report',
+    description: 'Comprehensive yearly business and financial report'
+  },
+}
 
 interface SeedFormProps {
   onValidChange: (isValid: boolean, data?: SeedFormData) => void
@@ -131,6 +142,8 @@ export type { SeedFormData }
 export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) {
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [referencePreview, setReferencePreview] = useState<string | null>(null)
+  const [usageOptions, setUsageOptions] = useState<{ id: string; label: string; description: string }[]>([])
+  const [loadingUsageTypes, setLoadingUsageTypes] = useState(true)
 
   const form = useForm<SeedFormData>({
     resolver: zodResolver(seedFormSchema),
@@ -307,6 +320,38 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
       setValue('referenceImage', undefined)
     }
   }, [setValue])
+
+  // Load usage types from registry
+  useEffect(() => {
+    const loadUsageTypes = async () => {
+      try {
+        setLoadingUsageTypes(true)
+        const docTypeIds = await listRegistryIds('docType')
+        
+        const options = docTypeIds
+          .filter(id => usageLabels[id]) // Only include IDs we have labels for
+          .map(id => ({
+            id,
+            label: usageLabels[id].label,
+            description: usageLabels[id].description
+          }))
+        
+        setUsageOptions(options)
+      } catch (error) {
+        console.error('Failed to load usage types:', error)
+        // Fallback to basic options if registry fails
+        setUsageOptions([
+          { id: 'ebook', label: 'E-book', description: 'Long-form digital publication with chapters and sections' },
+          { id: 'white-paper', label: 'White Paper', description: 'Authoritative report or guide on a specific topic' },
+          { id: 'case-study', label: 'Case Study', description: 'Detailed analysis of a project or business scenario' }
+        ])
+      } finally {
+        setLoadingUsageTypes(false)
+      }
+    }
+
+    loadUsageTypes()
+  }, [])
 
   return (
     <Form {...form}>
@@ -489,38 +534,45 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <FormField
-              control={form.control}
-              name="usage"
-              render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormControl>
-                    <RadioGroup
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      className="grid grid-cols-1 gap-4"
-                    >
-                      {usageOptions.map((option) => (
-                        <FormItem key={option.id} className="flex items-center space-x-3 space-y-0">
-                          <FormControl>
-                            <RadioGroupItem value={option.id} />
-                          </FormControl>
-                          <div className="flex-1">
-                            <FormLabel className="font-medium">
-                              {option.label}
-                            </FormLabel>
-                            <FormDescription className="mt-1">
-                              {option.description}
-                            </FormDescription>
-                          </div>
-                        </FormItem>
-                      ))}
-                    </RadioGroup>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {loadingUsageTypes ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-muted-foreground">Loading usage types...</span>
+              </div>
+            ) : (
+              <FormField
+                control={form.control}
+                name="usage"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        className="grid grid-cols-1 gap-4"
+                      >
+                        {usageOptions.map((option) => (
+                          <FormItem key={option.id} className="flex items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <RadioGroupItem value={option.id} />
+                            </FormControl>
+                            <div className="flex-1">
+                              <FormLabel className="font-medium">
+                                {option.label}
+                              </FormLabel>
+                              <FormDescription className="mt-1">
+                                {option.description}
+                              </FormDescription>
+                            </div>
+                          </FormItem>
+                        ))}
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
           </CardContent>
         </Card>
 
@@ -553,6 +605,7 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
         <PageMasterSelector 
           selection={pageMasters}
           onSelectionChange={handlePageMasterChange}
+          usageType={usage}
         />
 
         {/* Object Styles & Snippets */}

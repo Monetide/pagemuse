@@ -12,25 +12,32 @@ import { PAGE_MASTER_PRESETS, type PageMasterPreset } from '@/lib/page-masters'
 export interface PageMasterSelection {
   cover?: string | null
   body?: string | null
+  dataAppendix?: string | null
 }
 
 interface PageMasterSelectorProps {
   selection?: PageMasterSelection
   onSelectionChange: (selection: PageMasterSelection) => void
   className?: string
+  usageType?: string // Add usage type to control which masters to show
 }
 
 const PageMasterSelector = React.memo(function PageMasterSelector({ 
-  selection = { cover: null, body: null }, 
+  selection = { cover: null, body: null, dataAppendix: null }, 
   onSelectionChange, 
-  className 
+  className,
+  usageType
 }: PageMasterSelectorProps) {
   const [pageSize, setPageSize] = useState<'Letter' | 'A4'>('Letter')
 
   const coverPresets = PAGE_MASTER_PRESETS.filter(p => p.layoutType === 'cover-fullbleed' && p.pageSize === pageSize)
   const bodyPresets = PAGE_MASTER_PRESETS.filter(p => p.layoutType.startsWith('body-') && p.pageSize === pageSize)
+  const appendixPresets = PAGE_MASTER_PRESETS.filter(p => p.layoutType === 'data-appendix' && p.pageSize === pageSize)
+  
+  // Show appendix section only for report and annual-report
+  const showAppendix = usageType === 'report' || usageType === 'annual-report'
 
-  const updateSelection = (type: 'cover' | 'body', presetId: string) => {
+  const updateSelection = (type: 'cover' | 'body' | 'dataAppendix', presetId: string) => {
     const newSelection = { ...selection, [type]: presetId }
     onSelectionChange(newSelection)
   }
@@ -43,12 +50,14 @@ const PageMasterSelector = React.memo(function PageMasterSelector({
         return <Columns className="w-4 h-4" />
       case 'body-2col':
         return <Columns2 className="w-4 h-4" />
+      case 'data-appendix':
+        return <Palette className="w-4 h-4" />
       default:
         return <FileText className="w-4 h-4" />
     }
   }
 
-  const renderPresetCard = (preset: PageMasterPreset, type: 'cover' | 'body', isSelected: boolean) => (
+  const renderPresetCard = (preset: PageMasterPreset, type: 'cover' | 'body' | 'dataAppendix', isSelected: boolean) => (
     <div
       key={preset.id}
       className={`relative border rounded-lg p-3 cursor-pointer transition-all hover:border-primary/50 ${
@@ -188,6 +197,23 @@ const PageMasterSelector = React.memo(function PageMasterSelector({
             </div>
           </RadioGroup>
         </div>
+
+        {/* Data Appendix Master Selection - Only show for reports */}
+        {showAppendix && (
+          <div>
+            <Label className="text-sm font-medium mb-3 block">Data Appendix Master</Label>
+            <RadioGroup 
+              value={selection.dataAppendix || ''} 
+              onValueChange={(value) => updateSelection('dataAppendix', value)}
+            >
+              <div className="space-y-2">
+                {appendixPresets.map(preset => 
+                  renderPresetCard(preset, 'dataAppendix', selection.dataAppendix === preset.id)
+                )}
+              </div>
+            </RadioGroup>
+          </div>
+        )}
 
         {/* Quick Selection Buttons */}
         <div className="pt-4 border-t">
