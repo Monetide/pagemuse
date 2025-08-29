@@ -34,7 +34,9 @@ import {
   Sparkles,
   X,
   Check,
-  Loader2
+  Loader2,
+  Edit2,
+  Hash
 } from 'lucide-react'
 import { listRegistryIds } from '@/lib/template-gen-registry'
 
@@ -182,6 +184,8 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
   const [industryOptions, setIndustryOptions] = useState<{ id: string; label: string; description: string }[]>([])
   const [loadingUsageTypes, setLoadingUsageTypes] = useState(true)
   const [loadingIndustries, setLoadingIndustries] = useState(true)
+  const [templateIdOverride, setTemplateIdOverride] = useState<string | null>(null)
+  const [isEditingId, setIsEditingId] = useState(false)
 
   const form = useForm<SeedFormData>({
     resolver: zodResolver(seedFormSchema),
@@ -549,9 +553,102 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
     }
   }
 
+  // Compute template ID from form values
+  const computedTemplateId = useMemo(() => {
+    const docType = usage || 'report'
+    const stylePacks = getStylePacksFromVibes(vibes || [])
+    const stylePack = stylePacks[0] || 'professional'
+    const industryCode = industry || 'general'
+    const version = 'v1'
+    
+    return `${docType}.${stylePack}.${industryCode}.${version}`
+  }, [usage, vibes, industry])
+
+  const displayTemplateId = templateIdOverride || computedTemplateId
+
+  const handleIdEdit = () => {
+    setTemplateIdOverride(computedTemplateId)
+    setIsEditingId(true)
+  }
+
+  const handleIdSave = () => {
+    setIsEditingId(false)
+  }
+
+  const handleIdCancel = () => {
+    setTemplateIdOverride(null)
+    setIsEditingId(false)
+  }
+
   return (
     <Form {...form}>
       <div className="space-y-8">
+        {/* Template ID Header */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Hash className="w-5 h-5 text-primary" />
+              Template ID
+            </CardTitle>
+            <CardDescription>
+              Computed identifier for this template
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-3">
+              <div className="flex-1">
+                {isEditingId ? (
+                  <Input
+                    value={templateIdOverride || ''}
+                    onChange={(e) => setTemplateIdOverride(e.target.value)}
+                    className="font-mono text-sm"
+                    placeholder={computedTemplateId}
+                  />
+                ) : (
+                  <code className="px-3 py-2 bg-muted/50 rounded-md font-mono text-sm border">
+                    {displayTemplateId}
+                  </code>
+                )}
+              </div>
+              <div className="flex gap-2">
+                {isEditingId ? (
+                  <>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={handleIdSave}
+                    >
+                      <Check className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={handleIdCancel}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleIdEdit}
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+            {templateIdOverride && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Override: Using custom ID instead of computed "{computedTemplateId}"
+              </p>
+            )}
+          </CardContent>
+        </Card>
         {/* Brand Information */}
         <Card>
           <CardHeader>
