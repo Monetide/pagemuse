@@ -6,10 +6,11 @@ import { AdminGuard } from '@/components/auth/AdminGuard'
 import { TemplateGalleryScoped } from '@/components/template/TemplateGalleryScoped'
 import { ScopedTemplate } from '@/hooks/useTemplatesScoped'
 import { SeedForm, SeedFormData } from '@/components/admin/SeedForm'
+import { BatchComposer } from '@/components/admin/BatchComposer'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
-import { toast } from 'sonner'
-import { Globe, Settings, Plus, Star, Sparkles, Loader2 } from 'lucide-react'
+import { toast } from '@/hooks/use-toast'
+import { Globe, Settings, Plus, Star, Sparkles, Loader2, Grid3X3 } from 'lucide-react'
 
 export default function SystemTemplateGenerator() {
   const [selectedTemplate, setSelectedTemplate] = useState<ScopedTemplate | null>(null)
@@ -18,7 +19,7 @@ export default function SystemTemplateGenerator() {
   const [isComposing, setIsComposing] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
   const [createdTemplate, setCreatedTemplate] = useState<any>(null)
-  const [activeTab, setActiveTab] = useState<'generate' | 'gallery'>('generate')
+  const [activeTab, setActiveTab] = useState<'generate' | 'batch' | 'gallery'>('generate')
   const { session } = useAuth()
 
   const handleEditTemplate = (template: ScopedTemplate) => {
@@ -129,14 +130,14 @@ export default function SystemTemplateGenerator() {
       const successfulResults = composeResult.results?.filter((r: any) => r.success) || []
       if (successfulResults.length > 0) {
         setCreatedTemplate(successfulResults[0])
-        toast.success('Global draft template created successfully!')
+        toast({ title: 'Global draft template created successfully!' })
       } else {
         throw new Error('No templates were created successfully')
       }
       
     } catch (error) {
       console.error('Compose draft error:', error)
-      toast.error(`Failed to create draft: ${error.message}`)
+      toast({ title: `Failed to create draft: ${error.message}` })
     } finally {
       setIsComposing(false)
     }
@@ -165,12 +166,12 @@ export default function SystemTemplateGenerator() {
         throw new Error(`Publish failed: ${error.message}`)
       }
       
-      toast.success('Template published successfully!')
+      toast({ title: 'Template published successfully!' })
       setCreatedTemplate(null) // Reset after publishing
       
     } catch (error) {
       console.error('Publish error:', error)
-      toast.error(`Failed to publish: ${error.message}`)
+      toast({ title: `Failed to publish: ${error.message}` })
     } finally {
       setIsPublishing(false)
     }
@@ -207,6 +208,13 @@ export default function SystemTemplateGenerator() {
             >
               <Sparkles className="w-4 h-4 mr-2" />
               Generate
+            </Button>
+            <Button 
+              variant={activeTab === 'batch' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('batch')}
+            >
+              <Grid3X3 className="w-4 h-4 mr-2" />
+              Batch
             </Button>
             <Button 
               variant={activeTab === 'gallery' ? 'default' : 'outline'}
@@ -304,6 +312,9 @@ export default function SystemTemplateGenerator() {
               </Card>
             </div>
           </div>
+        ) : activeTab === 'batch' ? (
+          /* Batch Composer */
+          <BatchComposer />
         ) : (
           /* Template Gallery */
           <TemplateGalleryScoped
