@@ -5,10 +5,21 @@ import { Badge } from '@/components/ui/badge'
 import { AdminGuard } from '@/components/auth/AdminGuard'
 import { TemplateGalleryScoped } from '@/components/template/TemplateGalleryScoped'
 import { ScopedTemplate } from '@/hooks/useTemplatesScoped'
-import { Globe, Settings, Plus, Star } from 'lucide-react'
+import { SeedForm, SeedFormData } from '@/components/admin/SeedForm'
+import { supabase } from '@/integrations/supabase/client'
+import { useAuth } from '@/hooks/useAuth'
+import { toast } from 'sonner'
+import { Globe, Settings, Plus, Star, Sparkles, Loader2 } from 'lucide-react'
 
 export default function SystemTemplateGenerator() {
   const [selectedTemplate, setSelectedTemplate] = useState<ScopedTemplate | null>(null)
+  const [isFormValid, setIsFormValid] = useState(false)
+  const [seedData, setSeedData] = useState<SeedFormData | null>(null)
+  const [isComposing, setIsComposing] = useState(false)
+  const [isPublishing, setIsPublishing] = useState(false)
+  const [createdTemplate, setCreatedTemplate] = useState<any>(null)
+  const [activeTab, setActiveTab] = useState<'generate' | 'gallery'>('generate')
+  const { session } = useAuth()
 
   const handleEditTemplate = (template: ScopedTemplate) => {
     console.log('Edit template:', template.name)
@@ -23,6 +34,146 @@ export default function SystemTemplateGenerator() {
   const handleUseTemplate = (template: ScopedTemplate) => {
     console.log('Use template:', template.name)
     // TODO: Implement template usage
+  }
+
+  const handleFormValidChange = (valid: boolean, data?: SeedFormData) => {
+    setIsFormValid(valid)
+    setSeedData(data || null)
+  }
+
+  const buildSeedFromFormData = (data: SeedFormData) => {
+    const vibeOptions = [
+      { id: 'modern', label: 'Modern', stylePack: 'professional' },
+      { id: 'classic', label: 'Classic', stylePack: 'professional-serif' },
+      { id: 'editorial', label: 'Editorial', stylePack: 'editorial' },
+      { id: 'minimal', label: 'Minimal', stylePack: 'minimal' },
+      { id: 'bold', label: 'Bold', stylePack: 'bold' },
+      { id: 'technical', label: 'Technical', stylePack: 'technical' }
+    ]
+    
+    const vibes = data.vibes || []
+    const stylePacks = vibes.map(vibe => {
+      const vibeOption = vibeOptions.find(v => v.id === vibe)
+      return vibeOption?.stylePack || 'professional'
+    })
+    
+    const stylePack = stylePacks[0] || 'professional'
+    
+    // Compute the template ID from the form data
+    const templateId = `${data.usage || 'report'}.${stylePack}.${data.industry || 'tech-saas'}.v1`
+    
+    return {
+      id: templateId,
+      doc_type: data.usage || 'report',
+      industry: data.industry || 'tech-saas', 
+      style_pack: stylePack,
+      palette_hints: {
+        neutrals: 'cool',
+        accentSaturation: 'medium',
+        brandColor: data.primaryColor
+      },
+      scale: {
+        fonts: data.typography ? {
+          sans: data.typography.sans,
+          serif: data.typography.serif
+        } : undefined
+      },
+      motifs: data.motifs?.assets || [],
+      chart_defaults: {
+        numberFormat: 'standard',
+        showGrid: true
+      },
+      snippets: [],
+      type_pairing: data.typography ? [data.typography] : [],
+      validation_preset: null
+    }
+  }
+
+  const handleComposeDraft = async () => {
+    if (!seedData || !session) return
+    
+    setIsComposing(true)
+    try {
+      const seed = buildSeedFromFormData(seedData)
+      
+      // Step 1: Ingest seed
+      const { error: ingestError } = await supabase.functions.invoke(
+        'system-template-gen-seeds-ingest',
+        {
+          body: { seeds: [seed] },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          }
+        }
+      )
+      
+      if (ingestError) {
+        throw new Error(`Ingest failed: ${ingestError.message}`)
+      }
+      
+      // Step 2: Compose template
+      const { data: composeResult, error: composeError } = await supabase.functions.invoke(
+        'system-template-gen-seeds-compose',
+        {
+          body: { seedIds: [seed.id] },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          }
+        }
+      )
+      
+      if (composeError) {
+        throw new Error(`Compose failed: ${composeError.message}`)
+      }
+      
+      const successfulResults = composeResult.results?.filter((r: any) => r.success) || []
+      if (successfulResults.length > 0) {
+        setCreatedTemplate(successfulResults[0])
+        toast.success('Global draft template created successfully!')
+      } else {
+        throw new Error('No templates were created successfully')
+      }
+      
+    } catch (error) {
+      console.error('Compose draft error:', error)
+      toast.error(`Failed to create draft: ${error.message}`)
+    } finally {
+      setIsComposing(false)
+    }
+  }
+
+  const handlePublish = async () => {
+    if (!createdTemplate || !session) return
+    
+    setIsPublishing(true)
+    try {
+      // For global templates, we need to use a special workspace ID or handle differently
+      const { error } = await supabase.functions.invoke(
+        'templates-publish',
+        {
+          body: { 
+            templateIds: [createdTemplate.templateId],
+            workspaceId: '00000000-0000-0000-0000-000000000000' // Use global workspace ID
+          },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          }
+        }
+      )
+      
+      if (error) {
+        throw new Error(`Publish failed: ${error.message}`)
+      }
+      
+      toast.success('Template published successfully!')
+      setCreatedTemplate(null) // Reset after publishing
+      
+    } catch (error) {
+      console.error('Publish error:', error)
+      toast.error(`Failed to publish: ${error.message}`)
+    } finally {
+      setIsPublishing(false)
+    }
   }
 
   return (
@@ -47,14 +198,22 @@ export default function SystemTemplateGenerator() {
               Create and manage global templates available to all users
             </p>
           </div>
-          <div className="flex gap-3">
-            <Button variant="outline">
-              <Settings className="w-4 h-4 mr-2" />
-              Settings
+          
+          {/* Tab Navigation */}
+          <div className="flex gap-2">
+            <Button 
+              variant={activeTab === 'generate' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('generate')}
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              Generate
             </Button>
-            <Button className="bg-gradient-primary hover:shadow-glow">
-              <Plus className="w-4 h-4 mr-2" />
-              Create Global Template
+            <Button 
+              variant={activeTab === 'gallery' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('gallery')}
+            >
+              <Globe className="w-4 h-4 mr-2" />
+              Gallery
             </Button>
           </div>
         </div>
@@ -72,12 +231,87 @@ export default function SystemTemplateGenerator() {
           </CardContent>
         </Card>
 
-        {/* Template Gallery */}
-        <TemplateGalleryScoped
-          onUseTemplate={handleUseTemplate}
-          onEditTemplate={handleEditTemplate}
-          onPromoteTemplate={handlePromoteTemplate}
-        />
+        {/* Content based on active tab */}
+        {activeTab === 'generate' ? (
+          <div className="flex gap-6">
+            {/* Main Content - SeedForm */}
+            <div className="flex-1">
+              <SeedForm 
+                onValidChange={handleFormValidChange}
+                scope="global"
+              />
+            </div>
+
+            {/* Right Rail - Actions */}
+            <div className="w-80 space-y-4">
+              <Card className="sticky top-6">
+                <CardHeader>
+                  <CardTitle className="text-lg">Actions</CardTitle>
+                  <CardDescription>
+                    Generate and publish global templates
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Compose & Save Draft Button */}
+                  <Button
+                    onClick={handleComposeDraft}
+                    disabled={!isFormValid || isComposing || isPublishing}
+                    className="w-full"
+                    size="lg"
+                  >
+                    {isComposing ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-4 h-4 mr-2" />
+                    )}
+                    {isComposing ? 'Composing...' : 'Compose & Save Draft (Global)'}
+                  </Button>
+
+                  {/* Publish Button */}
+                  <Button
+                    onClick={handlePublish}
+                    disabled={!createdTemplate || isPublishing || isComposing}
+                    variant="secondary"
+                    className="w-full"
+                    size="lg"
+                  >
+                    {isPublishing ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Globe className="w-4 h-4 mr-2" />
+                    )}
+                    {isPublishing ? 'Publishing...' : 'Publish'}
+                  </Button>
+
+                  {/* Status Messages */}
+                  {!isFormValid && (
+                    <p className="text-sm text-muted-foreground">
+                      Complete the form to enable composing
+                    </p>
+                  )}
+                  
+                  {createdTemplate && (
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-md">
+                      <p className="text-sm text-green-800 font-medium">
+                        Draft Created: {createdTemplate.templateName}
+                      </p>
+                      <p className="text-xs text-green-600 mt-1">
+                        Ready to publish
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        ) : (
+          /* Template Gallery */
+          <TemplateGalleryScoped
+            onUseTemplate={handleUseTemplate}
+            onEditTemplate={handleEditTemplate}
+            onPromoteTemplate={handlePromoteTemplate}
+          />
+        )}
       </div>
     </AdminGuard>
   )

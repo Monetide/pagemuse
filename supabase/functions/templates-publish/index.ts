@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
 
     // Parse request body
     const body = await req.json()
-    const { templateIds, workspaceId } = body as { templateIds: string[], workspaceId: string }
+    const { templateIds, workspaceId } = body as { templateIds: string[], workspaceId: string | null }
 
     if (!templateIds || !Array.isArray(templateIds) || templateIds.length === 0) {
       return new Response(JSON.stringify({ error: 'Template IDs array required' }), {
@@ -69,36 +69,56 @@ Deno.serve(async (req) => {
       })
     }
 
-    if (!workspaceId) {
-      return new Response(JSON.stringify({ error: 'Workspace ID required' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+    // workspaceId can be null for global templates
+    const isGlobalPublish = workspaceId === null || workspaceId === '00000000-0000-0000-0000-000000000000'
+
+    console.log(`Publishing ${templateIds.length} ${isGlobalPublish ? 'global' : 'workspace'} templates`)
+
+    // For global templates, verify admin role instead of workspace membership
+    if (isGlobalPublish) {
+      const { data: userRoles, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userData.user.id)
+        .eq('role', 'admin')
+
+      if (roleError || !userRoles || userRoles.length === 0) {
+        return new Response(JSON.stringify({ error: 'Admin access required to publish global templates' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+    } else {
+      // Verify user has admin access to workspace
+      const { data: membership, error: membershipError } = await supabase
+        .from('workspace_members')
+        .select('role')
+        .eq('workspace_id', workspaceId)
+        .eq('user_id', userData.user.id)
+        .single()
+
+      if (membershipError || !membership || !['owner', 'admin'].includes(membership.role)) {
+        return new Response(JSON.stringify({ error: 'Admin access required to publish templates' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
     }
 
-    console.log(`Publishing ${templateIds.length} templates for workspace ${workspaceId}`)
-
-    // Verify user has admin access to workspace
-    const { data: membership, error: membershipError } = await supabase
-      .from('workspace_members')
-      .select('role')
-      .eq('workspace_id', workspaceId)
-      .eq('user_id', userData.user.id)
-      .single()
-
-    if (membershipError || !membership || !['owner', 'admin'].includes(membership.role)) {
-      return new Response(JSON.stringify({ error: 'Admin access required to publish templates' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
-
-    // Get templates to publish
-    const { data: templates, error: templatesError } = await supabase
+    // Get templates to publish (adjust query based on global vs workspace)
+    let templatesQuery = supabase
       .from('templates')
       .select('*')
       .in('id', templateIds)
-      .eq('workspace_id', workspaceId)
+    
+    if (isGlobalPublish) {
+      // For global templates, look for templates with null workspace_id or global UUID
+      templatesQuery = templatesQuery.or(`workspace_id.is.null,workspace_id.eq.00000000-0000-0000-0000-000000000000`)
+    } else {
+      templatesQuery = templatesQuery.eq('workspace_id', workspaceId)
+    }
+
+    const { data: templates, error: templatesError } = await templatesQuery
 
     if (templatesError) {
       console.error('Templates fetch error:', templatesError)
@@ -129,7 +149,7 @@ Deno.serve(async (req) => {
         }
 
         // Update template status and ensure facets are in metadata
-        const { data: updatedTemplate, error: updateError } = await supabase
+        let updateQuery = supabase
           .from('templates')
           .update({
             status: 'published',
@@ -143,7 +163,13 @@ Deno.serve(async (req) => {
             updated_at: new Date().toISOString()
           })
           .eq('id', template.id)
-          .eq('workspace_id', workspaceId)
+        
+        // Only add workspace_id filter for non-global templates
+        if (!isGlobalPublish) {
+          updateQuery = updateQuery.eq('workspace_id', workspaceId)
+        }
+
+        const { data: updatedTemplate, error: updateError } = await updateQuery
           .select()
           .single()
 
