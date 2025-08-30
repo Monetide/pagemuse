@@ -83,6 +83,9 @@ serve(async (req) => {
 
     const { data: seeds, error: seedsError } = await seedsQuery
 
+    console.log('Seed query result:', { seeds: seeds?.length || 0, seedsError })
+    console.log('Query details:', { globalWorkspaceId, seedIds })
+
     if (seedsError) {
       console.error('Failed to fetch global seeds:', seedsError)
       return new Response(
@@ -92,16 +95,30 @@ serve(async (req) => {
     }
 
     if (!seeds || seeds.length === 0) {
+      console.log('No seeds found, checking all template_seeds...')
+      // Debug: check if any seeds exist at all
+      const { data: allSeeds, error: allSeedsError } = await supabaseClient
+        .from('template_seeds')
+        .select('*')
+        .limit(5)
+      
+      console.log('All seeds check:', { allSeeds: allSeeds?.length || 0, allSeedsError })
+      
       return new Response(
         JSON.stringify({ 
           error: 'No global seeds found for composition',
-          seedIds: seedIds || 'all' 
+          seedIds: seedIds || 'all',
+          debug: {
+            globalWorkspaceId,
+            allSeedsCount: allSeeds?.length || 0,
+            allSeedsError: allSeedsError?.message
+          }
         }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    console.log(`Composing ${seeds.length} global seeds`)
+    console.log(`Composing ${seeds.length} global seeds:`, seeds.map(s => s.id))
 
     const results = []
     
@@ -141,6 +158,8 @@ serve(async (req) => {
           }
         }
 
+        console.log(`Creating template for seed ${seed.id}:`, templateSlug)
+
         // Check if template already exists
         const { data: existingTemplate } = await supabaseClient
           .from('templates')
@@ -161,6 +180,7 @@ serve(async (req) => {
 
           if (updateError) {
             console.error('Failed to update global template:', updateError)
+            console.error('Update error details:', updateError)
             results.push({
               seedId: seed.id,
               success: false,
@@ -181,6 +201,7 @@ serve(async (req) => {
 
           if (insertError) {
             console.error('Failed to insert global template:', insertError)
+            console.error('Insert error details:', insertError)
             results.push({
               seedId: seed.id,
               success: false,
