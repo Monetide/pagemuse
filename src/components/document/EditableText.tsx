@@ -52,8 +52,11 @@ export const EditableText = ({
   const textRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    setLocalContent(content)
-  }, [content])
+    // Only update local content if it's different and we're not currently editing
+    if (content !== localContent && document.activeElement !== textRef.current) {
+      setLocalContent(content)
+    }
+  }, [content, localContent])
 
   const handleInput = useCallback((e: React.FormEvent<HTMLDivElement>) => {
     const newContent = e.currentTarget.textContent || ''

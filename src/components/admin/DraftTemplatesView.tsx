@@ -109,7 +109,7 @@ export function DraftTemplatesView() {
       // Start with base document
       let initialContent = createDocument(`Test Document - ${templateName}`)
 
-      // Apply template pages to create proper structure
+      // Create a proper multi-section template structure
       if (templatePages && templatePages.length > 0) {
         // Clear default sections to replace with template structure
         initialContent.sections = []
@@ -170,6 +170,78 @@ export function DraftTemplatesView() {
           const sectionWithFlow = addFlowToSection(section, flow)
           initialContent = addSectionToDocument(initialContent, sectionWithFlow)
         })
+      } else {
+        // No template pages found - create a default multi-section structure
+        initialContent.sections = []
+        
+        // Cover section
+        const coverSection = createSection('Cover', 0)
+        ;(coverSection as any).layoutIntent = 'cover'
+        let coverFlow = createFlow('Main', 'linear', 0)
+        const titleBlock = createBlock('heading', { 
+          level: 1, 
+          text: templateData?.name || templateName || 'Document Title',
+          id: crypto.randomUUID() 
+        }, 0)
+        const subtitleBlock = createBlock('paragraph', { 
+          text: templateData?.description || 'Document subtitle - click to edit'
+        }, 1)
+        coverFlow = addBlockToFlow(coverFlow, titleBlock)
+        coverFlow = addBlockToFlow(coverFlow, subtitleBlock)
+        const coverWithFlow = addFlowToSection(coverSection, coverFlow)
+        initialContent = addSectionToDocument(initialContent, coverWithFlow)
+        
+        // Introduction section
+        const introSection = createSection('Introduction', 1)
+        let introFlow = createFlow('Main', 'linear', 0)
+        const introHeading = createBlock('heading', { 
+          level: 2, 
+          text: 'Introduction',
+          id: crypto.randomUUID() 
+        }, 0)
+        const introText = createBlock('paragraph', { 
+          text: 'This is the introduction section. Start typing your content here or use / commands to add more blocks.'
+        }, 1)
+        introFlow = addBlockToFlow(introFlow, introHeading)
+        introFlow = addBlockToFlow(introFlow, introText)
+        const introWithFlow = addFlowToSection(introSection, introFlow)
+        initialContent = addSectionToDocument(initialContent, introWithFlow)
+        
+        // Main Content section
+        const mainSection = createSection('Main Content', 2)
+        let mainFlow = createFlow('Main', 'linear', 0)
+        const mainHeading = createBlock('heading', { 
+          level: 2, 
+          text: 'Main Content',
+          id: crypto.randomUUID() 
+        }, 0)
+        const mainText = createBlock('paragraph', { 
+          text: 'This is the main content section. You can add multiple paragraphs, images, tables, and other content blocks here.'
+        }, 1)
+        const placeholderText = createBlock('paragraph', { 
+          text: 'Add another paragraph by pressing Enter or using the / command.'
+        }, 2)
+        mainFlow = addBlockToFlow(mainFlow, mainHeading)
+        mainFlow = addBlockToFlow(mainFlow, mainText)
+        mainFlow = addBlockToFlow(mainFlow, placeholderText)
+        const mainWithFlow = addFlowToSection(mainSection, mainFlow)
+        initialContent = addSectionToDocument(initialContent, mainWithFlow)
+        
+        // Conclusion section
+        const conclusionSection = createSection('Conclusion', 3)
+        let conclusionFlow = createFlow('Main', 'linear', 0)
+        const conclusionHeading = createBlock('heading', { 
+          level: 2, 
+          text: 'Conclusion',
+          id: crypto.randomUUID() 
+        }, 0)
+        const conclusionText = createBlock('paragraph', { 
+          text: 'Wrap up your document with key takeaways and final thoughts.'
+        }, 1)
+        conclusionFlow = addBlockToFlow(conclusionFlow, conclusionHeading)
+        conclusionFlow = addBlockToFlow(conclusionFlow, conclusionText)
+        const conclusionWithFlow = addFlowToSection(conclusionSection, conclusionFlow)
+        initialContent = addSectionToDocument(initialContent, conclusionWithFlow)
       }
 
       // Add template metadata
