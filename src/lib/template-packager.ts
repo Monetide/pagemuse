@@ -59,16 +59,7 @@ export interface TemplateManifest {
   }
   
   pageMasters: {
-    letter: {
-      'cover-fullbleed': any
-      'body-1col': any
-      'body-2col': any
-    }
-    a4: {
-      'cover-fullbleed': any
-      'body-1col': any
-      'body-2col': any
-    }
+    [key: string]: any // pm/cover-fullbleed-{paper}, pm/body-1col-{paper}, etc.
   }
   
   objectStyles: {
@@ -208,78 +199,152 @@ export async function packageTemplate(
       colors: seedData.colorway?.colors || {}
     },
     
-    pageMasters: {
-      letter: {
-        'cover-fullbleed': {
-          pageSize: 'Letter',
-          orientation: 'portrait',
-          margins: { top: 72, right: 72, bottom: 72, left: 72 },
-          columns: 1,
-          columnGap: 0,
-          hasHeader: false,
-          hasFooter: false,
-          baselineGrid: true,
-          gridSpacing: 12
-        },
-        'body-1col': {
-          pageSize: 'Letter',
-          orientation: 'portrait',
-          margins: { top: 72, right: 72, bottom: 72, left: 72 },
-          columns: 1,
-          columnGap: 0,
-          hasHeader: true,
-          hasFooter: true,
-          baselineGrid: true,
-          gridSpacing: 12
-        },
-        'body-2col': {
-          pageSize: 'Letter',
-          orientation: 'portrait',
-          margins: { top: 72, right: 72, bottom: 72, left: 72 },
-          columns: 2,
-          columnGap: 18,
-          hasHeader: true,
-          hasFooter: true,
-          baselineGrid: true,
-          gridSpacing: 12
-        }
-      },
-      a4: {
-        'cover-fullbleed': {
-          pageSize: 'A4',
-          orientation: 'portrait',
-          margins: { top: 72, right: 72, bottom: 72, left: 72 },
-          columns: 1,
-          columnGap: 0,
-          hasHeader: false,
-          hasFooter: false,
-          baselineGrid: true,
-          gridSpacing: 12
-        },
-        'body-1col': {
-          pageSize: 'A4',
-          orientation: 'portrait',
-          margins: { top: 72, right: 72, bottom: 72, left: 72 },
-          columns: 1,
-          columnGap: 0,
-          hasHeader: true,
-          hasFooter: true,
-          baselineGrid: true,
-          gridSpacing: 12
-        },
-        'body-2col': {
-          pageSize: 'A4',
-          orientation: 'portrait',
-          margins: { top: 72, right: 72, bottom: 72, left: 72 },
-          columns: 2,
-          columnGap: 18,
-          hasHeader: true,
-          hasFooter: true,
-          baselineGrid: true,
-          gridSpacing: 12
-        }
+    pageMasters: (() => {
+      const pageMasters: Record<string, any> = {}
+      
+      // Always include cover-fullbleed for both paper sizes
+      pageMasters['pm/cover-fullbleed-letter'] = {
+        pageSize: 'Letter',
+        orientation: 'portrait',
+        margins: { top: 72, right: 72, bottom: 72, left: 72 },
+        columns: 1,
+        columnGap: 0,
+        hasHeader: false,
+        hasFooter: false,
+        baselineGrid: true,
+        gridSpacing: 12
       }
-    },
+      pageMasters['pm/cover-fullbleed-a4'] = {
+        pageSize: 'A4',
+        orientation: 'portrait',
+        margins: { top: 72, right: 72, bottom: 72, left: 72 },
+        columns: 1,
+        columnGap: 0,
+        hasHeader: false,
+        hasFooter: false,
+        baselineGrid: true,
+        gridSpacing: 12
+      }
+      
+      // Add selected page masters from seedData
+      if (seedData.pageMasters?.selected) {
+        seedData.pageMasters.selected.forEach(layoutMaster => {
+          const layoutType = layoutMaster.id
+          if (layoutType === 'cover-fullbleed') return // Already added above
+          
+          const letterKey = `pm/${layoutType}-letter`
+          const a4Key = `pm/${layoutType}-a4`
+          
+          switch (layoutType) {
+            case 'body-1col':
+              pageMasters[letterKey] = {
+                pageSize: 'Letter',
+                orientation: 'portrait',
+                margins: { top: 72, right: 72, bottom: 72, left: 72 },
+                columns: 1,
+                columnGap: 0,
+                hasHeader: true,
+                hasFooter: true,
+                baselineGrid: true,
+                gridSpacing: 12
+              }
+              pageMasters[a4Key] = {
+                pageSize: 'A4',
+                orientation: 'portrait',
+                margins: { top: 72, right: 72, bottom: 72, left: 72 },
+                columns: 1,
+                columnGap: 0,
+                hasHeader: true,
+                hasFooter: true,
+                baselineGrid: true,
+                gridSpacing: 12
+              }
+              break
+              
+            case 'body-2col':
+              pageMasters[letterKey] = {
+                pageSize: 'Letter',
+                orientation: 'portrait',
+                margins: { top: 72, right: 72, bottom: 72, left: 72 },
+                columns: 2,
+                columnGap: 18,
+                hasHeader: true,
+                hasFooter: true,
+                baselineGrid: true,
+                gridSpacing: 12
+              }
+              pageMasters[a4Key] = {
+                pageSize: 'A4',
+                orientation: 'portrait',
+                margins: { top: 72, right: 72, bottom: 72, left: 72 },
+                columns: 2,
+                columnGap: 18,
+                hasHeader: true,
+                hasFooter: true,
+                baselineGrid: true,
+                gridSpacing: 12
+              }
+              break
+              
+            case 'body-2col-sidebar':
+              pageMasters[letterKey] = {
+                pageSize: 'Letter',
+                orientation: 'portrait',
+                margins: { top: 72, right: 72, bottom: 72, left: 72 },
+                columns: 2,
+                columnGap: 18,
+                hasHeader: true,
+                hasFooter: true,
+                baselineGrid: true,
+                gridSpacing: 12,
+                sidebar: { width: 144, position: 'right', gap: 18 }
+              }
+              pageMasters[a4Key] = {
+                pageSize: 'A4',
+                orientation: 'portrait',
+                margins: { top: 72, right: 72, bottom: 72, left: 72 },
+                columns: 2,
+                columnGap: 18,
+                hasHeader: true,
+                hasFooter: true,
+                baselineGrid: true,
+                gridSpacing: 12,
+                sidebar: { width: 144, position: 'right', gap: 18 }
+              }
+              break
+              
+            case 'data-portrait':
+              pageMasters[letterKey] = {
+                pageSize: 'Letter',
+                orientation: 'portrait',
+                margins: { top: 54, right: 36, bottom: 54, left: 36 },
+                columns: 1,
+                columnGap: 0,
+                hasHeader: true,
+                hasFooter: true,
+                baselineGrid: true,
+                gridSpacing: 12,
+                allowTableRotation: false
+              }
+              pageMasters[a4Key] = {
+                pageSize: 'A4',
+                orientation: 'portrait',
+                margins: { top: 54, right: 36, bottom: 54, left: 36 },
+                columns: 1,
+                columnGap: 0,
+                hasHeader: true,
+                hasFooter: true,
+                baselineGrid: true,
+                gridSpacing: 12,
+                allowTableRotation: false
+              }
+              break
+          }
+        })
+      }
+      
+      return pageMasters
+    })(),
     
     objectStyles: {
       figure: seedData.objectStyles?.styles?.['figure-default'] || {
