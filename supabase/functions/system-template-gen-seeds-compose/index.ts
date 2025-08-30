@@ -137,7 +137,7 @@ serve(async (req) => {
         // Create global template with workspace_id=null for true global scope
         const templateData = {
           name: templateName,
-          template_slug: uniqueSlug,
+          // template_slug: uniqueSlug, // Remove for now to test
           description: `Global template for ${seed.doc_type} documents in ${seed.industry} industry with ${seed.style_pack} styling`,
           category: seed.doc_type,
           scope: 'global',
@@ -161,13 +161,13 @@ serve(async (req) => {
           }
         }
 
-        console.log(`Creating template for seed ${seed.id}:`, uniqueSlug)
+        console.log(`Creating template for seed ${seed.id} without slug`)
 
-        // Check if template already exists
+        // Check if template already exists (by name since we're not using slug)
         const { data: existingTemplate } = await supabaseClient
           .from('templates')
           .select('id')
-          .eq('template_slug', uniqueSlug)
+          .eq('name', templateName)
           .eq('scope', 'global')
           .maybeSingle()
 
@@ -193,7 +193,7 @@ serve(async (req) => {
           }
 
           templateId = updatedTemplate.id
-          console.log(`Updated global template: ${uniqueSlug}`)
+          console.log(`Updated global template: ${templateName}`)
         } else {
           // Insert new template
           const { data: newTemplate, error: insertError } = await supabaseClient
@@ -214,7 +214,7 @@ serve(async (req) => {
           }
 
           templateId = newTemplate.id
-          console.log(`Created global template: ${uniqueSlug}`)
+          console.log(`Created global template: ${templateName}`)
         }
 
         // Create template pages (simplified for demo - in real implementation, this would be more complex)
@@ -262,7 +262,7 @@ serve(async (req) => {
           success: true,
           templateId,
           templateName,
-          templateSlug: uniqueSlug,
+          templateSlug: templateName, // Use name as slug for now
           previewUrl: mockPreviewUrl,
           scope: 'global',
           workspaceId: null
