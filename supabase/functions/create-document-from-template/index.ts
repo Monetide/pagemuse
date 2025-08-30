@@ -83,11 +83,64 @@ serve(async (req) => {
       .limit(1)
       .maybeSingle()
 
-    // Create basic document structure
+    // Create proper document structure using the expected SemanticDocument interface
     const documentContent = {
       id: crypto.randomUUID(),
       title: title || `Document from ${template.name}`,
-      type: 'document',
+      sections: [{
+        id: crypto.randomUUID(),
+        name: 'Main Content',
+        description: template.description,
+        flows: [{
+          id: crypto.randomUUID(),
+          name: 'Main',
+          blocks: [{
+            id: crypto.randomUUID(),
+            type: 'heading',
+            content: {
+              level: 1,
+              text: title || template.name || 'Document Title'
+            },
+            order: 0,
+            paginationRules: {
+              keepWithNext: true,
+              breakAvoid: true
+            }
+          }, {
+            id: crypto.randomUUID(),
+            type: 'paragraph',
+            content: {
+              text: template.description || 'Document created from template'
+            },
+            order: 1,
+            paginationRules: {}
+          }],
+          type: 'linear',
+          order: 0
+        }],
+        pageMaster: {
+          pageSize: 'Letter',
+          orientation: 'portrait',
+          margins: {
+            top: 1,
+            right: 1,
+            bottom: 1,
+            left: 1
+          },
+          columns: 1,
+          columnGap: 0.25,
+          hasHeader: false,
+          hasFooter: false,
+          baselineGrid: false,
+          gridSpacing: 0.125,
+          allowTableRotation: false
+        },
+        layoutIntent: 'body',
+        order: 0,
+        footnotes: [],
+        useEndnotes: false,
+        includeInTOC: true
+      }],
       metadata: {
         templateInfo: {
           id: template.id,
@@ -102,35 +155,8 @@ serve(async (req) => {
         } : null,
         ...template.metadata
       },
-      sections: [{
-        id: crypto.randomUUID(),
-        type: 'section',
-        name: 'Main Content',
-        order: 0,
-        flows: [{
-          id: crypto.randomUUID(),
-          type: 'flow',
-          name: 'Main',
-          flowType: 'linear',
-          order: 0,
-          blocks: [{
-            id: crypto.randomUUID(),
-            type: 'heading',
-            order: 0,
-            content: {
-              level: 1,
-              text: title || template.name || 'Document Title'
-            }
-          }, {
-            id: crypto.randomUUID(),
-            type: 'paragraph',
-            order: 1,
-            content: {
-              text: template.description || 'Document created from template'
-            }
-          }]
-        }]
-      }]
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }
 
     // Create the document
