@@ -25,6 +25,7 @@ import {
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
+import { createDocument } from '@/lib/document-model'
 
 interface TemplateDraft {
   id: string
@@ -93,12 +94,13 @@ export function DraftTemplatesView() {
       }
 
       // Create a new document using this template
+      const initialContent = createDocument(`Test Document - ${templateName}`)
       const { data, error } = await supabase
         .from('documents')
         .insert({
-          title: `Test Document - ${templateName}`,
+          title: initialContent.title,
           template_id: templateId,
-          content: [], // Start with empty content
+          content: initialContent as any,
           user_id: userData.user.id,
           workspace_id: workspaceData.workspace_id
         })
@@ -112,7 +114,7 @@ export function DraftTemplatesView() {
       }
 
       toast.success('Test document created!')
-      navigate(`/w/${workspaceData.workspace_id}/documents/${data.id}`)
+      navigate(`/w/${workspaceData.workspace_id}/documents/${data.id}/editor`)
     } catch (error) {
       console.error('Error creating test document:', error)
       toast.error('Failed to create test document')
