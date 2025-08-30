@@ -252,7 +252,7 @@ export function PageRenderer({ composition, seedData, className = '', scale = 1 
     >
       {/* Header */}
       <div 
-        className="h-12 border-b flex items-center px-8"
+        className="h-12 border-b flex items-center px-12"
         style={{ borderColor: colors.borderSubtle }}
       >
         <div 
@@ -266,8 +266,8 @@ export function PageRenderer({ composition, seedData, className = '', scale = 1 
         </div>
       </div>
 
-      {/* Content */}
-      <div className="p-8">
+      {/* Content - 1" margins = 72pt = px-12 for scaled view */}
+      <div className="px-12 py-8">
         {/* Section heading */}
         <h2 
           className={`${sansFont} text-3xl font-semibold mb-6`}
@@ -276,9 +276,9 @@ export function PageRenderer({ composition, seedData, className = '', scale = 1 
           {composition.content.heading}
         </h2>
 
-        {/* Table */}
+        {/* Data table with enhanced layout for data master */}
         <div className="border rounded overflow-hidden mb-4" style={{ borderColor: colors.borderSubtle }}>
-          {/* Header row */}
+          {/* Header row - repeats on page breaks */}
           <div 
             className="grid grid-cols-5 font-medium text-xs border-b"
             style={{ 
@@ -294,7 +294,7 @@ export function PageRenderer({ composition, seedData, className = '', scale = 1 
             ))}
           </div>
 
-          {/* Data rows */}
+          {/* Data rows - never split individually */}
           {composition.content.table.rows.map((row: string[], rowIndex: number) => (
             <div 
               key={rowIndex}
@@ -302,7 +302,8 @@ export function PageRenderer({ composition, seedData, className = '', scale = 1 
               style={{ 
                 backgroundColor: rowIndex % 2 === 1 && tableStyle.properties.alternateRows ? colors.bgSection : 'transparent',
                 borderColor: colors.borderSubtle,
-                padding: `${tableStyle.properties.cellPadding}px`
+                padding: `${tableStyle.properties.cellPadding}px`,
+                pageBreakInside: 'avoid' // Never split a row
               }}
             >
               {row.map((cell: string, cellIndex: number) => (
@@ -316,16 +317,40 @@ export function PageRenderer({ composition, seedData, className = '', scale = 1 
 
         {/* Table caption */}
         <p 
-          className="text-xs italic"
+          className="text-xs italic mb-6"
           style={{ color: colors.textMuted }}
         >
           {composition.content.table.caption}
         </p>
+
+        {/* Wide chart placeholder - defaults to data master */}
+        <div className="mt-8">
+          <div 
+            className="w-full h-48 rounded border-2 border-dashed flex items-center justify-center mb-2"
+            style={{ borderColor: colors.borderSubtle, backgroundColor: colors.bgSection }}
+          >
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-2 text-4xl">📊</div>
+              <div className="text-sm font-medium mb-1" style={{ color: colors.textBody }}>
+                Wide Chart/Data Visualization
+              </div>
+              <div className="text-xs" style={{ color: colors.textMuted }}>
+                Optimized for Data (Portrait) Master
+              </div>
+            </div>
+          </div>
+          <p 
+            className="text-xs italic"
+            style={{ color: colors.textMuted }}
+          >
+            Figure: Data visualization optimized for single-column data layout
+          </p>
+        </div>
       </div>
 
       {/* Footer */}
       <div 
-        className="absolute bottom-0 left-0 right-0 h-8 border-t flex items-center px-8"
+        className="absolute bottom-0 left-0 right-0 h-8 border-t flex items-center px-12"
         style={{ borderColor: colors.borderSubtle }}
       >
         <div className="text-xs" style={{ color: colors.textMuted }}>

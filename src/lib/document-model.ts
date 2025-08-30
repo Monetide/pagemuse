@@ -75,6 +75,11 @@ export interface PageMaster {
   baselineGrid: boolean
   gridSpacing: number
   allowTableRotation?: boolean
+  tableBreakRules?: {
+    repeatHeader: boolean
+    avoidRowSplit: boolean
+    keepTogetherRows: number
+  }
 }
 
 export interface Section {

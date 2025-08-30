@@ -311,10 +311,10 @@ export const PAGE_MASTER_PRESETS: PageMasterPreset[] = [
       pageSize: 'Letter',
       orientation: 'portrait',
       margins: { 
-        top: 0.75 * INCH_TO_PT, 
-        right: 0.5 * INCH_TO_PT, 
-        bottom: 0.75 * INCH_TO_PT, 
-        left: 0.5 * INCH_TO_PT 
+        top: 1 * INCH_TO_PT, 
+        right: 1 * INCH_TO_PT, 
+        bottom: 1 * INCH_TO_PT, 
+        left: 1 * INCH_TO_PT 
       },
       columns: 1,
       columnGap: 0,
@@ -322,7 +322,12 @@ export const PAGE_MASTER_PRESETS: PageMasterPreset[] = [
       hasFooter: true,
       baselineGrid: true,
       gridSpacing: 12, // 12pt baseline
-      allowTableRotation: false
+      allowTableRotation: false,
+      tableBreakRules: {
+        repeatHeader: true,
+        avoidRowSplit: true,
+        keepTogetherRows: 1
+      }
     }
   },
 
@@ -337,10 +342,10 @@ export const PAGE_MASTER_PRESETS: PageMasterPreset[] = [
       pageSize: 'A4',
       orientation: 'portrait',
       margins: { 
-        top: 19 * MM_TO_PT, 
-        right: 12.7 * MM_TO_PT, 
-        bottom: 19 * MM_TO_PT, 
-        left: 12.7 * MM_TO_PT 
+        top: 25.4 * MM_TO_PT, 
+        right: 25.4 * MM_TO_PT, 
+        bottom: 25.4 * MM_TO_PT, 
+        left: 25.4 * MM_TO_PT 
       },
       columns: 1,
       columnGap: 0,
@@ -348,7 +353,12 @@ export const PAGE_MASTER_PRESETS: PageMasterPreset[] = [
       hasFooter: true,
       baselineGrid: true,
       gridSpacing: 12, // 12pt baseline
-      allowTableRotation: false
+      allowTableRotation: false,
+      tableBreakRules: {
+        repeatHeader: true,
+        avoidRowSplit: true,
+        keepTogetherRows: 1
+      }
     }
   },
 
