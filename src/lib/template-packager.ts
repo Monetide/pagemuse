@@ -1,6 +1,6 @@
 import { toast } from 'sonner'
 import type { SeedFormData } from '@/components/admin/SeedForm'
-import { exportPageAsPNG } from '@/lib/page-composer'
+import { generateTemplatePreviewsAndAssets } from '@/lib/page-composer'
 
 export interface TemplatePackage {
   'template.json': TemplateManifest
@@ -11,8 +11,8 @@ export interface TemplatePackage {
   }
   previews: {
     'cover.png': Blob
-    'body-2col.png': Blob
     'data.png': Blob
+    [key: string]: Blob // Allow 'body-1col.png' or 'body-2col.png'
   }
 }
 
@@ -470,8 +470,8 @@ export async function packageTemplate(
     }
   }
 
-  // Extract assets from motifs
-  const assets = {
+  // Extract assets from motifs if available, otherwise use generated assets
+  let assets = {
     'body-bg.svg': '',
     'divider.svg': '', 
     'cover-shape.svg': ''
@@ -483,23 +483,68 @@ export async function packageTemplate(
       if (variant?.svg) {
         const fileName = `${asset.type}.svg` as keyof typeof assets
         if (fileName in assets) {
-          assets[fileName] = variant.svg
+          // Apply token-aware color replacement
+          let svg = variant.svg
+          if (seedData.colorway?.colors) {
+            const colors = seedData.colorway.colors
+            svg = svg.replace(/{{brand}}/g, colors.brand)
+            svg = svg.replace(/{{brandSecondary}}/g, colors.brandSecondary)
+            svg = svg.replace(/{{brandAccent}}/g, colors.brandAccent || colors.brand)
+            svg = svg.replace(/{{textBody}}/g, colors.textBody)
+            svg = svg.replace(/{{textMuted}}/g, colors.textMuted)
+            svg = svg.replace(/{{borderSubtle}}/g, colors.borderSubtle)
+          }
+          assets[fileName] = svg
         }
       }
     }
   }
-
-  // Generate preview images (placeholder - would need actual page renders)  
-  const previews = {
-    'cover.png': new Blob(['placeholder'], { type: 'image/png' }),
-    'body-2col.png': new Blob(['placeholder'], { type: 'image/png' }),
-    'data.png': new Blob(['placeholder'], { type: 'image/png' })
-  }
-
-  return {
-    'template.json': manifest,
-    assets,
-    previews
+    
+  // Generate preview images using new canonical system
+  try {
+    const { previews: generatedPreviews, assets: generatedAssets } = await generateTemplatePreviewsAndAssets(seedData)
+    
+    // Use generated assets if originals are empty
+    Object.keys(assets).forEach(key => {
+      if (!assets[key as keyof typeof assets] && generatedAssets[key]) {
+        assets[key as keyof typeof assets] = generatedAssets[key]
+      }
+    })
+    
+    const previews = {
+      'cover.png': generatedPreviews['cover.png'] || new Blob(['placeholder'], { type: 'image/png' }),
+      'data.png': generatedPreviews['data.png'] || new Blob(['placeholder'], { type: 'image/png' }),
+      // Add body preview with correct filename
+      ...((() => {
+        const bodyEntries = Object.entries(generatedPreviews).filter(([key]) => key.includes('body'))
+        return Object.fromEntries(bodyEntries)
+      })())
+    }
+    
+    return {
+      'template.json': manifest,
+      assets,
+      previews
+    }
+  } catch (error) {
+    console.warn('Failed to generate preview assets, using placeholders:', error)
+    
+    // Fallback to placeholder previews  
+    const selectedMasters = seedData.pageMasters?.selected || []
+    const hasTwoCol = selectedMasters.some((m: any) => m.id === 'body-2col' || m.id === 'body-2col-sidebar')
+    const bodyFilename = hasTwoCol ? 'body-2col.png' : 'body-1col.png'
+    
+    const previews = {
+      'cover.png': new Blob(['placeholder'], { type: 'image/png' }),
+      [bodyFilename]: new Blob(['placeholder'], { type: 'image/png' }),
+      'data.png': new Blob(['placeholder'], { type: 'image/png' })
+    }
+    
+    return {
+      'template.json': manifest,
+      assets,
+      previews
+    }
   }
 }
 

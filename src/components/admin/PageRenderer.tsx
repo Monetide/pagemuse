@@ -363,6 +363,8 @@ export function PageRenderer({ composition, seedData, className = '', scale = 1 
   switch (composition.id) {
     case 'cover':
       return renderCoverPage()
+    case 'body-1col':
+      return renderBodyPage()
     case 'body-2col':
       return renderBodyPage()
     case 'data':
