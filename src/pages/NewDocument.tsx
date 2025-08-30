@@ -44,10 +44,40 @@ export default function NewDocument() {
   }
 
   const handleUseTemplate = async (template: ScopedTemplate) => {
+    if (!workspaceId) {
+      toast({
+        title: "Error",
+        description: "No workspace selected",
+        variant: "destructive"
+      })
+      return
+    }
+
     try {
-      await createFromTemplate(template)
+      toast({
+        title: "Creating document...",
+        description: `Creating document from ${template.name}`,
+      })
+      
+      const { DocumentService } = await import('@/lib/document-service')
+      const result = await DocumentService.createFromTemplateViaFunction({
+        templateId: template.id,
+        workspaceId: workspaceId,
+        title: `Document from ${template.name}`
+      })
+
+      toast({
+        title: "Success",
+        description: "Document created successfully!",
+      })
+      navigate(result.url)
     } catch (error) {
-      console.error('Failed to create document from template:', error)
+      console.error('Error creating document from template:', error)
+      toast({
+        title: "Error",
+        description: "Failed to create document from template",
+        variant: "destructive"
+      })
     }
   }
 
