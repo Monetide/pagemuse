@@ -23,7 +23,7 @@ serve(async (req) => {
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       {
         auth: {
           autoRefreshToken: false,
@@ -198,6 +198,7 @@ serve(async (req) => {
         success: true,
         processed: seedsInput.length,
         successful: successCount,
+        successCount: successCount,
         failed: failureCount,
         results,
         scope: 'global',
