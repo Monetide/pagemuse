@@ -331,32 +331,31 @@ export async function packageTemplate(
     objectStyles: {
       figure: seedData.objectStyles?.styles?.['figure-default'] || {
         captionStyle: 'caption',
-        spacing: { top: 16, bottom: 16 },
-        widthPresets: ['column', 'full'],
-        defaultWidth: 'column'
+        spacingAbove: 16,
+        spacingBelow: 16,
+        width: 'column'
       },
       table: seedData.objectStyles?.styles?.['table-default'] || {
-        headerStyle: 'caption-bold',
+        headerRow: true,
         cellPadding: 8,
-        gridColor: 'border-subtle',
+        grid: 'border/subtle',
+        headerStyle: 'caption-bold',
         alternateRows: true,
         repeatHeader: true
       },
       callout: seedData.objectStyles?.styles?.['callout-default'] || {
         keepTogether: true,
         accentWidth: 4,
-        padding: { top: 16, right: 16, bottom: 16, left: 20 },
         variants: {
           info: { accentColor: 'brand', backgroundColor: 'bg-section' },
           tip: { accentColor: 'brand-secondary', backgroundColor: 'bg-section' },
-          warning: { accentColor: 'warning', backgroundColor: 'warning-light' }
+          warning: { accentColor: 'brand-accent', backgroundColor: 'bg-section' }
         }
       },
       tocItem: seedData.objectStyles?.styles?.['toc-item-default'] || {
+        leader: 'dots',
+        numbers: 'right', 
         textStyle: 'body',
-        dotLeader: true,
-        pageNumberAlign: 'right',
-        spacing: { top: 4, bottom: 4 },
         indentUnit: 16
       }
     },

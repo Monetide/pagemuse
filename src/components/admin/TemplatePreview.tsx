@@ -30,9 +30,8 @@ export function TemplatePreview({ data }: TemplatePreviewProps) {
   const coverMaster = data.pageMasters?.cover ? getPageMasterPreset(data.pageMasters.cover) : null
   const bodyMaster = data.pageMasters?.selected?.[0]?.id ? getPageMasterPreset(data.pageMasters.selected[0].id) : null
   
-  // Get object styles and snippets
+  // Get object styles  
   const objectStyles = data.objectStyles?.styles || {}
-  const selectedSnippets = data.objectStyles?.snippets || []
   
   // Use colorway colors if available, otherwise fallback to brand color
   const colors = data.colorway ? data.colorway.colors : {
@@ -250,7 +249,7 @@ export function TemplatePreview({ data }: TemplatePreviewProps) {
                         1. Introduction
                       </span>
                       <span className="text-template-body text-right" style={{ color: colors.textMuted }}>
-                        {objectStyles['toc-item-default'].properties.dotLeader && '...........'} 3
+                        {objectStyles['toc-item-default'].properties.leader === 'dots' && '...........'} 3
                       </span>
                     </div>
                     <div className="flex justify-between items-center" style={{ paddingLeft: `${objectStyles['toc-item-default'].properties.indentUnit}px` }}>
@@ -258,7 +257,7 @@ export function TemplatePreview({ data }: TemplatePreviewProps) {
                         1.1 Overview
                       </span>
                       <span className="text-template-body text-right" style={{ color: colors.textMuted }}>
-                        {objectStyles['toc-item-default'].properties.dotLeader && '...........'} 5
+                        {objectStyles['toc-item-default'].properties.leader === 'dots' && '...........'} 5
                       </span>
                     </div>
                   </div>
@@ -266,80 +265,7 @@ export function TemplatePreview({ data }: TemplatePreviewProps) {
               </div>
             )}
 
-            {/* Snippet Demos */}
-            {selectedSnippets.length > 0 && (
-              <div className="mt-4 space-y-3">
-                <h4 className={`${sansFont} text-template-h3 font-medium`} style={{ color: colors.brand }}>
-                  Content Snippets
-                </h4>
-                
-                {selectedSnippets.map(snippetId => {
-                  const snippet = getSnippet(snippetId)
-                  if (!snippet) return null
-
-                  switch (snippet.id) {
-                    case 'kpi-strip':
-                      return (
-                        <div key={snippetId} className="grid grid-cols-3 gap-3 p-3 rounded" style={{ backgroundColor: colors.bgSection }}>
-                          {[
-                            { label: 'Revenue', value: '$2.4M', change: '+12%' },
-                            { label: 'Growth', value: '23%', change: '+5%' },
-                            { label: 'Users', value: '45.2K', change: '+8%' }
-                          ].map((metric, i) => (
-                            <div key={i} className="text-center">
-                              <div className={`${sansFont} text-template-h2 font-bold`} style={{ color: colors.brand }}>{metric.value}</div>
-                              <div className="text-template-caption" style={{ color: colors.textMuted }}>{metric.label}</div>
-                              <div className="text-template-caption font-medium" style={{ color: colors.brand }}>{metric.change}</div>
-                            </div>
-                          ))}
-                        </div>
-                      )
-                    
-                    case 'pull-quote':
-                      return (
-                        <blockquote 
-                          key={snippetId}
-                          className={`${serifFont} text-template-quote italic text-center border-l-4 pl-4 py-3`}
-                          style={{ 
-                            color: colors.textBody,
-                            borderLeftColor: colors.brand,
-                            backgroundColor: colors.bgSection
-                          }}
-                        >
-                          "Design is not just what it looks like and feels like. Design is how it works."
-                          <footer className="text-template-caption mt-2" style={{ color: colors.textMuted }}>
-                            — Steve Jobs
-                          </footer>
-                        </blockquote>
-                      )
-                    
-                    case 'cta-button':
-                      return (
-                        <div key={snippetId} className="text-center p-4 rounded" style={{ backgroundColor: colors.bgSection }}>
-                          <h5 className={`${sansFont} text-template-h3 font-semibold mb-2`} style={{ color: colors.brand }}>
-                            Ready to get started?
-                          </h5>
-                          <p className={`${serifFont} text-template-body mb-3`} style={{ color: colors.textBody }}>
-                            Download our comprehensive guide today.
-                          </p>
-                          <button 
-                            className="px-4 py-2 rounded font-medium text-sm"
-                            style={{ 
-                              backgroundColor: colors.brand, 
-                              color: colors.bgPage 
-                            }}
-                          >
-                            Download Free Guide
-                          </button>
-                        </div>
-                      )
-                    
-                    default:
-                      return null
-                  }
-                })}
-              </div>
-            )}
+            {/* Snippet Demos - Removed as snippets are no longer part of Object Styles */}
           </div>
 
           {/* Vibe Indicators */}

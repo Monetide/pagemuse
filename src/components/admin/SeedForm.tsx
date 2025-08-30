@@ -102,8 +102,66 @@ const seedFormSchema = z.object({
     }))
   }).optional(),
   objectStyles: z.object({
-    styles: z.record(z.any()).optional(),
-    snippets: z.array(z.string()).optional(),
+    styles: z.object({
+      'figure-default': z.object({
+        id: z.string(),
+        name: z.string(),
+        type: z.literal('figure'),
+        properties: z.object({
+          captionStyle: z.enum(['caption', 'body', 'small']),
+          spacingAbove: z.number(),
+          spacingBelow: z.number(),
+          width: z.enum(['column', 'full'])
+        })
+      }),
+      'table-default': z.object({
+        id: z.string(),
+        name: z.string(), 
+        type: z.literal('table'),
+        properties: z.object({
+          headerRow: z.boolean(),
+          cellPadding: z.number(),
+          grid: z.enum(['border', 'subtle', 'none']),
+          headerStyle: z.enum(['caption-bold', 'body-bold', 'small-bold']),
+          alternateRows: z.boolean(),
+          repeatHeader: z.boolean()
+        })
+      }),
+      'callout-default': z.object({
+        id: z.string(),
+        name: z.string(),
+        type: z.literal('callout'),
+        properties: z.object({
+          accentWidth: z.number(),
+          keepTogether: z.boolean(),
+          variants: z.object({
+            info: z.object({
+              accentColor: z.literal('brand'),
+              backgroundColor: z.literal('bg-section')
+            }),
+            tip: z.object({
+              accentColor: z.literal('brand-secondary'),
+              backgroundColor: z.literal('bg-section')
+            }),
+            warning: z.object({
+              accentColor: z.literal('brand-accent'),
+              backgroundColor: z.literal('bg-section')
+            })
+          })
+        })
+      }),
+      'toc-item-default': z.object({
+        id: z.string(),
+        name: z.string(),
+        type: z.literal('toc-item'),
+        properties: z.object({
+          leader: z.enum(['dots', 'dashes', 'none']),
+          numbers: z.enum(['right', 'inline']),
+          textStyle: z.enum(['body', 'caption', 'small']),
+          indentUnit: z.number()
+        })
+      })
+    }).optional()
   }).optional(),
   logo: z.any().optional(),
   referenceImage: z.any().optional(),
@@ -1062,7 +1120,7 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
           ) || []}
         />
 
-        {/* Object Styles & Snippets */}
+        {/* Object Styles */}
         <ObjectStyleSelector 
           selection={objectStyles}
           onSelectionChange={handleObjectStyleChange}
