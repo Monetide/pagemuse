@@ -49,9 +49,13 @@ export default function AdminTemplates({ scope = 'workspace' }: AdminTemplatesPr
   const togglePublish = async (templateId: string, currentlyPublished: boolean) => {
     try {
       const newStatus = currentlyPublished ? 'draft' : 'published'
+      const updatePayload: any = { status: newStatus }
+      if (!currentlyPublished && scope === 'global') {
+        updatePayload.scope = 'global'
+      }
       const { error } = await supabase
         .from('templates')
-        .update({ status: newStatus })
+        .update(updatePayload)
         .eq('id', templateId)
 
       if (error) throw error
@@ -86,7 +90,8 @@ export default function AdminTemplates({ scope = 'workspace' }: AdminTemplatesPr
   const filteredTemplates = templates.filter(template =>
     (template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
      template.category.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    ((template as any).status === 'published')
+    ((template as any).status === 'published') &&
+    ((template as any).scope === scope)
   )
 
   if (loading) {
