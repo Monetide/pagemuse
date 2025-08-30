@@ -25,7 +25,7 @@ import {
 import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
-import { createDocument } from '@/lib/document-model'
+import { createDocument, createSection, createFlow, createBlock, addFlowToSection, addSectionToDocument, addBlockToFlow } from '@/lib/document-model'
 
 interface TemplateDraft {
   id: string
@@ -93,8 +93,36 @@ export function DraftTemplatesView() {
         return
       }
 
-      // Create a new document using this template
-      const initialContent = createDocument(`Test Document - ${templateName}`)
+      // Create a new document using this template (seed with simple cover based on template)
+      const { data: tpl } = await supabase
+        .from('templates')
+        .select('id, name, description, category, global_styling, metadata')
+        .eq('id', templateId)
+        .single()
+
+      // Base doc
+      let initialContent = createDocument(`Test Document - ${templateName}`)
+
+      // Build a minimal cover section using template info
+      const cover = createSection('Cover', 0)
+      ;(cover as any).layoutIntent = 'cover'
+      let flow = createFlow('Main', 'linear', 0)
+      const titleBlock = createBlock('heading', { level: 1, text: tpl?.name || templateName, id: crypto.randomUUID() }, 0)
+      const subtitleBlock = createBlock('paragraph', { text: tpl?.description || 'Subtitle' }, 1)
+      flow = addBlockToFlow(flow, titleBlock)
+      flow = addBlockToFlow(flow, subtitleBlock)
+      const coverWithFlow = addFlowToSection(cover, flow)
+
+      // Put cover first, keep default Body section
+      initialContent = {
+        ...initialContent,
+        sections: [coverWithFlow, ...initialContent.sections],
+        metadata: {
+          ...initialContent.metadata,
+          __templateInfo: { id: tpl?.id || templateId, name: tpl?.name || templateName, category: tpl?.category || 'general' },
+          global_styling: tpl?.global_styling || null
+        }
+      }
       const { data, error } = await supabase
         .from('documents')
         .insert({
