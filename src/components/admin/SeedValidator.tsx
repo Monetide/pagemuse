@@ -1,646 +1,418 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, CheckCircle, XCircle, AlertTriangle, Upload, Wand2, Shield } from 'lucide-react'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Textarea } from '@/components/ui/textarea'
+import { CheckCircle2, XCircle, AlertCircle, Copy, Trash2, Loader2 } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/integrations/supabase/client'
-import { useParams } from 'react-router-dom'
-import { useToast } from '@/hooks/use-toast'
+import { toast } from '@/hooks/use-toast'
 
 interface ValidationResult {
   okCount: number
   missingModules: string[]
-  createdModules: string[]
-  badParams: Array<{ index: number; error: string; item: any }>
+  badParams: { id: string; messages: string[] }[]
+  createdModules?: string[]
 }
 
-interface TemplateSeed {
+interface SeedItem {
   id: string
-  doc_type: string
-  style_pack: string
-  industry: string
-  status: string
-  created_at: string
-  updated_at: string
+  status: 'valid' | 'invalid' | 'missing-modules'
+  messages: string[]
 }
 
 interface ComposeResult {
   success: boolean
-  templatesCreated: number
-  templates: Array<{
-    seedId: string
-    templateId: string
-    name: string
-  }>
+  createdCount: number
+  results: any[]
 }
 
 export const SeedValidator = () => {
-  const { workspaceId } = useParams()
-  const { toast } = useToast()
   const [seedsJson, setSeedsJson] = useState('')
-  const [autoCreateMissing, setAutoCreateMissing] = useState(true)
   const [isValidating, setIsValidating] = useState(false)
-  const [isValidatingStored, setIsValidatingStored] = useState(false)
   const [isIngesting, setIsIngesting] = useState(false)
   const [isComposing, setIsComposing] = useState(false)
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null)
   const [composeResult, setComposeResult] = useState<ComposeResult | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [seeds, setSeeds] = useState<TemplateSeed[]>([])
-  const [isLoadingSeeds, setIsLoadingSeeds] = useState(false)
-
-  // Load existing seeds
-  const loadSeeds = async () => {
-    if (!workspaceId) return
-    
-    setIsLoadingSeeds(true)
-    try {
-      const { data, error } = await supabase
-        .from('template_seeds')
-        .select('id, doc_type, style_pack, industry, status, created_at, updated_at')
-        .eq('workspace_id', workspaceId)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setSeeds(data || [])
-    } catch (err) {
-      console.error('Error loading seeds:', err)
-      setError('Failed to load seeds')
-    } finally {
-      setIsLoadingSeeds(false)
-    }
-  }
+  const [ingestedSeedIds, setIngestedSeedIds] = useState<string[]>([])
+  const { session } = useAuth()
 
   useEffect(() => {
-    loadSeeds()
-  }, [workspaceId])
-
-  const handleCompose = async () => {
-    if (!workspaceId) {
-      setError('Workspace not loaded')
-      return
+    // Load persisted JSON from localStorage
+    const saved = localStorage.getItem('admin-seeds-json')
+    if (saved) {
+      setSeedsJson(saved)
     }
+  }, [])
 
-    const readySeeds = seeds.filter(seed => seed.status === 'ready')
-    if (readySeeds.length === 0) {
-      setError('No ready seeds to compose')
-      return
-    }
-
-    setIsComposing(true)
-    setError(null)
-    setComposeResult(null)
-
-    try {
-      const SUPABASE_URL = 'https://dbrzfjekbfkjathotjcj.supabase.co'
-      const url = `${SUPABASE_URL}/functions/v1/template-gen-seeds-compose`
-      
-      const { data: session } = await supabase.auth.getSession()
-      const token = session.session?.access_token
-
-      if (!token) {
-        throw new Error('Authentication required')
-      }
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ workspaceId })
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
-      }
-
-      const result = await response.json()
-      console.log('Compose result:', result)
-      
-      setComposeResult(result)
-      
-      // Reload seeds to show updated statuses
-      await loadSeeds()
-      
-      setError(null)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Composition failed')
-    } finally {
-      setIsComposing(false)
-    }
+  const persistJson = (json: string) => {
+    localStorage.setItem('admin-seeds-json', json)
   }
 
-  const handleIngest = async () => {
-    if (!seedsJson.trim() || !workspaceId) {
-      setError('Please paste seed data and ensure workspace is loaded')
-      return
-    }
-
-    setIsIngesting(true)
-    setError(null)
-
+  const normalizePayload = (jsonText: string) => {
     try {
-      // Parse JSON to validate format
-      let seeds
-      try {
-        seeds = JSON.parse(seedsJson)
-      } catch (parseError) {
-        throw new Error('Invalid JSON format')
+      const parsed = JSON.parse(jsonText)
+      
+      // If it's an array, wrap in envelope
+      if (Array.isArray(parsed)) {
+        return { seeds: parsed }
       }
-
-      const SUPABASE_URL = 'https://dbrzfjekbfkjathotjcj.supabase.co'
-      const url = `${SUPABASE_URL}/functions/v1/template-gen-seeds-ingest`
       
-      const { data: session } = await supabase.auth.getSession()
-      const token = session.session?.access_token
-
-      if (!token) {
-        throw new Error('Authentication required')
+      // If it's already an envelope with seeds property, use as-is
+      if (parsed.seeds && Array.isArray(parsed.seeds)) {
+        return parsed
       }
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ seeds, workspaceId })
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
-      }
-
-      const result = await response.json()
-      console.log('Ingest result:', result)
       
-      // Reload seeds to show the new ones
-      await loadSeeds()
-      
-      // Clear the input
-      setSeedsJson('')
-      
-      setError(null)
+      throw new Error('Invalid format: expected array of seeds or {seeds: [...]} envelope')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ingestion failed')
-    } finally {
-      setIsIngesting(false)
+      throw new Error(`JSON parse error: ${err.message}`)
     }
   }
 
   const handleValidate = async () => {
-    if (!seedsJson.trim()) {
-      setError('Please paste seed data')
-      return
-    }
-
+    if (!seedsJson.trim() || !session) return
+    
     setIsValidating(true)
     setError(null)
     setValidationResult(null)
-
+    
     try {
-      // Parse JSON to validate format
-      let seeds
-      try {
-        seeds = JSON.parse(seedsJson)
-      } catch (parseError) {
-        throw new Error('Invalid JSON format')
-      }
-
-      const SUPABASE_URL = 'https://dbrzfjekbfkjathotjcj.supabase.co'
-      const url = `${SUPABASE_URL}/functions/v1/template-gen-seeds-validate${autoCreateMissing ? '?autoCreateMissing=true' : ''}`
+      const payload = normalizePayload(seedsJson)
       
-      const { data: session } = await supabase.auth.getSession()
-      const token = session.session?.access_token
-
-      if (!token) {
-        throw new Error('Authentication required')
+      const { data, error: fnError } = await supabase.functions.invoke(
+        'system-template-gen-seeds-validate',
+        {
+          body: payload,
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          }
+        }
+      )
+      
+      if (fnError) {
+        throw new Error(fnError.message)
       }
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ seeds })
+      
+      setValidationResult(data)
+      toast({ 
+        title: `Validation complete: ${data.okCount} valid seeds`,
+        description: data.missingModules?.length > 0 ? `${data.missingModules.length} missing modules` : undefined
       })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
-      }
-
-      const result = await response.json()
-      setValidationResult(result)
+      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Validation failed')
+      setError(err.message)
+      toast({ title: 'Validation failed', description: err.message, variant: 'destructive' })
     } finally {
       setIsValidating(false)
     }
   }
 
-  const handleValidateStored = async () => {
-    if (seeds.length === 0) {
-      toast({
-        title: "No seeds to validate",
-        description: "No stored seeds found in the database.",
-        variant: "destructive"
-      })
-      return
-    }
-
-    setIsValidatingStored(true)
-
+  const handleIngest = async () => {
+    if (!seedsJson.trim() || !session) return
+    
+    setIsIngesting(true)
+    setError(null)
+    
     try {
-      // Convert stored seeds to the format expected by the validation endpoint
-      const seedsForValidation = seeds.map(seed => ({
-        docType: seed.doc_type,
-        stylePack: seed.style_pack,
-        industry: seed.industry
-      }))
-
-      const SUPABASE_URL = 'https://dbrzfjekbfkjathotjcj.supabase.co'
-      const url = `${SUPABASE_URL}/functions/v1/template-gen-seeds-validate`
+      const payload = normalizePayload(seedsJson)
       
-      const { data: session } = await supabase.auth.getSession()
-      const token = session.session?.access_token
-
-      if (!token) {
-        throw new Error('Authentication required')
+      const { data, error: fnError } = await supabase.functions.invoke(
+        'system-template-gen-seeds-ingest',
+        {
+          body: payload,
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          }
+        }
+      )
+      
+      if (fnError) {
+        throw new Error(fnError.message)
       }
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ seeds: seedsForValidation })
+      
+      const seedIds = payload.seeds.map((seed: any) => seed.id)
+      setIngestedSeedIds(seedIds)
+      
+      toast({ 
+        title: `Ingested ${data.successCount || payload.seeds.length} global seeds`,
+        description: 'Seeds are ready for composition'
       })
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
-      }
-
-      const result = await response.json()
       
-      if (result.missingModules.length === 0 && result.badParams.length === 0) {
-        toast({
-          title: "All seeds valid",
-          description: `All ${result.okCount} stored seeds are valid and reference existing modules.`,
-          variant: "default"
-        })
-      } else {
-        const issues = []
-        if (result.missingModules.length > 0) {
-          issues.push(`${result.missingModules.length} missing modules: ${result.missingModules.join(', ')}`)
-        }
-        if (result.badParams.length > 0) {
-          issues.push(`${result.badParams.length} invalid seeds`)
-        }
-        
-        toast({
-          title: "Validation issues found",
-          description: issues.join('; '),
-          variant: "destructive"
-        })
-      }
     } catch (err) {
-      toast({
-        title: "Validation failed",
-        description: err instanceof Error ? err.message : 'Unknown error occurred',
-        variant: "destructive"
-      })
+      setError(err.message)
+      toast({ title: 'Ingestion failed', description: err.message, variant: 'destructive' })
     } finally {
-      setIsValidatingStored(false)
+      setIsIngesting(false)
     }
   }
 
-  const exampleSeeds = `[
-  {
-    "docType": "white-paper",
-    "stylePack": "professional", 
-    "industry": "finance"
-  },
-  {
-    "docType": "report",
-    "stylePack": "editorial",
-    "industry": "healthcare"
+  const handleCompose = async () => {
+    if (ingestedSeedIds.length === 0 || !session) return
+    
+    setIsComposing(true)
+    setError(null)
+    setComposeResult(null)
+    
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke(
+        'system-template-gen-seeds-compose',
+        {
+          body: { seedIds: ingestedSeedIds },
+          headers: {
+            Authorization: `Bearer ${session.access_token}`
+          }
+        }
+      )
+      
+      if (fnError) {
+        throw new Error(fnError.message)
+      }
+      
+      setComposeResult(data)
+      toast({ 
+        title: `Composed ${data.successCount || 0} global templates`,
+        description: data.successCount > 0 ? 'Check /system/templates for new drafts' : undefined
+      })
+      
+      // Clear ingested seed IDs after successful composition
+      setIngestedSeedIds([])
+      
+    } catch (err) {
+      setError(err.message)
+      toast({ title: 'Composition failed', description: err.message, variant: 'destructive' })
+    } finally {
+      setIsComposing(false)
+    }
   }
-]`
+
+  const handleClear = () => {
+    setSeedsJson('')
+    setValidationResult(null)
+    setComposeResult(null)
+    setError(null)
+    setIngestedSeedIds([])
+    localStorage.removeItem('admin-seeds-json')
+  }
+
+  const getSeedStatus = (seedId: string): SeedItem => {
+    if (!validationResult) return { id: seedId, status: 'valid', messages: [] }
+    
+    const badParam = validationResult.badParams?.find(bp => bp.id === seedId)
+    if (badParam) {
+      return { id: seedId, status: 'invalid', messages: badParam.messages }
+    }
+    
+    return { id: seedId, status: 'valid', messages: [] }
+  }
+
+  const getSeedIds = (): string[] => {
+    try {
+      const payload = normalizePayload(seedsJson)
+      return payload.seeds.map((seed: any) => seed.id).filter(Boolean)
+    } catch {
+      return []
+    }
+  }
 
   return (
     <div className="space-y-6">
+      {/* Input Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Seed Validator</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Copy className="w-5 h-5" />
+            JSON Import
+          </CardTitle>
           <CardDescription>
-            Validate template generation seeds before processing. Paste a JSON array of parameter sets.
+            Paste seed JSON (array or envelope format) to validate, ingest, and compose global templates
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="seeds-input" className="text-sm font-medium">
-              Seeds JSON
-            </label>
+          <div>
             <Textarea
-              id="seeds-input"
-              placeholder={`Paste your seeds JSON here, e.g.:\n${exampleSeeds}`}
+              placeholder="Paste seed JSON here..."
               value={seedsJson}
-              onChange={(e) => setSeedsJson(e.target.value)}
-              rows={12}
-              className="font-mono text-sm"
+              onChange={(e) => {
+                setSeedsJson(e.target.value)
+                persistJson(e.target.value)
+              }}
+              className="min-h-[300px] font-mono text-sm"
             />
           </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="auto-create"
-              checked={autoCreateMissing}
-              onCheckedChange={(checked) => setAutoCreateMissing(checked as boolean)}
-            />
-            <label htmlFor="auto-create" className="text-sm">
-              Auto-create missing registry modules
-            </label>
-          </div>
-
-          <div className="flex gap-2">
-            <Button 
-              onClick={handleValidate} 
-              disabled={isValidating || !seedsJson.trim()}
+          
+          {/* Action Buttons */}
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              onClick={handleValidate}
+              disabled={!seedsJson.trim() || isValidating}
               variant="outline"
-              className="flex-1"
             >
               {isValidating ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Validating...
-                </>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : (
-                'Validate Seeds (Dry-run)'
+                <CheckCircle2 className="w-4 h-4 mr-2" />
               )}
+              Validate (Dry-run)
             </Button>
             
-            <Button 
-              onClick={handleIngest} 
-              disabled={isIngesting || !seedsJson.trim()}
-              className="flex-1"
+            <Button
+              onClick={handleIngest}
+              disabled={!seedsJson.trim() || isIngesting}
             >
               {isIngesting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Ingesting...
-                </>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : (
-                <>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Ingest Seeds
-                </>
+                <AlertCircle className="w-4 h-4 mr-2" />
               )}
+              Ingest (Global)
+            </Button>
+            
+            <Button
+              onClick={handleCompose}
+              disabled={ingestedSeedIds.length === 0 || isComposing}
+              variant="secondary"
+            >
+              {isComposing ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4 mr-2" />
+              )}
+              Compose now
+            </Button>
+            
+            <Button
+              onClick={handleClear}
+              variant="ghost"
+              size="sm"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Clear
             </Button>
           </div>
         </CardContent>
       </Card>
 
+      {/* Error Display */}
       {error && (
-        <Alert variant="destructive">
-          <XCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {validationResult && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-              Validation Results
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
-                  {validationResult.okCount}
-                </div>
-                <div className="text-sm text-muted-foreground">Valid Seeds</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-red-600">
-                  {validationResult.badParams.length}
-                </div>
-                <div className="text-sm text-muted-foreground">Bad Params</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-orange-600">
-                  {validationResult.missingModules.length}
-                </div>
-                <div className="text-sm text-muted-foreground">Missing Modules</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">
-                  {validationResult.createdModules.length}
-                </div>
-                <div className="text-sm text-muted-foreground">Created Modules</div>
+        <Card className="border-destructive">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-2 text-destructive">
+              <XCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-medium">Error</p>
+                <p className="text-sm">{error}</p>
               </div>
             </div>
-
-            {validationResult.createdModules.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm">Created Modules:</h4>
-                <div className="flex flex-wrap gap-2">
-                  {validationResult.createdModules.map((module) => (
-                    <Badge key={module} variant="secondary" className="text-xs">
-                      {module}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {validationResult.missingModules.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-orange-600" />
-                  Missing Modules:
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {validationResult.missingModules.map((module) => (
-                    <Badge key={module} variant="destructive" className="text-xs">
-                      {module}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {validationResult.badParams.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm flex items-center gap-2">
-                  <XCircle className="w-4 h-4 text-red-600" />
-                  Bad Parameters:
-                </h4>
-                <div className="space-y-2 max-h-40 overflow-y-auto">
-                  {validationResult.badParams.map((param, index) => (
-                    <Alert key={index} variant="destructive">
-                      <AlertDescription className="text-xs">
-                        <strong>Index {param.index}:</strong> {param.error}
-                      </AlertDescription>
-                    </Alert>
-                  ))}
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
       )}
 
-      {composeResult && (
+      {/* Results Section */}
+      {(validationResult || composeResult || ingestedSeedIds.length > 0) && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-              Composition Results
-            </CardTitle>
+            <CardTitle>Results</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">
-                  {composeResult.templatesCreated}
+            {/* Validation Results */}
+            {validationResult && (
+              <div>
+                <h4 className="font-medium mb-2">Validation Summary</h4>
+                <div className="flex gap-4 mb-3">
+                  <Badge variant="outline" className="text-green-700 border-green-300">
+                    {validationResult.okCount} Valid
+                  </Badge>
+                  {validationResult.missingModules?.length > 0 && (
+                    <Badge variant="outline" className="text-yellow-700 border-yellow-300">
+                      {validationResult.missingModules.length} Missing Modules
+                    </Badge>
+                  )}
+                  {validationResult.badParams?.length > 0 && (
+                    <Badge variant="outline" className="text-red-700 border-red-300">
+                      {validationResult.badParams.length} Invalid
+                    </Badge>
+                  )}
                 </div>
-                <div className="text-sm text-muted-foreground">Templates Created</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">
-                  {composeResult.templates?.length || 0}
-                </div>
-                <div className="text-sm text-muted-foreground">Draft Templates</div>
-              </div>
-            </div>
-
-            {composeResult.templates && composeResult.templates.length > 0 && (
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm">Created Templates:</h4>
-                <div className="space-y-1">
-                  {composeResult.templates.map((template) => (
-                    <div key={template.templateId} className="text-xs bg-muted p-2 rounded">
-                      <strong>{template.name}</strong> (from seed: {template.seedId})
-                    </div>
-                  ))}
-                </div>
+                
+                {/* Missing Modules */}
+                {validationResult.missingModules?.length > 0 && (
+                  <div className="mb-3">
+                    <p className="text-sm font-medium text-yellow-700 mb-1">Missing Modules:</p>
+                    <p className="text-sm text-muted-foreground">
+                      {validationResult.missingModules.join(', ')}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            Ingested Seeds
-            <div className="flex gap-2">
-              <Button 
-                onClick={handleValidateStored} 
-                disabled={isValidatingStored || seeds.length === 0}
-                variant="outline"
-                size="sm"
-              >
-                {isValidatingStored ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Validating...
-                  </>
-                ) : (
-                  <>
-                    <Shield className="w-4 h-4 mr-2" />
-                    Validate ({seeds.length})
-                  </>
-                )}
-              </Button>
-              <Button 
-                onClick={handleCompose} 
-                disabled={isComposing || seeds.filter(s => s.status === 'ready').length === 0}
-                variant="default"
-                size="sm"
-              >
-                {isComposing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Composing...
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="w-4 h-4 mr-2" />
-                    Compose all Ready ({seeds.filter(s => s.status === 'ready').length})
-                  </>
-                )}
-              </Button>
-            </div>
-          </CardTitle>
-          <CardDescription>
-            Template parameter sets that have been ingested and stored in the database.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoadingSeeds ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin" />
-              <span className="ml-2">Loading seeds...</span>
-            </div>
-          ) : seeds.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No seeds have been ingested yet. Use the form above to ingest seeds.
-            </div>
-          ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Doc Type</TableHead>
-                    <TableHead>Style Pack</TableHead>
-                    <TableHead>Industry</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Created</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {seeds.map((seed) => (
-                    <TableRow key={seed.id}>
-                      <TableCell className="font-mono text-sm">{seed.id}</TableCell>
-                      <TableCell>{seed.doc_type}</TableCell>
-                      <TableCell>{seed.style_pack}</TableCell>
-                      <TableCell>{seed.industry}</TableCell>
-                      <TableCell>
-                        <Badge variant={
-                          seed.status === 'ready' ? 'default' : 
-                          seed.status === 'composed' ? 'secondary' : 
-                          'outline'
-                        }>
+            
+            {/* Per-Seed Status */}
+            {getSeedIds().length > 0 && (
+              <div>
+                <h4 className="font-medium mb-2">Seed Status</h4>
+                <div className="space-y-2">
+                  {getSeedIds().map(seedId => {
+                    const seed = getSeedStatus(seedId)
+                    return (
+                      <div key={seedId} className="flex items-start gap-2 p-2 bg-muted/30 rounded">
+                        {seed.status === 'valid' ? (
+                          <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-red-600 mt-0.5" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-mono">{seedId}</p>
+                          {seed.messages.length > 0 && (
+                            <p className="text-xs text-red-600 mt-1">
+                              {seed.messages.join(', ')}
+                            </p>
+                          )}
+                        </div>
+                        <Badge variant={seed.status === 'valid' ? 'default' : 'destructive'} className="text-xs">
                           {seed.status}
                         </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {new Date(seed.created_at).toLocaleDateString()}
-                      </TableCell>
-                    </TableRow>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+            
+            {/* Ingested Seeds */}
+            {ingestedSeedIds.length > 0 && (
+              <div>
+                <h4 className="font-medium mb-2">Ready for Composition</h4>
+                <p className="text-sm text-muted-foreground mb-2">
+                  {ingestedSeedIds.length} seeds ingested and ready
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {ingestedSeedIds.map(seedId => (
+                    <Badge key={seedId} variant="secondary" className="text-xs">
+                      {seedId}
+                    </Badge>
                   ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                </div>
+              </div>
+            )}
+            
+            {/* Composition Results */}
+            {composeResult && (
+              <div>
+                <h4 className="font-medium mb-2">Composition Results</h4>
+                <Badge variant="outline" className="text-green-700 border-green-300 mb-2">
+                  {composeResult.createdCount || 0} Templates Created
+                </Badge>
+                {composeResult.createdCount > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Check <span className="font-mono">/system/templates</span> for new draft templates with preview PNGs and SVG assets.
+                  </p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

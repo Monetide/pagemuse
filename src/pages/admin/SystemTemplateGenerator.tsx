@@ -10,7 +10,8 @@ import { BatchComposer } from '@/components/admin/BatchComposer'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
 import { toast } from '@/hooks/use-toast'
-import { Globe, Settings, Plus, Star, Sparkles, Loader2, Grid3X3 } from 'lucide-react'
+import { Globe, Settings, Plus, Star, Sparkles, Loader2, Grid3X3, FileText } from 'lucide-react'
+import { SeedValidator } from '@/components/admin/SeedValidator'
 
 export default function SystemTemplateGenerator() {
   const [selectedTemplate, setSelectedTemplate] = useState<ScopedTemplate | null>(null)
@@ -19,7 +20,7 @@ export default function SystemTemplateGenerator() {
   const [isComposing, setIsComposing] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
   const [createdTemplate, setCreatedTemplate] = useState<any>(null)
-  const [activeTab, setActiveTab] = useState<'generate' | 'batch' | 'gallery'>('generate')
+  const [activeTab, setActiveTab] = useState<'generate' | 'batch' | 'gallery' | 'import'>('generate')
   const { session } = useAuth()
 
   const handleEditTemplate = (template: ScopedTemplate) => {
@@ -223,6 +224,13 @@ export default function SystemTemplateGenerator() {
               <Globe className="w-4 h-4 mr-2" />
               Gallery
             </Button>
+            <Button 
+              variant={activeTab === 'import' ? 'default' : 'outline'}
+              onClick={() => setActiveTab('import')}
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              JSON Import
+            </Button>
           </div>
         </div>
 
@@ -315,6 +323,9 @@ export default function SystemTemplateGenerator() {
         ) : activeTab === 'batch' ? (
           /* Batch Composer */
           <BatchComposer />
+        ) : activeTab === 'import' ? (
+          /* JSON Import */
+          <SeedValidator />
         ) : (
           /* Template Gallery */
           <TemplateGalleryScoped
