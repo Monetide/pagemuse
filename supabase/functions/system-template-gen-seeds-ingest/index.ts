@@ -51,93 +51,106 @@ serve(async (req) => {
       )
     }
 
-    // Check if user has admin role
-    const { data: userRoles, error: roleError } = await supabaseClient
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
+    // Check if user has admin role via secure RPC (bypasses RLS)
+    const { data: roles, error: roleErr } = await supabaseClient.rpc('get_user_roles', { _user_id: user.id })
 
-    if (roleError || !userRoles || userRoles.length === 0) {
+    const isAdmin = Array.isArray(roles) && roles.some((r: any) => r.role === 'admin')
+
+    if (roleErr || !isAdmin) {
       return new Response(
         JSON.stringify({ error: 'Admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    const { seeds } = await req.json()
+    const raw = await req.json()
+    const seedsInput = Array.isArray(raw) ? raw : raw?.seeds
 
-    if (!seeds || !Array.isArray(seeds)) {
+    if (!seedsInput || !Array.isArray(seedsInput)) {
       return new Response(
         JSON.stringify({ error: 'Seeds array is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    console.log(`Global seeds ingest requested by admin ${user.id}: ${seeds.length} seeds`)
+    console.log(`Global seeds ingest requested by admin ${user.id}: ${seedsInput.length} seeds`)
 
-    // Create a dummy global workspace ID for global seeds
-    // We'll use a special UUID that represents the global scope
+    // Global workspace ID for global seeds
     const globalWorkspaceId = '00000000-0000-0000-0000-000000000000'
 
     const results = []
     
-    for (const seed of seeds) {
+    for (const seed of seedsInput) {
       try {
+        // Normalize field names (accept camelCase or snake_case)
+        const normalized = {
+          id: seed.id,
+          doc_type: seed.doc_type ?? seed.docType,
+          industry: seed.industry,
+          style_pack: seed.style_pack ?? seed.stylePack,
+          palette_hints: seed.palette_hints ?? seed.paletteHints ?? {},
+          scale: seed.scale ?? {},
+          motifs: seed.motifs ?? seed.motifVariants ?? {},
+          chart_defaults: seed.chart_defaults ?? seed.chartDefaults ?? {},
+          snippets: seed.snippets ?? [],
+          type_pairing: seed.type_pairing ?? seed.typePairing ?? [],
+          validation_preset: seed.validation_preset ?? seed.validationPreset ?? null,
+        }
+
         // Validate required seed fields
-        if (!seed.id || !seed.doc_type || !seed.industry || !seed.style_pack) {
+        if (!normalized.id || !normalized.doc_type || !normalized.industry || !normalized.style_pack) {
           results.push({
-            seedId: seed.id || 'unknown',
+            seedId: normalized.id || 'unknown',
             success: false,
-            error: 'Missing required fields: id, doc_type, industry, or style_pack'
+            error: 'Missing required fields: id, docType/style_pack, industry, or stylePack/doc_type'
           })
           continue
         }
 
         // Prepare seed data for global scope
         const seedData = {
-          id: seed.id,
-          doc_type: seed.doc_type,
-          industry: seed.industry,
-          style_pack: seed.style_pack,
+          id: normalized.id,
+          doc_type: normalized.doc_type,
+          industry: normalized.industry,
+          style_pack: normalized.style_pack,
           workspace_id: globalWorkspaceId, // Use global workspace ID
           status: 'ready',
-          palette_hints: seed.palette_hints || {},
-          scale: seed.scale || {},
-          motifs: seed.motifs || {},
-          chart_defaults: seed.chart_defaults || {},
-          snippets: seed.snippets || [],
-          type_pairing: seed.type_pairing || [],
-          validation_preset: seed.validation_preset || null
+          palette_hints: normalized.palette_hints,
+          scale: normalized.scale,
+          motifs: normalized.motifs,
+          chart_defaults: normalized.chart_defaults,
+          snippets: normalized.snippets,
+          type_pairing: normalized.type_pairing,
+          validation_preset: normalized.validation_preset
         }
 
         // Insert or update the seed
         const { data: existingSeed } = await supabaseClient
           .from('template_seeds')
           .select('id')
-          .eq('id', seed.id)
+          .eq('id', normalized.id)
           .eq('workspace_id', globalWorkspaceId)
-          .single()
+          .maybeSingle()
 
         if (existingSeed) {
           // Update existing seed
           const { error: updateError } = await supabaseClient
             .from('template_seeds')
             .update(seedData)
-            .eq('id', seed.id)
+            .eq('id', normalized.id)
             .eq('workspace_id', globalWorkspaceId)
 
           if (updateError) {
             console.error('Failed to update seed:', updateError)
             results.push({
-              seedId: seed.id,
+              seedId: normalized.id,
               success: false,
               error: updateError.message
             })
           } else {
-            console.log(`Updated global seed: ${seed.id}`)
+            console.log(`Updated global seed: ${normalized.id}`)
             results.push({
-              seedId: seed.id,
+              seedId: normalized.id,
               success: true,
               action: 'updated'
             })
@@ -151,14 +164,14 @@ serve(async (req) => {
           if (insertError) {
             console.error('Failed to insert seed:', insertError)
             results.push({
-              seedId: seed.id,
+              seedId: normalized.id,
               success: false,
               error: insertError.message
             })
           } else {
-            console.log(`Inserted global seed: ${seed.id}`)
+            console.log(`Inserted global seed: ${normalized.id}`)
             results.push({
-              seedId: seed.id,
+              seedId: normalized.id,
               success: true,
               action: 'inserted'
             })
@@ -170,7 +183,7 @@ serve(async (req) => {
         results.push({
           seedId: seed.id || 'unknown',
           success: false,
-          error: error.message
+          error: (error as Error).message
         })
       }
     }
@@ -183,7 +196,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        processed: seeds.length,
+        processed: seedsInput.length,
         successful: successCount,
         failed: failureCount,
         results,

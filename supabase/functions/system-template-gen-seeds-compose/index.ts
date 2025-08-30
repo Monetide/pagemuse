@@ -51,14 +51,12 @@ serve(async (req) => {
       )
     }
 
-    // Check if user has admin role
-    const { data: userRoles, error: roleError } = await supabaseClient
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'admin')
+    // Check if user has admin role via secure RPC
+    const { data: roles, error: roleErr } = await supabaseClient.rpc('get_user_roles', { _user_id: user.id })
 
-    if (roleError || !userRoles || userRoles.length === 0) {
+    const isAdmin = Array.isArray(roles) && roles.some((r: any) => r.role === 'admin')
+
+    if (roleErr || !isAdmin) {
       return new Response(
         JSON.stringify({ error: 'Admin access required' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
