@@ -93,35 +93,94 @@ export function DraftTemplatesView() {
         return
       }
 
-      // Create a new document using this template (seed with simple cover based on template)
-      const { data: tpl } = await supabase
+      // Create a new document using this template - fetch template pages for structure
+      const { data: templatePages } = await supabase
+        .from('template_pages')
+        .select('*')
+        .eq('template_id', templateId)
+        .order('page_index')
+
+      const { data: templateData } = await supabase
         .from('templates')
         .select('id, name, description, category, global_styling, metadata')
         .eq('id', templateId)
         .single()
 
-      // Base doc
+      // Start with base document
       let initialContent = createDocument(`Test Document - ${templateName}`)
 
-      // Build a minimal cover section using template info
-      const cover = createSection('Cover', 0)
-      ;(cover as any).layoutIntent = 'cover'
-      let flow = createFlow('Main', 'linear', 0)
-      const titleBlock = createBlock('heading', { level: 1, text: tpl?.name || templateName, id: crypto.randomUUID() }, 0)
-      const subtitleBlock = createBlock('paragraph', { text: tpl?.description || 'Subtitle' }, 1)
-      flow = addBlockToFlow(flow, titleBlock)
-      flow = addBlockToFlow(flow, subtitleBlock)
-      const coverWithFlow = addFlowToSection(cover, flow)
+      // Apply template pages to create proper structure
+      if (templatePages && templatePages.length > 0) {
+        // Clear default sections to replace with template structure
+        initialContent.sections = []
 
-      // Put cover first, keep default Body section
-      initialContent = {
-        ...initialContent,
-        sections: [coverWithFlow, ...initialContent.sections],
-        metadata: {
-          ...initialContent.metadata,
-          __templateInfo: { id: tpl?.id || templateId, name: tpl?.name || templateName, category: tpl?.category || 'general' },
-          global_styling: tpl?.global_styling || null
-        }
+        templatePages.forEach((page, index) => {
+          const section = createSection(page.name || `Section ${index + 1}`, index)
+          
+          // Set layout intent based on template page
+          const layoutConfig = page.layout_config as any
+          if (layoutConfig?.type) {
+            ;(section as any).layoutIntent = layoutConfig.type
+          }
+
+          // Create flow with template content
+          let flow = createFlow('Main', 'linear', 0)
+
+          // Add blocks based on template page content scaffold
+          const contentScaffold = page.content_scaffold as any
+          if (contentScaffold) {
+            let blockOrder = 0
+            
+            // Add title if present
+            if (contentScaffold.title) {
+              const titleBlock = createBlock('heading', { 
+                level: 1, 
+                text: contentScaffold.title, 
+                id: crypto.randomUUID() 
+              }, blockOrder++)
+              flow = addBlockToFlow(flow, titleBlock)
+            }
+
+            // Add subtitle if present
+            if (contentScaffold.subtitle) {
+              const subtitleBlock = createBlock('paragraph', { 
+                text: contentScaffold.subtitle 
+              }, blockOrder++)
+              flow = addBlockToFlow(flow, subtitleBlock)
+            }
+
+            // Add author if present
+            if (contentScaffold.author) {
+              const authorBlock = createBlock('paragraph', { 
+                text: `Author: ${contentScaffold.author}` 
+              }, blockOrder++)
+              flow = addBlockToFlow(flow, authorBlock)
+            }
+
+            // Add date if present
+            if (contentScaffold.date) {
+              const dateBlock = createBlock('paragraph', { 
+                text: `Date: ${contentScaffold.date}` 
+              }, blockOrder++)
+              flow = addBlockToFlow(flow, dateBlock)
+            }
+          }
+
+          // Add the flow to section
+          const sectionWithFlow = addFlowToSection(section, flow)
+          initialContent = addSectionToDocument(initialContent, sectionWithFlow)
+        })
+      }
+
+      // Add template metadata
+      initialContent.metadata = {
+        ...initialContent.metadata,
+        __templateInfo: { 
+          id: templateData?.id || templateId, 
+          name: templateData?.name || templateName, 
+          category: templateData?.category || 'general' 
+        },
+        global_styling: templateData?.global_styling || null
       }
       const { data, error } = await supabase
         .from('documents')
