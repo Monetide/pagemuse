@@ -4,6 +4,7 @@ export interface CreateFromTemplateParams {
   templateId: string
   title?: string
   workspaceId: string
+  followKitUpdates?: boolean
 }
 
 export interface CreateFromTemplateResponse {
@@ -13,7 +14,7 @@ export interface CreateFromTemplateResponse {
 
 export class DocumentService {
   static async createFromTemplate(params: CreateFromTemplateParams): Promise<CreateFromTemplateResponse> {
-    const { templateId, title, workspaceId } = params
+    const { templateId, title, workspaceId, followKitUpdates } = params
 
     try {
       const response = await fetch(`/api/w/${workspaceId}/documents/from-template`, {
@@ -24,7 +25,8 @@ export class DocumentService {
         },
         body: JSON.stringify({
           templateId,
-          title
+          title,
+          followKitUpdates
         })
       })
 
@@ -41,14 +43,15 @@ export class DocumentService {
   }
 
   static async createFromTemplateViaFunction(params: CreateFromTemplateParams): Promise<CreateFromTemplateResponse> {
-    const { templateId, title, workspaceId } = params
+    const { templateId, title, workspaceId, followKitUpdates } = params
 
     try {
       const { data, error } = await supabase.functions.invoke('create-document-from-template', {
         body: {
           templateId,
           title,
-          workspaceId
+          workspaceId,
+          followKitUpdates
         }
       })
 

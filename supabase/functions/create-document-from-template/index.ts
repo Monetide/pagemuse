@@ -37,7 +37,7 @@ serve(async (req) => {
       return new Response('Unauthorized', { status: 401, headers: corsHeaders })
     }
 
-    const { templateId, title, workspaceId } = await req.json()
+    const { templateId, title, workspaceId, followKitUpdates } = await req.json()
 
     if (!templateId || !workspaceId) {
       return new Response('Template ID and Workspace ID required', { status: 400, headers: corsHeaders })
@@ -58,21 +58,23 @@ serve(async (req) => {
       return new Response('Access denied', { status: 403, headers: corsHeaders })
     }
 
-    // Fetch template data
+    // Fetch template with full configuration
     const { data: template, error: templateError } = await supabaseClient
       .from('templates')
       .select(`
-        id, name, description, category, global_styling, metadata,
+        id, name, description, category, status, scope,
+        global_styling, metadata, tpkg_source,
         template_pages (
           id, name, page_index, content_scaffold, page_styling, layout_config
         )
       `)
       .eq('id', templateId)
+      .eq('status', 'published')
       .single()
 
     if (templateError || !template) {
       console.error('Template fetch error:', templateError)
-      return new Response('Template not found', { status: 404, headers: corsHeaders })
+      return new Response('Template not found or not published', { status: 404, headers: corsHeaders })
     }
 
     // Get workspace's default brand kit
@@ -83,14 +85,158 @@ serve(async (req) => {
       .limit(1)
       .maybeSingle()
 
-    // Create proper document structure using the expected SemanticDocument interface
-    const documentContent = {
-      id: crypto.randomUUID(),
-      title: title || `Document from ${template.name}`,
-      sections: [{
+    // Helper function to apply brand kit to theme tokens
+    function applyBrandKitToTokens(themeTokens: any, brandKit: any) {
+      if (!brandKit) return themeTokens
+      
+      const tokens = { ...themeTokens }
+      
+      // Map brand kit colors to theme tokens
+      if (brandKit.palette) {
+        tokens.primary = brandKit.palette.primary
+        tokens.secondary = brandKit.palette.secondary  
+        tokens.accent = brandKit.palette.accent
+      }
+      
+      if (brandKit.neutrals) {
+        tokens.textBody = brandKit.neutrals.textBody
+        tokens.textMuted = brandKit.neutrals.textMuted
+        tokens.bgPage = brandKit.neutrals.bgPage
+        tokens.bgSection = brandKit.neutrals.bgSection
+        tokens.borderSubtle = brandKit.neutrals.borderSubtle
+      }
+      
+      if (brandKit.fonts) {
+        if (brandKit.fonts.heading) tokens.fontHeading = brandKit.fonts.heading
+        if (brandKit.fonts.body) tokens.fontBody = brandKit.fonts.body
+      }
+      
+      return tokens
+    }
+
+    // Helper function to recolor SVG motifs
+    function recolorSvg(svgContent: string, colorMap: any) {
+      let recolored = svgContent
+      
+      // Replace data-token attributes with actual colors
+      Object.keys(colorMap).forEach(token => {
+        const regex = new RegExp(`data-token="${token}"`, 'g')
+        recolored = recolored.replace(regex, `fill="${colorMap[token]}"`)
+      })
+      
+      return recolored
+    }
+
+    // Clone template configuration
+    const templateConfig = template.tpkg_source || {}
+    const templateMetadata = template.metadata || {}
+    
+    // Extract configuration from template
+    const themeTokens = applyBrandKitToTokens(templateConfig.themeTokens || {}, brandKit)
+    const objectStyles = templateConfig.objectStyles || {}
+    const pageMasters = templateConfig.pageMasters || {}
+    const layoutIntents = templateConfig.layoutIntents || []
+    const snippets = templateConfig.snippets || []
+    const starterContent = templateConfig.starterContent || {}
+    const motifs = templateConfig.motifs || {}
+
+    // Create sections from starter content
+    const sections = []
+    let sectionOrder = 0
+
+    // Create Cover section if template has cover layout
+    const hasCoverLayout = layoutIntents.some((intent: any) => intent.type === 'cover')
+    if (hasCoverLayout) {
+      const coverSection = {
+        id: crypto.randomUUID(),
+        name: 'Cover',
+        description: 'Document cover page',
+        flows: [{
+          id: crypto.randomUUID(),
+          name: 'Cover Flow',
+          blocks: [{
+            id: crypto.randomUUID(),
+            type: 'heading',
+            content: {
+              level: 1,
+              text: title || template.name || 'Document Title'
+            },
+            order: 0,
+            paginationRules: {
+              keepWithNext: true,
+              breakAvoid: true
+            }
+          }],
+          type: 'linear',
+          order: 0
+        }],
+        pageMaster: pageMasters.cover || {
+          pageSize: 'Letter',
+          orientation: 'portrait',
+          margins: { top: 2, right: 2, bottom: 2, left: 2 },
+          columns: 1,
+          columnGap: 0,
+          hasHeader: false,
+          hasFooter: false,
+          baselineGrid: false,
+          gridSpacing: 0.125,
+          allowTableRotation: false
+        },
+        layoutIntent: 'cover',
+        order: sectionOrder++,
+        footnotes: [],
+        useEndnotes: false,
+        includeInTOC: false
+      }
+      sections.push(coverSection)
+    }
+
+    // Create Body sections from starter content
+    if (starterContent.sections && Array.isArray(starterContent.sections)) {
+      starterContent.sections.forEach((sectionConfig: any, index: number) => {
+        const section = {
+          id: crypto.randomUUID(),
+          name: sectionConfig.name || `Section ${index + 1}`,
+          description: sectionConfig.description || '',
+          flows: sectionConfig.flows?.map((flowConfig: any, flowIndex: number) => ({
+            id: crypto.randomUUID(),
+            name: flowConfig.name || `Flow ${flowIndex + 1}`,
+            blocks: flowConfig.blocks?.map((blockConfig: any, blockIndex: number) => ({
+              id: crypto.randomUUID(),
+              type: blockConfig.type || 'paragraph',
+              content: blockConfig.content || { text: 'Content placeholder' },
+              order: blockIndex,
+              paginationRules: blockConfig.paginationRules || {}
+            })) || [],
+            type: flowConfig.type || 'linear',
+            order: flowIndex
+          })) || [],
+          pageMaster: sectionConfig.pageMaster || pageMasters.body || {
+            pageSize: 'Letter',
+            orientation: 'portrait',
+            margins: { top: 1, right: 1, bottom: 1, left: 1 },
+            columns: sectionConfig.columns || 1,
+            columnGap: 0.25,
+            hasHeader: false,
+            hasFooter: false,
+            baselineGrid: false,
+            gridSpacing: 0.125,
+            allowTableRotation: false
+          },
+          layoutIntent: sectionConfig.layoutIntent || 'body',
+          order: sectionOrder++,
+          footnotes: [],
+          useEndnotes: false,
+          includeInTOC: true
+        }
+        sections.push(section)
+      })
+    } else {
+      // Create default body section if no starter content
+      const bodySection = {
         id: crypto.randomUUID(),
         name: 'Main Content',
-        description: template.description,
+        description: template.description || '',
         flows: [{
           id: crypto.randomUUID(),
           name: 'Main',
@@ -98,8 +244,8 @@ serve(async (req) => {
             id: crypto.randomUUID(),
             type: 'heading',
             content: {
-              level: 1,
-              text: title || template.name || 'Document Title'
+              level: 2,
+              text: 'Introduction'
             },
             order: 0,
             paginationRules: {
@@ -118,15 +264,10 @@ serve(async (req) => {
           type: 'linear',
           order: 0
         }],
-        pageMaster: {
+        pageMaster: pageMasters.body || {
           pageSize: 'Letter',
           orientation: 'portrait',
-          margins: {
-            top: 1,
-            right: 1,
-            bottom: 1,
-            left: 1
-          },
+          margins: { top: 1, right: 1, bottom: 1, left: 1 },
           columns: 1,
           columnGap: 0.25,
           hasHeader: false,
@@ -136,24 +277,38 @@ serve(async (req) => {
           allowTableRotation: false
         },
         layoutIntent: 'body',
-        order: 0,
+        order: sectionOrder++,
         footnotes: [],
         useEndnotes: false,
         includeInTOC: true
-      }],
+      }
+      sections.push(bodySection)
+    }
+
+    // Create full document with template configuration
+    const documentContent = {
+      id: crypto.randomUUID(),
+      title: title || template.name || 'Document',
+      sections,
       metadata: {
         templateInfo: {
           id: template.id,
           name: template.name,
           category: template.category
         },
-        globalStyling: template.global_styling || {},
+        themeTokens,
+        objectStyles,
+        pageMasters,
+        layoutIntents,
+        snippets,
+        motifs,
         appliedBrandKit: brandKit ? {
           id: brandKit.id,
           name: brandKit.name,
-          appliedAt: new Date().toISOString()
+          appliedAt: new Date().toISOString(),
+          followUpdates: followKitUpdates !== false
         } : null,
-        ...template.metadata
+        ...templateMetadata
       },
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
