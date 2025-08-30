@@ -85,8 +85,8 @@ export default function AdminTemplates({ scope = 'workspace' }: AdminTemplatesPr
 
   const filteredTemplates = templates.filter(template =>
     (template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    template.category.toLowerCase().includes(searchTerm.toLowerCase())) &&
-    ((template as any).status === 'published' || template.is_global) // Support both new status field and legacy is_global
+     template.category.toLowerCase().includes(searchTerm.toLowerCase())) &&
+    ((template as any).status === 'published')
   )
 
   if (loading) {
@@ -212,7 +212,7 @@ export default function AdminTemplates({ scope = 'workspace' }: AdminTemplatesPr
                           <Copy className="w-4 h-4 mr-2" />
                           Duplicate
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => togglePublish(template.id, ((template as any).status === 'published') || template.is_global)}>
+                        <DropdownMenuItem onClick={() => togglePublish(template.id, ((template as any).status === 'published'))}>
                           <EyeOff className="w-4 h-4 mr-2" />
                           Unpublish
                         </DropdownMenuItem>
@@ -261,7 +261,7 @@ export default function AdminTemplates({ scope = 'workspace' }: AdminTemplatesPr
                     <Button 
                       size="sm" 
                       variant="outline"
-                      onClick={() => togglePublish(template.id, ((template as any).status === 'published') || template.is_global)}
+                      onClick={() => togglePublish(template.id, ((template as any).status === 'published'))}
                     >
                       <EyeOff className="w-4 h-4 mr-1" />
                       Unpublish
