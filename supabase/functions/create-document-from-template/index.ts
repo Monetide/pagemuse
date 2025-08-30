@@ -12,18 +12,15 @@ serve(async (req) => {
   }
 
   try {
-    const authHeader = req.headers.get('Authorization')!
-    const token = authHeader.replace('Bearer ', '')
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return new Response('Unauthorized', { status: 401, headers: corsHeaders })
+    }
 
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       {
-        global: {
-          headers: {
-            Authorization: authHeader,
-          },
-        },
         auth: {
           autoRefreshToken: false,
           persistSession: false,
@@ -31,35 +28,34 @@ serve(async (req) => {
       }
     )
 
-    const { data: { user } } = await supabaseClient.auth.getUser(token)
-    if (!user) {
+    // Get user from token
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token)
+    
+    if (userError || !user) {
+      console.error('User authentication error:', userError)
       return new Response('Unauthorized', { status: 401, headers: corsHeaders })
     }
 
-    const url = new URL(req.url)
-    const pathParts = url.pathname.split('/')
-    const workspaceId = pathParts[pathParts.indexOf('w') + 1]
+    const { templateId, title, workspaceId } = await req.json()
 
-    if (!workspaceId) {
-      return new Response('Workspace ID required', { status: 400, headers: corsHeaders })
+    if (!templateId || !workspaceId) {
+      return new Response('Template ID and Workspace ID required', { status: 400, headers: corsHeaders })
     }
 
+    console.log('Creating document from template:', { templateId, workspaceId, userId: user.id })
+
     // Verify workspace membership
-    const { data: membership } = await supabaseClient
+    const { data: membership, error: membershipError } = await supabaseClient
       .from('workspace_members')
       .select('role')
       .eq('workspace_id', workspaceId)
       .eq('user_id', user.id)
       .single()
 
-    if (!membership) {
+    if (membershipError || !membership) {
+      console.error('Workspace membership error:', membershipError)
       return new Response('Access denied', { status: 403, headers: corsHeaders })
-    }
-
-    const { templateId, title } = await req.json()
-
-    if (!templateId) {
-      return new Response('Template ID required', { status: 400, headers: corsHeaders })
     }
 
     // Fetch template data
@@ -75,6 +71,7 @@ serve(async (req) => {
       .single()
 
     if (templateError || !template) {
+      console.error('Template fetch error:', templateError)
       return new Response('Template not found', { status: 404, headers: corsHeaders })
     }
 
@@ -84,9 +81,9 @@ serve(async (req) => {
       .select('id, name, palette, neutrals, fonts, logo_primary_url, logo_alt_url')
       .eq('workspace_id', workspaceId)
       .limit(1)
-      .single()
+      .maybeSingle()
 
-    // Create document structure from template
+    // Create basic document structure
     const documentContent = {
       id: crypto.randomUUID(),
       title: title || `Document from ${template.name}`,
@@ -97,7 +94,7 @@ serve(async (req) => {
           name: template.name,
           category: template.category
         },
-        globalStyling: template.global_styling,
+        globalStyling: template.global_styling || {},
         appliedBrandKit: brandKit ? {
           id: brandKit.id,
           name: brandKit.name,
@@ -105,72 +102,35 @@ serve(async (req) => {
         } : null,
         ...template.metadata
       },
-      sections: []
-    }
-
-    // Process template pages into document sections
-    if (template.template_pages && template.template_pages.length > 0) {
-      const sortedPages = template.template_pages.sort((a, b) => a.page_index - b.page_index)
-      
-      for (const page of sortedPages) {
-        const section = {
+      sections: [{
+        id: crypto.randomUUID(),
+        type: 'section',
+        name: 'Main Content',
+        order: 0,
+        flows: [{
           id: crypto.randomUUID(),
-          type: 'section',
-          name: page.name || `Section ${page.page_index + 1}`,
-          order: page.page_index,
-          layoutIntent: page.layout_config?.type || 'standard',
-          styling: applyBrandKitToStyling(page.page_styling || {}, brandKit),
-          flows: [{
-            id: crypto.randomUUID(),
-            type: 'flow',
-            name: 'Main',
-            flowType: 'linear',
-            order: 0,
-            blocks: createBlocksFromScaffold(page.content_scaffold || {}, brandKit)
-          }]
-        }
-        documentContent.sections.push(section)
-      }
-    } else {
-      // Create default structure if no template pages
-      documentContent.sections = [
-        {
-          id: crypto.randomUUID(),
-          type: 'section',
-          name: 'Cover',
+          type: 'flow',
+          name: 'Main',
+          flowType: 'linear',
           order: 0,
-          layoutIntent: 'cover',
-          styling: applyBrandKitToStyling({}, brandKit),
-          flows: [{
+          blocks: [{
             id: crypto.randomUUID(),
-            type: 'flow',
-            name: 'Main',
-            flowType: 'linear',
+            type: 'heading',
             order: 0,
-            blocks: [
-              {
-                id: crypto.randomUUID(),
-                type: 'heading',
-                order: 0,
-                content: {
-                  level: 1,
-                  text: title || template.name || 'Document Title'
-                },
-                styling: applyBrandKitToStyling({}, brandKit)
-              },
-              {
-                id: crypto.randomUUID(),
-                type: 'paragraph',
-                order: 1,
-                content: {
-                  text: template.description || 'Document created from template'
-                },
-                styling: applyBrandKitToStyling({}, brandKit)
-              }
-            ]
+            content: {
+              level: 1,
+              text: title || template.name || 'Document Title'
+            }
+          }, {
+            id: crypto.randomUUID(),
+            type: 'paragraph',
+            order: 1,
+            content: {
+              text: template.description || 'Document created from template'
+            }
           }]
-        }
-      ]
+        }]
+      }]
     }
 
     // Create the document
@@ -215,6 +175,8 @@ serve(async (req) => {
       url: `/w/${workspaceId}/documents/${document.id}/editor`
     }
 
+    console.log('Document created successfully:', response)
+
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
@@ -224,104 +186,3 @@ serve(async (req) => {
     return new Response('Internal server error', { status: 500, headers: corsHeaders })
   }
 })
-
-function applyBrandKitToStyling(styling: any, brandKit: any) {
-  if (!brandKit) return styling
-
-  const appliedStyling = { ...styling }
-
-  // Apply brand kit colors to styling tokens
-  if (brandKit.palette) {
-    appliedStyling.colors = {
-      ...appliedStyling.colors,
-      primary: brandKit.palette.primary,
-      secondary: brandKit.palette.secondary,
-      accent: brandKit.palette.accent
-    }
-  }
-
-  if (brandKit.neutrals) {
-    appliedStyling.colors = {
-      ...appliedStyling.colors,
-      ...brandKit.neutrals
-    }
-  }
-
-  if (brandKit.fonts) {
-    appliedStyling.typography = {
-      ...appliedStyling.typography,
-      ...brandKit.fonts
-    }
-  }
-
-  return appliedStyling
-}
-
-function createBlocksFromScaffold(scaffold: any, brandKit: any) {
-  const blocks = []
-  let order = 0
-
-  if (scaffold.title) {
-    blocks.push({
-      id: crypto.randomUUID(),
-      type: 'heading',
-      order: order++,
-      content: {
-        level: 1,
-        text: scaffold.title
-      },
-      styling: applyBrandKitToStyling({}, brandKit)
-    })
-  }
-
-  if (scaffold.subtitle) {
-    blocks.push({
-      id: crypto.randomUUID(),
-      type: 'paragraph',
-      order: order++,
-      content: {
-        text: scaffold.subtitle
-      },
-      styling: applyBrandKitToStyling({}, brandKit)
-    })
-  }
-
-  if (scaffold.author) {
-    blocks.push({
-      id: crypto.randomUUID(),
-      type: 'paragraph',
-      order: order++,
-      content: {
-        text: `Author: ${scaffold.author}`
-      },
-      styling: applyBrandKitToStyling({}, brandKit)
-    })
-  }
-
-  if (scaffold.date) {
-    blocks.push({
-      id: crypto.randomUUID(),
-      type: 'paragraph',
-      order: order++,
-      content: {
-        text: `Date: ${scaffold.date}`
-      },
-      styling: applyBrandKitToStyling({}, brandKit)
-    })
-  }
-
-  // If no content, add a default paragraph
-  if (blocks.length === 0) {
-    blocks.push({
-      id: crypto.randomUUID(),
-      type: 'paragraph',
-      order: 0,
-      content: {
-        text: 'Start writing your content here...'
-      },
-      styling: applyBrandKitToStyling({}, brandKit)
-    })
-  }
-
-  return blocks
-}
