@@ -112,7 +112,7 @@ export function DraftTemplatesView() {
       }
 
       toast.success('Test document created!')
-      navigate(`/documents/${data.id}`)
+      navigate(`/w/${workspaceData.workspace_id}/documents/${data.id}`)
     } catch (error) {
       console.error('Error creating test document:', error)
       toast.error('Failed to create test document')
