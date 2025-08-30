@@ -51,12 +51,11 @@ export function useTemplatesScoped() {
       setLoading(true)
       setError(null)
 
-      // Fetch global templates
+      // Fetch global templates (both new scope-based and legacy is_global)
       const { data: globalTemplates, error: globalError } = await supabase
         .from('templates')
         .select('*')
-        .eq('scope', 'global')
-        .eq('status', 'published')
+        .or('and(scope.eq.global,status.eq.published),and(is_global.eq.true,status.eq.published)')
         .order('usage_count', { ascending: false })
 
       if (globalError) throw globalError

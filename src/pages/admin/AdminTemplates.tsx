@@ -31,7 +31,7 @@ import { supabase } from '@/integrations/supabase/client'
 import type { Tables } from '@/integrations/supabase/types'
 import { ImportTemplateDialog } from '@/components/admin/ImportTemplateDialog'
 
-type Template = Tables<'templates'>
+type Template = Tables<'templates'> & { status?: string }
 
 interface AdminTemplatesProps {
   scope?: 'workspace' | 'global'
@@ -46,22 +46,18 @@ export default function AdminTemplates({ scope = 'workspace' }: AdminTemplatesPr
     window.location.reload()
   }
 
-  const togglePublish = async (templateId: string, currentStatus: boolean) => {
+  const togglePublish = async (templateId: string, currentlyPublished: boolean) => {
     try {
+      const newStatus = currentlyPublished ? 'draft' : 'published'
       const { error } = await supabase
         .from('templates')
-        .update({ is_global: !currentStatus })
+        .update({ status: newStatus })
         .eq('id', templateId)
 
       if (error) throw error
       
-      // For database templates, update local state
-      const updatedTemplates = templates.map(template => 
-        template.id === templateId 
-          ? { ...template, is_global: !currentStatus }
-          : template
-      )
-      // Note: This won't work for starter templates - page reload needed
+      // Refresh templates to show updated status
+      refetchTemplates()
     } catch (error) {
       console.error('Error updating template status:', error)
     }
@@ -88,8 +84,9 @@ export default function AdminTemplates({ scope = 'workspace' }: AdminTemplatesPr
   }
 
   const filteredTemplates = templates.filter(template =>
-    template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    template.category.toLowerCase().includes(searchTerm.toLowerCase())
+    (template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    template.category.toLowerCase().includes(searchTerm.toLowerCase())) &&
+    ((template as any).status === 'published' || template.is_global) // Support both new status field and legacy is_global
   )
 
   if (loading) {
@@ -183,17 +180,10 @@ export default function AdminTemplates({ scope = 'workspace' }: AdminTemplatesPr
                         <Badge variant="secondary" className="text-xs">
                           {template.category}
                         </Badge>
-                        {template.is_global ? (
-                          <Badge className="text-xs bg-green-100 text-green-800">
-                            <Eye className="w-3 h-3 mr-1" />
-                            Published
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-xs">
-                            <EyeOff className="w-3 h-3 mr-1" />
-                            Draft
-                          </Badge>
-                        )}
+                        <Badge className="text-xs bg-green-100 text-green-800">
+                          <Eye className="w-3 h-3 mr-1" />
+                          Published
+                        </Badge>
                         {template.is_premium && (
                           <Badge className="text-xs bg-yellow-100 text-yellow-800">
                             Premium
@@ -222,18 +212,9 @@ export default function AdminTemplates({ scope = 'workspace' }: AdminTemplatesPr
                           <Copy className="w-4 h-4 mr-2" />
                           Duplicate
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => togglePublish(template.id, template.is_global)}>
-                          {template.is_global ? (
-                            <>
-                              <EyeOff className="w-4 h-4 mr-2" />
-                              Unpublish
-                            </>
-                          ) : (
-                            <>
-                              <Eye className="w-4 h-4 mr-2" />
-                              Publish
-                            </>
-                          )}
+                        <DropdownMenuItem onClick={() => togglePublish(template.id, ((template as any).status === 'published') || template.is_global)}>
+                          <EyeOff className="w-4 h-4 mr-2" />
+                          Unpublish
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem 
@@ -279,20 +260,11 @@ export default function AdminTemplates({ scope = 'workspace' }: AdminTemplatesPr
                     </Link>
                     <Button 
                       size="sm" 
-                      variant={template.is_global ? "default" : "outline"}
-                      onClick={() => togglePublish(template.id, template.is_global)}
+                      variant="outline"
+                      onClick={() => togglePublish(template.id, ((template as any).status === 'published') || template.is_global)}
                     >
-                      {template.is_global ? (
-                        <>
-                          <EyeOff className="w-4 h-4 mr-1" />
-                          Hide
-                        </>
-                      ) : (
-                        <>
-                          <Eye className="w-4 h-4 mr-1" />
-                          Publish
-                        </>
-                      )}
+                      <EyeOff className="w-4 h-4 mr-1" />
+                      Unpublish
                     </Button>
                   </div>
                 </CardContent>

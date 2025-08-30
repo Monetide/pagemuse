@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { useTemplatesScoped, ScopedTemplate } from '@/hooks/useTemplatesScoped'
 import { useTemplateApplication } from '@/hooks/useTemplateApplication'
-import { Loader2, Search, Star, Globe, Building2, Eye, ArrowLeft, FileText, Palette, Building } from 'lucide-react'
+import { Loader2, Search, Star, Globe, Building2, Eye, ArrowLeft, FileText, Palette, Building, Plus } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 export default function NewDocument() {
@@ -230,23 +230,36 @@ export default function NewDocument() {
       )}
 
       {/* Empty State */}
-      {filteredGlobalFeatured.length === 0 && filteredGlobalAll.length === 0 && filteredWorkspace.length === 0 && (
-        <div className="text-center py-16 text-muted-foreground">
-          <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <h3 className="text-lg font-medium mb-2">No templates found</h3>
-          <p>No templates match your current search criteria.</p>
-          <Button 
-            variant="outline" 
-            onClick={() => {
-              setSearchQuery('')
-              setSelectedDocType('all')
-              setSelectedStylePack('all')
-              setSelectedIndustry('all')
-            }}
-            className="mt-4"
-          >
-            Clear Filters
-          </Button>
+      {filteredGlobalFeatured.length === 0 && filteredGlobalAll.length === 0 && filteredWorkspace.length === 0 && !loading && (
+        <div className="text-center py-12">
+          <FileText className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold text-foreground mb-2">
+            No templates available
+          </h3>
+          <p className="text-muted-foreground mb-6">
+            {searchQuery || selectedDocType !== 'all' || selectedStylePack !== 'all' || selectedIndustry !== 'all'
+              ? 'No templates match your current filters. Try adjusting your search or filters.'
+              : 'Templates need to be published before they appear here.'
+            }
+          </p>
+          <div className="flex gap-2 justify-center">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setSearchQuery('')
+                setSelectedDocType('all')
+                setSelectedStylePack('all')
+                setSelectedIndustry('all')
+              }}
+              className="mt-4"
+            >
+              Clear All Filters
+            </Button>
+            <Button onClick={() => navigate(`/w/${workspaceId}/admin/templates`)} className="mt-4">
+              <Palette className="w-4 h-4 mr-2" />
+              Manage Templates
+            </Button>
+          </div>
         </div>
       )}
 
