@@ -124,9 +124,12 @@ serve(async (req) => {
     
     for (const seed of seeds) {
       try {
-        // Generate template name based on seed properties
+        // Generate template name based on seed properties  
         const templateName = `Global ${seed.doc_type} - ${seed.industry} (${seed.style_pack})`
-        const templateSlug = `global-${seed.doc_type}-${seed.industry}-${seed.style_pack}`.toLowerCase().replace(/[^a-z0-9-]/g, '-')
+        const baseSlug = `global-${seed.doc_type}-${seed.industry}-${seed.style_pack}`.toLowerCase().replace(/[^a-z0-9-]/g, '-')
+        
+        // Make slug unique by adding timestamp
+        const uniqueSlug = `${baseSlug}-${Date.now()}`
 
         // Create mock preview data (in real implementation, this would generate actual previews)
         const mockPreviewUrl = `https://via.placeholder.com/800x600/1f2937/ffffff?text=${encodeURIComponent(templateName)}`
@@ -134,7 +137,7 @@ serve(async (req) => {
         // Create global template with workspace_id=null for true global scope
         const templateData = {
           name: templateName,
-          template_slug: templateSlug,
+          template_slug: uniqueSlug,
           description: `Global template for ${seed.doc_type} documents in ${seed.industry} industry with ${seed.style_pack} styling`,
           category: seed.doc_type,
           scope: 'global',
@@ -158,13 +161,13 @@ serve(async (req) => {
           }
         }
 
-        console.log(`Creating template for seed ${seed.id}:`, templateSlug)
+        console.log(`Creating template for seed ${seed.id}:`, uniqueSlug)
 
         // Check if template already exists
         const { data: existingTemplate } = await supabaseClient
           .from('templates')
           .select('id')
-          .eq('template_slug', templateSlug)
+          .eq('template_slug', uniqueSlug)
           .eq('scope', 'global')
           .maybeSingle()
 
@@ -190,7 +193,7 @@ serve(async (req) => {
           }
 
           templateId = updatedTemplate.id
-          console.log(`Updated global template: ${templateSlug}`)
+          console.log(`Updated global template: ${uniqueSlug}`)
         } else {
           // Insert new template
           const { data: newTemplate, error: insertError } = await supabaseClient
@@ -211,7 +214,7 @@ serve(async (req) => {
           }
 
           templateId = newTemplate.id
-          console.log(`Created global template: ${templateSlug}`)
+          console.log(`Created global template: ${uniqueSlug}`)
         }
 
         // Create template pages (simplified for demo - in real implementation, this would be more complex)
@@ -259,7 +262,7 @@ serve(async (req) => {
           success: true,
           templateId,
           templateName,
-          templateSlug,
+          templateSlug: uniqueSlug,
           previewUrl: mockPreviewUrl,
           scope: 'global',
           workspaceId: null
