@@ -69,6 +69,19 @@ export interface TemplateManifest {
     tocItem: any
   }
   
+  snippets: string[]
+  
+  starterContent: {
+    [key: string]: {
+      type: 'snippet'
+      name: string
+      category: string
+      content: string
+      appliesTo: string[]
+      industries: string[]
+    }
+  }
+  
   layoutIntents: {
     [key: string]: {
       name: string
@@ -360,6 +373,31 @@ export async function packageTemplate(
       }
     },
     
+    snippets: seedData.snippets?.snippets || [],
+    
+    starterContent: (() => {
+      const content: Record<string, any> = {}
+      
+      // Add snippets as starter content entries
+      if (seedData.snippets?.snippets) {
+        seedData.snippets.snippets.forEach(snippetId => {
+          const snippet = getSnippetById(snippetId)
+          if (snippet) {
+            content[snippetId] = {
+              type: 'snippet',
+              name: snippet.name,
+              category: snippet.category,
+              content: snippet.content,
+              appliesTo: snippet.docTypes,
+              industries: snippet.industries || []
+            }
+          }
+        })
+      }
+      
+      return content
+    })(),
+    
     layoutIntents: (() => {
       const intents: Record<string, any> = {}
       
@@ -463,6 +501,146 @@ export async function packageTemplate(
     assets,
     previews
   }
+}
+
+// Helper function to get snippet by ID
+function getSnippetById(snippetId: string) {
+  const snippets = [
+    // Common snippets
+    {
+      id: 'kpi-3up',
+      name: 'KPI 3-Up',
+      category: 'common',
+      docTypes: ['white-paper', 'report', 'annual-report', 'case-study'],
+      content: `<div class="kpi-strip">
+  <div class="kpi-item">
+    <div class="kpi-value">$2.4M</div>
+    <div class="kpi-label">Revenue</div>
+    <div class="kpi-change">+12%</div>
+  </div>
+  <div class="kpi-item">
+    <div class="kpi-value">23%</div>
+    <div class="kpi-label">Growth</div>
+    <div class="kpi-change">+5%</div>
+  </div>
+  <div class="kpi-item">
+    <div class="kpi-value">45.2K</div>
+    <div class="kpi-label">Users</div> 
+    <div class="kpi-change">+8%</div>
+  </div>
+</div>`
+    },
+    {
+      id: 'pull-quote',
+      name: 'Pull Quote',
+      category: 'common',
+      docTypes: ['white-paper', 'report', 'annual-report', 'ebook', 'case-study'],
+      content: `<blockquote class="pull-quote">
+  <p>"Design is not just what it looks like and feels like. Design is how it works."</p>
+  <footer>— Steve Jobs</footer>
+</blockquote>`
+    },
+    {
+      id: 'cta',
+      name: 'Call to Action',
+      category: 'common',
+      docTypes: ['white-paper', 'ebook', 'case-study', 'proposal'],
+      content: `<div class="cta-section">
+  <h3>Ready to get started?</h3>
+  <p>Download our comprehensive guide today.</p>
+  <button class="cta-button">Download Free Guide</button>
+</div>`
+    },
+    {
+      id: 'disclaimer-finance',
+      name: 'Financial Disclaimer',
+      category: 'finance',
+      docTypes: ['report', 'annual-report', 'white-paper'],
+      industries: ['finance', 'insurance'],
+      content: `<div class="disclaimer financial">
+  <h4>Important Disclaimer</h4>
+  <p>This material is for informational purposes only and should not be construed as investment advice. Past performance does not guarantee future results. All investments carry risk of loss.</p>
+</div>`
+    },
+    {
+      id: 'forward-looking-statement',
+      name: 'Forward-Looking Statement',
+      category: 'finance',
+      docTypes: ['annual-report', 'report'],
+      industries: ['finance', 'insurance', 'public-sector'],
+      content: `<div class="forward-looking-disclaimer">
+  <h4>Forward-Looking Statements</h4>
+  <p>This document contains forward-looking statements. These statements involve risks and uncertainties that could cause actual results to differ materially from those expressed or implied.</p>
+</div>`
+    },
+    {
+      id: 'disclaimer-insurance',
+      name: 'Insurance Disclaimer',
+      category: 'insurance',
+      docTypes: ['report', 'white-paper', 'proposal'],
+      industries: ['insurance'],
+      content: `<div class="disclaimer insurance">
+  <h4>Coverage Disclaimer</h4>
+  <p>Coverage details may vary by state and policy. This is a general overview and does not constitute a contract. Please refer to your policy documents for complete terms and conditions.</p>
+</div>`
+    },
+    {
+      id: 'terms-summary',
+      name: 'Terms Summary',
+      category: 'insurance',
+      docTypes: ['proposal', 'report'],
+      industries: ['insurance'],
+      content: `<div class="terms-summary">
+  <h4>Policy Summary</h4>
+  <ul>
+    <li><strong>Policy Term:</strong> 12 months</li>
+    <li><strong>Premium:</strong> $XXX/month</li>
+    <li><strong>Deductible:</strong> $XXX</li>
+    <li><strong>Coverage Limit:</strong> $XXX</li>
+  </ul>
+</div>`
+    },
+    {
+      id: 'hipaa-note',
+      name: 'HIPAA Notice',
+      category: 'healthcare',
+      docTypes: ['report', 'white-paper', 'case-study'],
+      industries: ['healthcare'],
+      content: `<div class="hipaa-notice">
+  <h4>Privacy Notice</h4>
+  <p>All patient information in this document has been de-identified in accordance with HIPAA privacy regulations. No protected health information is disclosed.</p>
+</div>`
+    },
+    {
+      id: 'letter-from-ceo',
+      name: 'Letter from CEO',
+      category: 'annual-report',
+      docTypes: ['annual-report'],
+      content: `<div class="ceo-letter">
+  <h2>Letter from the CEO</h2>
+  <p>Dear Shareholders,</p>
+  <p>I am pleased to present our annual results and reflect on a year of significant achievement and growth...</p>
+  <p>Sincerely,<br/>[CEO Name]<br/>Chief Executive Officer</p>
+</div>`
+    },
+    {
+      id: 'governance-summary',
+      name: 'Governance Summary',
+      category: 'annual-report',
+      docTypes: ['annual-report'],
+      content: `<div class="governance-summary">
+  <h3>Corporate Governance</h3>
+  <p>Our Board consists of [X] independent directors who provide strategic oversight and ensure accountability to our shareholders.</p>
+  <ul>
+    <li>Board Independence: XX%</li>
+    <li>Diversity: XX% diverse representation</li>
+    <li>Committees: Audit, Compensation, Nominating</li>
+  </ul>
+</div>`
+    }
+  ]
+  
+  return snippets.find(s => s.id === snippetId)
 }
 
 // Helper function to get allowed blocks for section types

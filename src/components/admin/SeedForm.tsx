@@ -14,6 +14,7 @@ import { ColorwaySelector, type Colorway } from '@/components/admin/ColorwaySele
 import { MotifSelector, type MotifSelection, type MotifAsset } from '@/components/admin/MotifSelector'
 import { PageMasterSelector, type PageMasterSelection } from '@/components/admin/PageMasterSelector'
 import { SectionPresets, type SectionPresetData } from '@/components/admin/SectionPresets'
+import { SnippetLibrary, type SnippetData } from '@/components/admin/SnippetLibrary'
 import { ObjectStyleSelector, type ObjectStyleSelection } from '@/components/admin/ObjectStyleSelector'
 import AutoComposePreview from '@/components/admin/AutoComposePreview'
 import QualityChecker from '@/components/admin/QualityChecker'
@@ -100,6 +101,9 @@ const seedFormSchema = z.object({
       masterName: z.string(),
       enabled: z.boolean()
     }))
+  }).optional(),
+  snippets: z.object({
+    snippets: z.array(z.string())
   }).optional(),
   objectStyles: z.object({
     styles: z.object({
@@ -295,6 +299,7 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
   const motifs = useWatch({ control: form.control, name: 'motifs' })  
   const pageMasters = useWatch({ control: form.control, name: 'pageMasters' })
   const sectionPresets = useWatch({ control: form.control, name: 'sectionPresets' })
+  const snippets = useWatch({ control: form.control, name: 'snippets' })
   const objectStyles = useWatch({ control: form.control, name: 'objectStyles' })
   const logo = useWatch({ control: form.control, name: 'logo' })
   const referenceImage = useWatch({ control: form.control, name: 'referenceImage' })
@@ -435,6 +440,10 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
 
   const handleSectionPresetsChange = useCallback((data: SectionPresetData) => {
     setValue('sectionPresets', data, { shouldValidate: true })
+  }, [setValue])
+
+  const handleSnippetsChange = useCallback((data: SnippetData) => {
+    setValue('snippets', data, { shouldValidate: true })
   }, [setValue])
 
   const handleObjectStyleChange = useCallback((selection: ObjectStyleSelection) => {
@@ -1124,6 +1133,13 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
         <ObjectStyleSelector 
           selection={objectStyles}
           onSelectionChange={handleObjectStyleChange}
+        />
+
+        {/* Snippets */}
+        <SnippetLibrary
+          control={form.control}
+          value={snippets}
+          onChange={handleSnippetsChange}
         />
 
         {/* Auto-Compose Preview - Only render when we have minimum seed data */}
