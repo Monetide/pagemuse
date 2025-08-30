@@ -13,6 +13,7 @@ import { TypographySelector, type TypographyPairing } from '@/components/admin/T
 import { ColorwaySelector, type Colorway } from '@/components/admin/ColorwaySelector'
 import { MotifSelector, type MotifSelection, type MotifAsset } from '@/components/admin/MotifSelector'
 import { PageMasterSelector, type PageMasterSelection } from '@/components/admin/PageMasterSelector'
+import { SectionPresets, type SectionPresetData } from '@/components/admin/SectionPresets'
 import { ObjectStyleSelector, type ObjectStyleSelection } from '@/components/admin/ObjectStyleSelector'
 import AutoComposePreview from '@/components/admin/AutoComposePreview'
 import QualityChecker from '@/components/admin/QualityChecker'
@@ -84,13 +85,22 @@ const seedFormSchema = z.object({
     }),
     assets: z.array(z.any()),
   }).optional(),
-      pageMasters: z.object({
-        cover: z.string().nullable(),
-        selected: z.array(z.object({
-          id: z.string(),
-          order: z.number()
-        })).optional(),
-      }).optional(),
+  pageMasters: z.object({
+    cover: z.string().nullable(),
+    selected: z.array(z.object({
+      id: z.string(),
+      order: z.number()
+    })).optional(),
+  }).optional(),
+  sectionPresets: z.object({
+    mappings: z.array(z.object({
+      sectionType: z.string(),
+      sectionName: z.string(),
+      pageMaster: z.string(),
+      masterName: z.string(),
+      enabled: z.boolean()
+    }))
+  }).optional(),
   objectStyles: z.object({
     styles: z.record(z.any()).optional(),
     snippets: z.array(z.string()).optional(),
@@ -224,8 +234,9 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
   const industry = useWatch({ control: form.control, name: 'industry' })
   const typography = useWatch({ control: form.control, name: 'typography' })
   const colorway = useWatch({ control: form.control, name: 'colorway' })
-  const motifs = useWatch({ control: form.control, name: 'motifs' })
+  const motifs = useWatch({ control: form.control, name: 'motifs' })  
   const pageMasters = useWatch({ control: form.control, name: 'pageMasters' })
+  const sectionPresets = useWatch({ control: form.control, name: 'sectionPresets' })
   const objectStyles = useWatch({ control: form.control, name: 'objectStyles' })
   const logo = useWatch({ control: form.control, name: 'logo' })
   const referenceImage = useWatch({ control: form.control, name: 'referenceImage' })
@@ -351,6 +362,21 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
 
   const handlePageMasterChange = useCallback((selection: PageMasterSelection) => {
     setValue('pageMasters', selection, { shouldValidate: true })
+    
+    // Update section presets when page masters change
+    const currentSectionPresets = form.getValues('sectionPresets')
+    if (currentSectionPresets?.mappings) {
+      // Trigger re-generation of section presets with new page masters
+      setValue('sectionPresets', undefined, { shouldValidate: true })
+      setTimeout(() => {
+        // This will cause SectionPresets to regenerate with new masters
+        handleSectionPresetsChange({ mappings: [] })
+      }, 0)
+    }
+  }, [setValue, form])
+
+  const handleSectionPresetsChange = useCallback((data: SectionPresetData) => {
+    setValue('sectionPresets', data, { shouldValidate: true })
   }, [setValue])
 
   const handleObjectStyleChange = useCallback((selection: ObjectStyleSelection) => {
@@ -1024,6 +1050,16 @@ export function SeedForm({ onValidChange, scope = 'workspace' }: SeedFormProps) 
           selection={pageMasters as PageMasterSelection}
           onSelectionChange={handlePageMasterChange}
           usageType={usage}
+        />
+
+        {/* Section Presets */}
+        <SectionPresets
+          control={form.control}
+          value={sectionPresets}
+          onChange={handleSectionPresetsChange}
+          selectedPageMasters={pageMasters?.selected?.filter((m): m is { id: string; order: number } => 
+            Boolean(m.id && typeof m.order === 'number')
+          ) || []}
         />
 
         {/* Object Styles & Snippets */}

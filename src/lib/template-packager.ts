@@ -70,25 +70,7 @@ export interface TemplateManifest {
   }
   
   layoutIntents: {
-    cover: {
-      name: string
-      description: string
-      pageMaster: string
-      allowedBlocks: string[]
-    }
-    executiveSummary: {
-      name: string
-      description: string
-      pageMaster: string
-      allowedBlocks: string[]
-    }
-    body: {
-      name: string
-      description: string
-      pageMaster: string
-      allowedBlocks: string[]
-    }
-    dataAppendix: {
+    [key: string]: {
       name: string
       description: string
       pageMaster: string
@@ -379,32 +361,39 @@ export async function packageTemplate(
       }
     },
     
-    layoutIntents: {
-      cover: {
-        name: 'Cover Page',
-        description: 'Full-page layout for document covers and title pages',
-        pageMaster: 'cover-fullbleed',
-        allowedBlocks: ['heading', 'paragraph', 'spacer', 'figure']
-      },
-      executiveSummary: {
-        name: 'Executive Summary',
-        description: 'Single-column layout for executive summaries',
-        pageMaster: 'body-1col',
-        allowedBlocks: ['heading', 'paragraph', 'quote', 'callout', 'figure']
-      },
-      body: {
-        name: 'Body Content',
-        description: 'Two-column layout for main document content',
-        pageMaster: 'body-2col',
-        allowedBlocks: ['heading', 'paragraph', 'ordered-list', 'unordered-list', 'quote', 'callout', 'figure', 'table']
-      },
-      dataAppendix: {
-        name: 'Data Appendix',
-        description: 'Single-column layout optimized for tables and data',
-        pageMaster: 'body-1col',
-        allowedBlocks: ['heading', 'paragraph', 'table', 'figure', 'chart']
+    layoutIntents: (() => {
+      const intents: Record<string, any> = {}
+      
+      // Generate layout intents from section presets
+      if (seedData.sectionPresets?.mappings) {
+        seedData.sectionPresets.mappings
+          .filter(mapping => mapping.enabled)
+          .forEach(mapping => {
+            intents[mapping.sectionType] = {
+              name: mapping.sectionName,
+              description: `${mapping.sectionName} layout using ${mapping.masterName}`,
+              pageMaster: mapping.pageMaster,
+              allowedBlocks: getBlocksForSectionType(mapping.sectionType)
+            }
+          })
+      } else {
+        // Fallback defaults if no section presets
+        intents.cover = {
+          name: 'Cover Page',
+          description: 'Full-page layout for document covers and title pages',
+          pageMaster: 'cover-fullbleed',
+          allowedBlocks: ['heading', 'paragraph', 'spacer', 'figure']
+        }
+        intents.body = {
+          name: 'Body Content',
+          description: 'Main document content layout',
+          pageMaster: 'body-2col',
+          allowedBlocks: ['heading', 'paragraph', 'ordered-list', 'unordered-list', 'quote', 'callout', 'figure', 'table']
+        }
       }
-    },
+      
+      return intents
+    })(),
     
     behaviors: {
       pagination: {
@@ -463,7 +452,7 @@ export async function packageTemplate(
     }
   }
 
-  // Generate preview images (placeholder - would need actual page renders)
+  // Generate preview images (placeholder - would need actual page renders)  
   const previews = {
     'cover.png': new Blob(['placeholder'], { type: 'image/png' }),
     'body-2col.png': new Blob(['placeholder'], { type: 'image/png' }),
@@ -474,6 +463,32 @@ export async function packageTemplate(
     'template.json': manifest,
     assets,
     previews
+  }
+}
+
+// Helper function to get allowed blocks for section types
+function getBlocksForSectionType(sectionType: string): string[] {
+  switch (sectionType) {
+    case 'cover':
+      return ['heading', 'paragraph', 'spacer', 'figure']
+    case 'toc':
+      return ['table-of-contents', 'heading']
+    case 'executive-summary':
+      return ['heading', 'paragraph', 'quote', 'callout', 'figure']
+    case 'body':
+    case 'chapters':
+    case 'narrative':
+      return ['heading', 'paragraph', 'ordered-list', 'unordered-list', 'quote', 'callout', 'figure', 'table']
+    case 'data-appendix':
+    case 'metrics':
+    case 'comparison':
+      return ['heading', 'paragraph', 'table', 'figure', 'chart']
+    case 'references':
+      return ['heading', 'paragraph', 'ordered-list', 'unordered-list']
+    case 'feature':
+      return ['heading', 'paragraph', 'quote', 'callout', 'figure', 'table']
+    default:
+      return ['heading', 'paragraph', 'ordered-list', 'unordered-list', 'quote', 'callout', 'figure', 'table']
   }
 }
 
