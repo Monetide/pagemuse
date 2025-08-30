@@ -13,6 +13,7 @@ import { ValidationIntegratedLayout } from "@/components/layout/ValidationIntegr
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import MyDocuments from "./pages/MyDocuments";
+import NewDocument from "./pages/NewDocument";
 import TemplateLibrary from "./pages/TemplateLibrary";
 import MediaLibrary from "./pages/MediaLibrary";
 import AdminPanel from "./pages/AdminPanel";
@@ -111,6 +112,7 @@ const App = () => {
                                 <Route path="/" element={<Index />} />
                                 <Route path="/dashboard" element={<Dashboard />} />
                                 <Route path="/documents" element={<MyDocuments />} />
+                                <Route path="/documents/new" element={<NewDocument />} />
                                 <Route path="/documents/new/editor" element={<DocumentModelDemo />} />
                                 <Route path="/documents/:id/editor" element={<DocumentModelDemo />} />
                                 <Route path="/documents/:id/settings" element={<DocumentSettings />} />
