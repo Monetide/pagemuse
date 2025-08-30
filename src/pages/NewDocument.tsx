@@ -19,9 +19,9 @@ export default function NewDocument() {
   const { createFromTemplate, loading: creatingDocument } = useTemplateApplication()
   
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedDocType, setSelectedDocType] = useState<string>('')
-  const [selectedStylePack, setSelectedStylePack] = useState<string>('')
-  const [selectedIndustry, setSelectedIndustry] = useState<string>('')
+  const [selectedDocType, setSelectedDocType] = useState<string>('all')
+  const [selectedStylePack, setSelectedStylePack] = useState<string>('all')
+  const [selectedIndustry, setSelectedIndustry] = useState<string>('all')
   const [previewTemplate, setPreviewTemplate] = useState<ScopedTemplate | null>(null)
 
   const filterTemplates = (templateList: ScopedTemplate[]) => {
@@ -35,9 +35,9 @@ export default function NewDocument() {
       const stylePack = template.metadata?.stylePack || ''
       const industry = template.metadata?.industry || ''
       
-      const matchesDocType = !selectedDocType || docType === selectedDocType
-      const matchesStylePack = !selectedStylePack || stylePack === selectedStylePack
-      const matchesIndustry = !selectedIndustry || industry === selectedIndustry
+      const matchesDocType = selectedDocType === 'all' || docType === selectedDocType
+      const matchesStylePack = selectedStylePack === 'all' || stylePack === selectedStylePack
+      const matchesIndustry = selectedIndustry === 'all' || industry === selectedIndustry
       
       return matchesSearch && matchesDocType && matchesStylePack && matchesIndustry
     })
@@ -132,7 +132,7 @@ export default function NewDocument() {
             <SelectValue placeholder="Document Type" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Document Types</SelectItem>
+            <SelectItem value="all">All Document Types</SelectItem>
             {docTypes.map(docType => (
               <SelectItem key={docType} value={docType}>{docType}</SelectItem>
             ))}
@@ -144,7 +144,7 @@ export default function NewDocument() {
             <SelectValue placeholder="Style Pack" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Style Packs</SelectItem>
+            <SelectItem value="all">All Style Packs</SelectItem>
             {stylePacks.map(stylePack => (
               <SelectItem key={stylePack} value={stylePack}>{stylePack}</SelectItem>
             ))}
@@ -156,7 +156,7 @@ export default function NewDocument() {
             <SelectValue placeholder="Industry" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Industries</SelectItem>
+            <SelectItem value="all">All Industries</SelectItem>
             {industries.map(industry => (
               <SelectItem key={industry} value={industry}>{industry}</SelectItem>
             ))}
@@ -239,9 +239,9 @@ export default function NewDocument() {
             variant="outline" 
             onClick={() => {
               setSearchQuery('')
-              setSelectedDocType('')
-              setSelectedStylePack('')
-              setSelectedIndustry('')
+              setSelectedDocType('all')
+              setSelectedStylePack('all')
+              setSelectedIndustry('all')
             }}
             className="mt-4"
           >
