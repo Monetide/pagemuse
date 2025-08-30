@@ -14,6 +14,7 @@ import { useImportHistory } from '@/hooks/useImportHistory'
 import { ImportCommit } from '@/lib/import-history'
 import { useDocumentPersistence } from '@/hooks/useDocumentPersistence'
 import { SemanticDocument } from '@/lib/document-model'
+import { useWorkspaceContext } from '@/contexts/WorkspaceContext'
 import { 
   Plus, 
   FileText, 
@@ -30,6 +31,7 @@ import {
 export default function Dashboard() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { currentWorkspace } = useWorkspaceContext()
   const { documents, loading: documentsLoading } = useDocuments()
   const { templates, loading: templatesLoading } = useTemplates()
   const { stats: userStats, loading: statsLoading } = useUserStats()
@@ -90,7 +92,7 @@ export default function Dashboard() {
         )
       }
       
-      navigate('/document-model')
+      navigate(`/w/${currentWorkspace?.id}/documents/new/editor`)
     })
     setImportDialogOpen(false)
   }
@@ -100,7 +102,7 @@ export default function Dashboard() {
     if (restoredDocument) {
       saveDocument(restoredDocument)
     } else {
-      navigate('/dashboard')
+      navigate(`/w/${currentWorkspace?.id}/dashboard`)
     }
   }
 
@@ -120,7 +122,7 @@ export default function Dashboard() {
   const handleDesignFromContent = (payload: any) => {
     console.log('Design from content payload:', payload);
     // TODO: Implement the actual design from content flow
-    navigate('/document-model');
+    navigate(`/w/${currentWorkspace?.id}/documents/new/editor`);
   }
 
   return (
@@ -145,7 +147,7 @@ export default function Dashboard() {
           </Button>
           <Button 
             variant="outline"
-            onClick={() => navigate('/document-model')}
+            onClick={() => navigate(`/w/${currentWorkspace?.id}/documents/new`)}
           >
             <Plus className="w-4 h-4 mr-2" />
             New Document
@@ -235,7 +237,7 @@ export default function Dashboard() {
             <Button 
               variant="ghost" 
               className="w-full mt-4"
-              onClick={() => navigate('/documents')}
+              onClick={() => navigate(`/w/${currentWorkspace?.id}/documents`)}
             >
               View All Documents
             </Button>
@@ -303,7 +305,7 @@ export default function Dashboard() {
             <Button 
               variant="ghost" 
               className="w-full mt-4"
-              onClick={() => navigate('/templates')}
+              onClick={() => navigate(`/w/${currentWorkspace?.id}/templates`)}
             >
               Browse All Templates
             </Button>
@@ -332,7 +334,7 @@ export default function Dashboard() {
             <Button 
               variant="outline" 
               className="h-24 flex-col gap-2 hover:shadow-soft transition-all"
-              onClick={() => navigate('/document-model')}
+              onClick={() => navigate(`/w/${currentWorkspace?.id}/documents/new`)}
             >
               <FileText className="w-6 h-6 text-primary" />
               <span>Create Document</span>

@@ -194,7 +194,7 @@ export default function MyDocuments() {
         </div>
         <Button 
           className="bg-gradient-primary hover:shadow-glow transition-all duration-200"
-          onClick={() => navigate(`/w/${currentWorkspace?.id}/documents/new/editor`)}
+          onClick={() => navigate(`/w/${currentWorkspace?.id}/documents/new`)}
         >
           <Plus className="w-4 h-4 mr-2" />
           New Document
@@ -295,7 +295,7 @@ export default function MyDocuments() {
               {!searchQuery && (
                 <Button 
                   className="bg-gradient-primary hover:shadow-glow transition-all duration-200"
-                  onClick={() => navigate(`/w/${currentWorkspace?.id}/documents/new/editor`)}
+                  onClick={() => navigate(`/w/${currentWorkspace?.id}/documents/new`)}
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Create Document
