@@ -145,7 +145,7 @@ serve(async (req) => {
           user_id: user.id, // Admin who created it
           is_global: true,
           is_premium: false,
-          status: 'draft',
+          status: 'published',
           preview_image_url: mockPreviewUrl,
           global_styling: {
             palette: seed.palette_hints,

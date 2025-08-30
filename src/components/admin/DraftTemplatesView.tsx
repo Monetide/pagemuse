@@ -79,6 +79,19 @@ export function DraftTemplatesView() {
         return
       }
 
+      // Get user's workspace - ensure they have one
+      const { data: workspaceData } = await supabase
+        .from('workspace_members')
+        .select('workspace_id')
+        .eq('user_id', userData.user.id)
+        .limit(1)
+        .single()
+
+      if (!workspaceData) {
+        toast.error('No workspace found. Please create a workspace first.')
+        return
+      }
+
       // Create a new document using this template
       const { data, error } = await supabase
         .from('documents')
@@ -86,7 +99,8 @@ export function DraftTemplatesView() {
           title: `Test Document - ${templateName}`,
           template_id: templateId,
           content: [], // Start with empty content
-          user_id: userData.user.id
+          user_id: userData.user.id,
+          workspace_id: workspaceData.workspace_id
         })
         .select()
         .single()
@@ -308,8 +322,8 @@ export function DraftTemplatesView() {
                     variant="outline" 
                     size="sm"
                     onClick={() => {
-                      // Could open a preview modal
-                      toast.info('Template preview coming soon')
+                      // Navigate to template preview page
+                      navigate(`/admin/templates/${draft.id}/preview`)
                     }}
                   >
                     <Eye className="w-4 h-4 mr-2" />
