@@ -81,7 +81,7 @@ export const SeedValidator = () => {
       const payload = normalizePayload(seedsJson)
       
       const { data, error: fnError } = await supabase.functions.invoke(
-        'system-template-gen-seeds-validate',
+        'template-gen-seeds-validate',
         {
           body: payload,
           headers: {
@@ -118,7 +118,7 @@ export const SeedValidator = () => {
       const payload = normalizePayload(seedsJson)
       
       const { data, error: fnError } = await supabase.functions.invoke(
-        'system-template-gen-seeds-ingest',
+        'template-gen-seeds-ingest',
         {
           body: payload,
           headers: {
@@ -156,7 +156,7 @@ export const SeedValidator = () => {
     
     try {
       const { data, error: fnError } = await supabase.functions.invoke(
-        'system-template-gen-seeds-compose',
+        'template-gen-seeds-compose',
         {
           body: { seedIds: ingestedSeedIds },
           headers: {
