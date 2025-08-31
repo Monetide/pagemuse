@@ -138,6 +138,63 @@ Deno.serve(async (req) => {
     const publishedTemplates = []
     const analyticsEvents = []
 
+    // Validate template packaging before publishing
+    const incompleteTemplates = []
+    for (const template of templates) {
+      const errors = []
+      
+      // Check for missing tpkg_source
+      if (!template.tpkg_source) {
+        errors.push('tpkg_source is missing')
+      } else {
+        // Validate tpkg structure
+        const tpkg = template.tpkg_source
+        if (!tpkg['template.json']) {
+          errors.push('tpkg_source missing template.json')
+        }
+        if (!Array.isArray(tpkg.assets) || tpkg.assets.length < 3) {
+          errors.push('tpkg_source missing required assets (need >=3 SVGs)')
+        }
+        if (!Array.isArray(tpkg.previews) || tpkg.previews.length < 3) {
+          errors.push('tpkg_source missing required previews (need >=3 PNGs)')
+        }
+      }
+
+      // Check for missing config
+      if (!template.config) {
+        errors.push('config is missing')
+      } else {
+        // Validate config structure
+        const config = template.config
+        if (!config.pageMasters || !Array.isArray(config.pageMasters) || config.pageMasters.length < 3) {
+          errors.push('config missing required pageMasters (need >=3)')
+        }
+        if (!config.themeTokens) {
+          errors.push('config missing themeTokens')
+        }
+      }
+
+      if (errors.length > 0) {
+        incompleteTemplates.push({
+          templateId: template.id,
+          templateName: template.name,
+          errors
+        })
+      }
+    }
+
+    // Return 422 if any templates are incomplete
+    if (incompleteTemplates.length > 0) {
+      return new Response(JSON.stringify({
+        error: 'TEMPLATE_INCOMPLETE',
+        message: 'One or more templates are missing required packaging data',
+        incompleteTemplates: incompleteTemplates
+      }), {
+        status: 422,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
     // Process each template
     for (const template of templates) {
       try {
