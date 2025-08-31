@@ -34,34 +34,28 @@ interface TemplateConfig {
   typePairing: string[]
 }
 
-// Mock image generation - in real implementation, this would generate actual preview images
+// Mock image generation - in real implementation, this would use a proper image generation library
 const generatePreviewImage = async (type: 'cover' | 'body-2col' | 'data', config: TemplateConfig): Promise<string> => {
-  // Simulate image generation with a simple colored rectangle
-  const canvas = new OffscreenCanvas(400, 300)
-  const ctx = canvas.getContext('2d')!
-  
-  // Set background color based on type
+  // Generate a simple SVG as a data URL instead of using canvas
   const colors = {
     cover: '#3b82f6', // blue
-    'body-2col': '#10b981', // green
+    'body-2col': '#10b981', // green  
     data: '#f59e0b' // amber
   }
   
-  ctx.fillStyle = colors[type]
-  ctx.fillRect(0, 0, 400, 300)
+  const bgColor = colors[type] || '#6b7280'
   
-  // Add text
-  ctx.fillStyle = 'white'
-  ctx.font = '20px Arial'
-  ctx.textAlign = 'center'
-  ctx.fillText(`${type} Preview`, 200, 150)
-  ctx.fillText(`${config.docType}`, 200, 180)
-  ctx.fillText(`${config.stylePack}`, 200, 210)
+  const svg = `
+    <svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+      <rect width="400" height="300" fill="${bgColor}"/>
+      <text x="200" y="150" fill="white" text-anchor="middle" font-family="Arial" font-size="20">${type} Preview</text>
+      <text x="200" y="180" fill="white" text-anchor="middle" font-family="Arial" font-size="16">${config.docType}</text>
+      <text x="200" y="210" fill="white" text-anchor="middle" font-family="Arial" font-size="16">${config.stylePack}</text>
+    </svg>
+  `
   
-  const blob = await canvas.convertToBlob({ type: 'image/png' })
-  const arrayBuffer = await blob.arrayBuffer()
-  const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
-  return `data:image/png;base64,${base64}`
+  const base64 = btoa(svg)
+  return `data:image/svg+xml;base64,${base64}`
 }
 
 // Generate SVG motifs with token awareness
