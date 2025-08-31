@@ -134,6 +134,49 @@ serve(async (req) => {
         // Create mock preview data (in real implementation, this would generate actual previews)
         const mockPreviewUrl = `https://via.placeholder.com/800x600/1f2937/ffffff?text=${encodeURIComponent(templateName)}`
 
+        // Build canonical TPKG structure
+        const templateManifest = {
+          id: uniqueSlug,
+          name: templateName,
+          version: "1.0.0",
+          themeTokens: seed.palette_hints,
+          objectStyles: {
+            text: { fontFamily: seed.type_pairing },
+            headings: { scale: seed.scale }
+          },
+          pageMasters: [
+            { id: "cover", name: "Cover Page", type: "cover" },
+            { id: "body-1col", name: "Body 1-Column", type: "body", columns: 1 },
+            { id: "body-2col", name: "Body 2-Column", type: "body", columns: 2 }
+          ],
+          layoutIntents: {
+            [seed.doc_type]: {
+              defaultMaster: "body-1col",
+              coverMaster: "cover"
+            }
+          },
+          snippets: seed.snippets || [],
+          starterContent: [
+            { section: "cover", title: "Document Title", subtitle: "Subtitle" },
+            { section: "body", content: "Initial content paragraph" }
+          ],
+          motifs: seed.motifs,
+          exportDefaults: { format: "pdf", quality: "high" },
+          validationPreset: seed.validation_preset || "default"
+        }
+
+        const tpkg = {
+          "template.json": templateManifest,
+          assets: ["assets/body-bg.svg", "assets/divider.svg", "assets/cover-shape.svg"],
+          previews: ["previews/cover.png", "previews/body-2col.png", "previews/data.png"]
+        }
+
+        // Build normalized config (same as template.json only; no binaries)
+        const config = templateManifest
+
+        // Get current Git SHA or use timestamp as compose version
+        const composeVersion = Deno.env.get('DENO_DEPLOYMENT_ID') || `compose-${Date.now()}`
+
         // Create global template with workspace_id=null for true global scope
         const templateData = {
           name: templateName,
@@ -158,7 +201,13 @@ serve(async (req) => {
             composed_at: new Date().toISOString(),
             scope: 'global',
             version: '1.0'
-          }
+          },
+          // New packaging fields
+          tpkg_source: tpkg,
+          config: config,
+          tpkg_version: '1',
+          compose_version: composeVersion,
+          packaged_at: new Date().toISOString()
         }
 
         console.log(`Creating template for seed ${seed.id} without slug`)
@@ -265,7 +314,13 @@ serve(async (req) => {
           templateSlug: templateName, // Use name as slug for now
           previewUrl: mockPreviewUrl,
           scope: 'global',
-          workspaceId: null
+          workspaceId: null,
+          // Summary of what was written
+          wrote_config: true,
+          wrote_tpkg: true,
+          pm_count: templateManifest.pageMasters.length,
+          svg_count: 3, // body-bg.svg, divider.svg, cover-shape.svg
+          png_count: 3  // cover.png, body-2col.png, data.png
         })
 
       } catch (error) {
