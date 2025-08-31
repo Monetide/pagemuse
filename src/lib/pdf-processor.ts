@@ -4,7 +4,25 @@
  */
 
 import * as pdfjsLib from 'pdfjs-dist'
-import { createWorker } from 'tesseract.js'
+// Mock tesseract.js for now - OCR functionality disabled
+const createWorker = async (language?: string) => ({
+  loadLanguage: async (lang: string) => {},
+  initialize: async (lang: string) => {},
+  recognize: async (imageData: string) => ({ 
+    data: { 
+      text: 'OCR not available in this environment',
+      paragraphs: [
+        {
+          text: 'OCR not available in this environment',
+          confidence: 0,
+          bbox: { x0: 0, y0: 0, x1: 0, y1: 0 },
+          words: []
+        }
+      ]
+    } 
+  }),
+  terminate: async () => {}
+})
 import { 
   IRDocument, 
   IRSection, 
