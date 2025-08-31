@@ -1,0 +1,183 @@
+{
+  "template.json": {
+    "templateManifest": {
+      "name": "Executive Summary Report",
+      "description": "Professional business report template with executive summary, data visualization, and formal structure",
+      "category": "business",
+      "previewImage": "preview.png",
+      "colorways": [
+        {
+          "id": "corporate-blue",
+          "name": "Corporate Blue",
+          "primary": "#1a472a",
+          "secondary": "#2563eb",
+          "accent": "#3b82f6",
+          "neutral": "#64748b",
+          "background": "#ffffff"
+        }
+      ],
+      "typography": {
+        "headingFont": "Inter",
+        "bodyFont": "Inter",
+        "scale": "corporate"
+      },
+      "pageMasters": [
+        {
+          "id": "cover-page",
+          "name": "Cover Page",
+          "pageSize": "letter",
+          "margins": { "top": 1, "bottom": 1, "left": 1, "right": 1 },
+          "components": [
+            {
+              "type": "header",
+              "height": 2,
+              "styling": { "background": "primary", "textColor": "white" }
+            },
+            {
+              "type": "content",
+              "height": 8,
+              "styling": { "padding": 2 }
+            },
+            {
+              "type": "footer",
+              "height": 1,
+              "styling": { "borderTop": "1px solid neutral" }
+            }
+          ]
+        },
+        {
+          "id": "content-page",
+          "name": "Content Page",
+          "pageSize": "letter",
+          "margins": { "top": 1, "bottom": 1, "left": 1, "right": 1 },
+          "components": [
+            {
+              "type": "header",
+              "height": 1,
+              "styling": { "borderBottom": "1px solid neutral" }
+            },
+            {
+              "type": "content",
+              "height": 9,
+              "styling": { "padding": 1 }
+            },
+            {
+              "type": "footer",
+              "height": 0.5,
+              "styling": { "textAlign": "center", "fontSize": "small" }
+            }
+          ]
+        },
+        {
+          "id": "appendix-page",
+          "name": "Appendix Page",
+          "pageSize": "letter",
+          "margins": { "top": 1, "bottom": 1, "left": 1, "right": 1 },
+          "components": [
+            {
+              "type": "header",
+              "height": 1,
+              "styling": { "background": "secondary", "textColor": "white" }
+            },
+            {
+              "type": "content",
+              "height": 9,
+              "styling": { "padding": 1, "columns": 2 }
+            },
+            {
+              "type": "footer",
+              "height": 0.5,
+              "styling": { "textAlign": "center" }
+            }
+          ]
+        }
+      ],
+      "objectStyles": {
+        "heading1": {
+          "fontSize": 28,
+          "fontWeight": "bold",
+          "color": "primary",
+          "marginBottom": 16,
+          "textAlign": "center"
+        },
+        "heading2": {
+          "fontSize": 22,
+          "fontWeight": "semibold",
+          "color": "secondary",
+          "marginBottom": 12,
+          "borderBottom": "2px solid accent"
+        },
+        "heading3": {
+          "fontSize": 18,
+          "fontWeight": "medium",
+          "color": "primary",
+          "marginBottom": 8
+        },
+        "paragraph": {
+          "fontSize": 12,
+          "lineHeight": 1.6,
+          "marginBottom": 12,
+          "textAlign": "justify"
+        },
+        "list": {
+          "fontSize": 12,
+          "lineHeight": 1.4,
+          "marginBottom": 12,
+          "paddingLeft": 16
+        },
+        "table": {
+          "fontSize": 11,
+          "borderCollapse": "collapse",
+          "width": "100%",
+          "marginBottom": 16
+        },
+        "chart": {
+          "marginBottom": 16,
+          "borderRadius": 8,
+          "backgroundColor": "background"
+        }
+      },
+      "behaviors": {
+        "autoTOC": true,
+        "pageBreaks": {
+          "beforeH1": true,
+          "beforeH2": false
+        },
+        "numbering": {
+          "sections": true,
+          "figures": true,
+          "tables": true
+        }
+      },
+      "validationPreset": "business-formal",
+      "exportDefaults": {
+        "pdf": {
+          "quality": "high",
+          "embedFonts": true
+        },
+        "docx": {
+          "compatibility": "office365"
+        }
+      }
+    }
+  },
+  "assets": [
+    {
+      "name": "corporate-motif.svg",
+      "type": "motif",
+      "content": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><rect width=\"100\" height=\"100\" fill=\"#1a472a\"/><circle cx=\"50\" cy=\"50\" r=\"30\" fill=\"#2563eb\"/></svg>"
+    },
+    {
+      "name": "brand-element.svg",
+      "type": "decoration",
+      "content": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 200 50\"><rect width=\"200\" height=\"50\" fill=\"none\" stroke=\"#3b82f6\" stroke-width=\"2\"/></svg>"
+    }
+  ],
+  "previews": [
+    {
+      "name": "preview.png",
+      "type": "thumbnail",
+      "base64": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
+    }
+  ]
+}
