@@ -63,18 +63,33 @@ serve(async (req) => {
       .from('templates')
       .select(`
         id, name, description, category, status, scope,
-        global_styling, metadata, tpkg_source,
-        template_pages (
-          id, name, page_index, content_scaffold, page_styling, layout_config
-        )
+        global_styling, metadata, tpkg_source, config
       `)
       .eq('id', templateId)
-      .eq('status', 'published')
       .single()
 
     if (templateError || !template) {
       console.error('Template fetch error:', templateError)
-      return new Response('Template not found or not published', { status: 404, headers: corsHeaders })
+      return new Response('Template not found', { status: 404, headers: corsHeaders })
+    }
+
+    // Validate template is published
+    if (template.status !== 'published') {
+      return new Response(
+        JSON.stringify({ error: 'Template is not published' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Validate template has complete packaging
+    if (!template.tpkg_source || !template.config) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'TEMPLATE_INCOMPLETE',
+          message: 'Template is missing required packaging data (tpkg_source or config)'
+        }),
+        { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     // Get workspace's default brand kit
@@ -127,301 +142,77 @@ serve(async (req) => {
       return recolored
     }
 
-    // Clone template configuration or use defaults
-    const templateConfig = template.tpkg_source || {}
-    const templateMetadata = template.metadata || {}
-    
-    // Create default configuration based on template category if tpkg_source is missing
-    const getDefaultLayoutIntents = (category: string) => {
-      const baseIntents = [
-        { type: 'cover', name: 'Cover Page' },
-        { type: 'body', name: 'Main Content', columns: 1 }
-      ]
-      
-      if (category === 'report') {
-        baseIntents.push(
-          { type: 'body', name: 'Executive Summary', columns: 1 },
-          { type: 'body', name: 'Analysis', columns: 2 },
-          { type: 'body', name: 'Recommendations', columns: 1 }
-        )
-      }
-      
-      return baseIntents
-    }
+    // Clone configuration strictly from template.config
+    const templateConfig = template.config
+    const tpkgSource = template.tpkg_source
 
-    const getDefaultStarterContent = (category: string, templateName: string) => {
-      if (category === 'report') {
-        return {
-          sections: [
-            {
-              name: 'Executive Summary',
-              description: 'High-level overview of key findings',
-              layoutIntent: 'body',
-              columns: 1,
-              flows: [{
-                name: 'Summary Content',
-                type: 'linear',
-                blocks: [
-                  {
-                    type: 'heading',
-                    content: { level: 2, text: 'Executive Summary' }
-                  },
-                  {
-                    type: 'paragraph',
-                    content: { text: 'This section provides a comprehensive overview of the key findings and recommendations from our analysis.' }
-                  }
-                ]
-              }]
-            },
-            {
-              name: 'Analysis',
-              description: 'Detailed analysis and findings',
-              layoutIntent: 'body',
-              columns: 2,
-              flows: [{
-                name: 'Analysis Content',
-                type: 'linear',
-                blocks: [
-                  {
-                    type: 'heading',
-                    content: { level: 2, text: 'Analysis' }
-                  },
-                  {
-                    type: 'paragraph',
-                    content: { text: 'Our detailed analysis reveals several key insights that inform the strategic recommendations outlined in this report.' }
-                  }
-                ]
-              }]
-            },
-            {
-              name: 'Recommendations',
-              description: 'Strategic recommendations and next steps',
-              layoutIntent: 'body',
-              columns: 1,
-              flows: [{
-                name: 'Recommendations Content',
-                type: 'linear',
-                blocks: [
-                  {
-                    type: 'heading',
-                    content: { level: 2, text: 'Recommendations' }
-                  },
-                  {
-                    type: 'paragraph',
-                    content: { text: 'Based on our analysis, we recommend the following strategic actions to achieve optimal results.' }
-                  }
-                ]
-              }]
-            }
-          ]
-        }
-      }
-      
-      // Default for other categories
-      return {
-        sections: [
-          {
-            name: 'Introduction',
-            description: 'Document introduction',
-            layoutIntent: 'body',
-            columns: 1,
-            flows: [{
-              name: 'Introduction Content',
-              type: 'linear',
-              blocks: [
-                {
-                  type: 'heading',
-                  content: { level: 2, text: 'Introduction' }
-                },
-                {
-                  type: 'paragraph',
-                  content: { text: 'Welcome to this document created from the ' + templateName + ' template.' }
-                }
-              ]
-            }]
-          }
-        ]
-      }
-    }
-    
-    // Extract configuration from template or use defaults
-    const themeTokens = applyBrandKitToTokens(templateConfig.themeTokens || {}, brandKit)
+    // Extract core template configuration
+    const originalThemeTokens = templateConfig.themeTokens || {}
     const objectStyles = templateConfig.objectStyles || {}
-    const pageMasters = templateConfig.pageMasters || {
-      cover: {
-        pageSize: 'Letter',
-        orientation: 'portrait',
-        margins: { top: 2, right: 2, bottom: 2, left: 2 },
-        columns: 1,
-        columnGap: 0,
-        hasHeader: false,
-        hasFooter: false,
-        baselineGrid: false,
-        gridSpacing: 0.125,
-        allowTableRotation: false
-      },
-      body: {
-        pageSize: 'Letter',
-        orientation: 'portrait',
-        margins: { top: 1, right: 1, bottom: 1, left: 1 },
-        columns: 1,
-        columnGap: 0.25,
-        hasHeader: true,
-        hasFooter: true,
-        baselineGrid: false,
-        gridSpacing: 0.125,
-        allowTableRotation: false
-      }
-    }
-    const layoutIntents = templateConfig.layoutIntents || getDefaultLayoutIntents(template.category)
+    const pageMasters = templateConfig.pageMasters || []
+    const layoutIntents = templateConfig.layoutIntents || {}
     const snippets = templateConfig.snippets || []
-    const starterContent = templateConfig.starterContent || getDefaultStarterContent(template.category, template.name)
+    const starterContent = templateConfig.starterContent || []
     const motifs = templateConfig.motifs || {}
 
-    // Create sections from starter content
+    // Apply brand kit mapping to theme tokens
+    const themeTokens = applyBrandKitToTokens(originalThemeTokens, brandKit)
+
+    // Recolor SVG motifs using brand kit colors and save as document assets
+    const recoloredMotifs = {}
+    Object.keys(motifs).forEach(motifKey => {
+      const motifSvg = motifs[motifKey]
+      if (typeof motifSvg === 'string' && motifSvg.includes('<svg')) {
+        recoloredMotifs[motifKey] = recolorSvg(motifSvg, themeTokens)
+      } else {
+        recoloredMotifs[motifKey] = motifSvg
+      }
+    })
+
+    // Create sections from starterContent and layoutIntents only
     const sections = []
     let sectionOrder = 0
 
-    // Create Cover section if template has cover layout
-    const hasCoverLayout = layoutIntents.some((intent: any) => intent.type === 'cover')
-    if (hasCoverLayout) {
-      const coverSection = {
-        id: crypto.randomUUID(),
-        name: 'Cover',
-        description: 'Document cover page',
-        flows: [{
-          id: crypto.randomUUID(),
-          name: 'Cover Flow',
-          blocks: [{
-            id: crypto.randomUUID(),
-            type: 'heading',
-            content: {
-              level: 1,
-              text: title || template.name || 'Document Title'
-            },
-            order: 0,
-            paginationRules: {
-              keepWithNext: true,
-              breakAvoid: true
-            }
-          }],
-          type: 'linear',
-          order: 0
-        }],
-        pageMaster: pageMasters.cover || {
-          pageSize: 'Letter',
-          orientation: 'portrait',
-          margins: { top: 2, right: 2, bottom: 2, left: 2 },
-          columns: 1,
-          columnGap: 0,
-          hasHeader: false,
-          hasFooter: false,
-          baselineGrid: false,
-          gridSpacing: 0.125,
-          allowTableRotation: false
-        },
-        layoutIntent: 'cover',
-        order: sectionOrder++,
-        footnotes: [],
-        useEndnotes: false,
-        includeInTOC: false
-      }
-      sections.push(coverSection)
+    // Only process if starterContent exists
+    if (!starterContent || starterContent.length === 0) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'TEMPLATE_INCOMPLETE',
+          message: 'Template has no starter content defined'
+        }),
+        { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    // Create Body sections from starter content
-    if (starterContent.sections && Array.isArray(starterContent.sections)) {
-      starterContent.sections.forEach((sectionConfig: any, index: number) => {
-        const section = {
-          id: crypto.randomUUID(),
-          name: sectionConfig.name || `Section ${index + 1}`,
-          description: sectionConfig.description || '',
-          flows: sectionConfig.flows?.map((flowConfig: any, flowIndex: number) => ({
-            id: crypto.randomUUID(),
-            name: flowConfig.name || `Flow ${flowIndex + 1}`,
-            blocks: flowConfig.blocks?.map((blockConfig: any, blockIndex: number) => ({
-              id: crypto.randomUUID(),
-              type: blockConfig.type || 'paragraph',
-              content: blockConfig.content || { text: 'Content placeholder' },
-              order: blockIndex,
-              paginationRules: blockConfig.paginationRules || {}
-            })) || [],
-            type: flowConfig.type || 'linear',
-            order: flowIndex
-          })) || [],
-          pageMaster: sectionConfig.pageMaster || pageMasters.body || {
-            pageSize: 'Letter',
-            orientation: 'portrait',
-            margins: { top: 1, right: 1, bottom: 1, left: 1 },
-            columns: sectionConfig.columns || 1,
-            columnGap: 0.25,
-            hasHeader: false,
-            hasFooter: false,
-            baselineGrid: false,
-            gridSpacing: 0.125,
-            allowTableRotation: false
-          },
-          layoutIntent: sectionConfig.layoutIntent || 'body',
-          order: sectionOrder++,
-          footnotes: [],
-          useEndnotes: false,
-          includeInTOC: true
-        }
-        sections.push(section)
-      })
-    } else {
-      // Create default body section if no starter content
-      const bodySection = {
+    starterContent.forEach((sectionConfig, index) => {
+      const section = {
         id: crypto.randomUUID(),
-        name: 'Main Content',
-        description: template.description || '',
-        flows: [{
+        name: sectionConfig.name || `Section ${index + 1}`,
+        description: sectionConfig.description || '',
+        flows: sectionConfig.flows?.map((flowConfig, flowIndex) => ({
           id: crypto.randomUUID(),
-          name: 'Main',
-          blocks: [{
+          name: flowConfig.name || `Flow ${flowIndex + 1}`,
+          blocks: flowConfig.blocks?.map((blockConfig, blockIndex) => ({
             id: crypto.randomUUID(),
-            type: 'heading',
-            content: {
-              level: 2,
-              text: 'Introduction'
-            },
-            order: 0,
-            paginationRules: {
-              keepWithNext: true,
-              breakAvoid: true
-            }
-          }, {
-            id: crypto.randomUUID(),
-            type: 'paragraph',
-            content: {
-              text: template.description || 'Document created from template'
-            },
-            order: 1,
-            paginationRules: {}
-          }],
-          type: 'linear',
-          order: 0
-        }],
-        pageMaster: pageMasters.body || {
-          pageSize: 'Letter',
-          orientation: 'portrait',
-          margins: { top: 1, right: 1, bottom: 1, left: 1 },
-          columns: 1,
-          columnGap: 0.25,
-          hasHeader: false,
-          hasFooter: false,
-          baselineGrid: false,
-          gridSpacing: 0.125,
-          allowTableRotation: false
-        },
-        layoutIntent: 'body',
+            type: blockConfig.type || 'paragraph',
+            content: blockConfig.content || { text: 'Content placeholder' },
+            order: blockIndex,
+            paginationRules: blockConfig.paginationRules || {}
+          })) || [],
+          type: flowConfig.type || 'linear',
+          order: flowIndex
+        })) || [],
+        pageMaster: sectionConfig.pageMaster || 
+          pageMasters.find(pm => pm.id === sectionConfig.pageMasterId) || 
+          pageMasters[0] || {},
+        layoutIntent: sectionConfig.layoutIntent || 'body',
         order: sectionOrder++,
         footnotes: [],
         useEndnotes: false,
-        includeInTOC: true
+        includeInTOC: sectionConfig.includeInTOC !== false
       }
-      sections.push(bodySection)
-    }
+      sections.push(section)
+    })
 
     // Create full document with template configuration
     const documentContent = {
@@ -439,14 +230,14 @@ serve(async (req) => {
         pageMasters,
         layoutIntents,
         snippets,
-        motifs,
+        motifs: recoloredMotifs,
         appliedBrandKit: brandKit ? {
           id: brandKit.id,
           name: brandKit.name,
           appliedAt: new Date().toISOString(),
           followUpdates: followKitUpdates !== false
         } : null,
-        ...templateMetadata
+        ...template.metadata
       },
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
