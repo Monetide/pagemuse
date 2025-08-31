@@ -127,17 +127,155 @@ serve(async (req) => {
       return recolored
     }
 
-    // Clone template configuration
+    // Clone template configuration or use defaults
     const templateConfig = template.tpkg_source || {}
     const templateMetadata = template.metadata || {}
     
-    // Extract configuration from template
+    // Create default configuration based on template category if tpkg_source is missing
+    const getDefaultLayoutIntents = (category: string) => {
+      const baseIntents = [
+        { type: 'cover', name: 'Cover Page' },
+        { type: 'body', name: 'Main Content', columns: 1 }
+      ]
+      
+      if (category === 'report') {
+        baseIntents.push(
+          { type: 'body', name: 'Executive Summary', columns: 1 },
+          { type: 'body', name: 'Analysis', columns: 2 },
+          { type: 'body', name: 'Recommendations', columns: 1 }
+        )
+      }
+      
+      return baseIntents
+    }
+
+    const getDefaultStarterContent = (category: string, templateName: string) => {
+      if (category === 'report') {
+        return {
+          sections: [
+            {
+              name: 'Executive Summary',
+              description: 'High-level overview of key findings',
+              layoutIntent: 'body',
+              columns: 1,
+              flows: [{
+                name: 'Summary Content',
+                type: 'linear',
+                blocks: [
+                  {
+                    type: 'heading',
+                    content: { level: 2, text: 'Executive Summary' }
+                  },
+                  {
+                    type: 'paragraph',
+                    content: { text: 'This section provides a comprehensive overview of the key findings and recommendations from our analysis.' }
+                  }
+                ]
+              }]
+            },
+            {
+              name: 'Analysis',
+              description: 'Detailed analysis and findings',
+              layoutIntent: 'body',
+              columns: 2,
+              flows: [{
+                name: 'Analysis Content',
+                type: 'linear',
+                blocks: [
+                  {
+                    type: 'heading',
+                    content: { level: 2, text: 'Analysis' }
+                  },
+                  {
+                    type: 'paragraph',
+                    content: { text: 'Our detailed analysis reveals several key insights that inform the strategic recommendations outlined in this report.' }
+                  }
+                ]
+              }]
+            },
+            {
+              name: 'Recommendations',
+              description: 'Strategic recommendations and next steps',
+              layoutIntent: 'body',
+              columns: 1,
+              flows: [{
+                name: 'Recommendations Content',
+                type: 'linear',
+                blocks: [
+                  {
+                    type: 'heading',
+                    content: { level: 2, text: 'Recommendations' }
+                  },
+                  {
+                    type: 'paragraph',
+                    content: { text: 'Based on our analysis, we recommend the following strategic actions to achieve optimal results.' }
+                  }
+                ]
+              }]
+            }
+          ]
+        }
+      }
+      
+      // Default for other categories
+      return {
+        sections: [
+          {
+            name: 'Introduction',
+            description: 'Document introduction',
+            layoutIntent: 'body',
+            columns: 1,
+            flows: [{
+              name: 'Introduction Content',
+              type: 'linear',
+              blocks: [
+                {
+                  type: 'heading',
+                  content: { level: 2, text: 'Introduction' }
+                },
+                {
+                  type: 'paragraph',
+                  content: { text: 'Welcome to this document created from the ' + templateName + ' template.' }
+                }
+              ]
+            }]
+          }
+        ]
+      }
+    }
+    
+    // Extract configuration from template or use defaults
     const themeTokens = applyBrandKitToTokens(templateConfig.themeTokens || {}, brandKit)
     const objectStyles = templateConfig.objectStyles || {}
-    const pageMasters = templateConfig.pageMasters || {}
-    const layoutIntents = templateConfig.layoutIntents || []
+    const pageMasters = templateConfig.pageMasters || {
+      cover: {
+        pageSize: 'Letter',
+        orientation: 'portrait',
+        margins: { top: 2, right: 2, bottom: 2, left: 2 },
+        columns: 1,
+        columnGap: 0,
+        hasHeader: false,
+        hasFooter: false,
+        baselineGrid: false,
+        gridSpacing: 0.125,
+        allowTableRotation: false
+      },
+      body: {
+        pageSize: 'Letter',
+        orientation: 'portrait',
+        margins: { top: 1, right: 1, bottom: 1, left: 1 },
+        columns: 1,
+        columnGap: 0.25,
+        hasHeader: true,
+        hasFooter: true,
+        baselineGrid: false,
+        gridSpacing: 0.125,
+        allowTableRotation: false
+      }
+    }
+    const layoutIntents = templateConfig.layoutIntents || getDefaultLayoutIntents(template.category)
     const snippets = templateConfig.snippets || []
-    const starterContent = templateConfig.starterContent || {}
+    const starterContent = templateConfig.starterContent || getDefaultStarterContent(template.category, template.name)
     const motifs = templateConfig.motifs || {}
 
     // Create sections from starter content
