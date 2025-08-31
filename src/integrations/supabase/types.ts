@@ -1175,6 +1175,8 @@ export type Database = {
       templates: {
         Row: {
           category: string
+          compose_version: string | null
+          config: Json | null
           created_at: string
           description: string | null
           figma_file_id: string | null
@@ -1185,11 +1187,13 @@ export type Database = {
           is_premium: boolean
           metadata: Json | null
           name: string
+          packaged_at: string | null
           preview_image_url: string | null
           scope: Database["public"]["Enums"]["template_scope"]
           status: string | null
           template_slug: string | null
           tpkg_source: Json | null
+          tpkg_version: string | null
           updated_at: string
           usage_count: number
           user_id: string | null
@@ -1197,6 +1201,8 @@ export type Database = {
         }
         Insert: {
           category: string
+          compose_version?: string | null
+          config?: Json | null
           created_at?: string
           description?: string | null
           figma_file_id?: string | null
@@ -1207,11 +1213,13 @@ export type Database = {
           is_premium?: boolean
           metadata?: Json | null
           name: string
+          packaged_at?: string | null
           preview_image_url?: string | null
           scope?: Database["public"]["Enums"]["template_scope"]
           status?: string | null
           template_slug?: string | null
           tpkg_source?: Json | null
+          tpkg_version?: string | null
           updated_at?: string
           usage_count?: number
           user_id?: string | null
@@ -1219,6 +1227,8 @@ export type Database = {
         }
         Update: {
           category?: string
+          compose_version?: string | null
+          config?: Json | null
           created_at?: string
           description?: string | null
           figma_file_id?: string | null
@@ -1229,11 +1239,13 @@ export type Database = {
           is_premium?: boolean
           metadata?: Json | null
           name?: string
+          packaged_at?: string | null
           preview_image_url?: string | null
           scope?: Database["public"]["Enums"]["template_scope"]
           status?: string | null
           template_slug?: string | null
           tpkg_source?: Json | null
+          tpkg_version?: string | null
           updated_at?: string
           usage_count?: number
           user_id?: string | null
