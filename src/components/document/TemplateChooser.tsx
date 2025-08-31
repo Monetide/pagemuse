@@ -21,6 +21,7 @@ import { useDocuments, Template } from '@/hooks/useSupabaseData'
 import { useTemplateApplication } from '@/hooks/useTemplateApplication'
 import type { ScopedTemplate } from '@/hooks/useTemplatesScoped'
 import { TemplatePreview } from '@/components/template/TemplatePreview'
+import { computeTemplateIntegrity } from '@/lib/template-integrity'
 
 interface TemplateChooserProps {
   isOpen: boolean
@@ -72,7 +73,8 @@ export const TemplateChooser = ({
     const scopedTemplate: ScopedTemplate = {
       ...template,
       scope: template.is_global ? 'global' : 'workspace',
-      template_slug: template.name.toLowerCase().replace(/[^a-zA-Z0-9]+/g, '-')
+      template_slug: template.name.toLowerCase().replace(/[^a-zA-Z0-9]+/g, '-'),
+      integrity: computeTemplateIntegrity(template)
     }
 
     try {

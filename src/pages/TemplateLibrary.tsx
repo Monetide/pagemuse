@@ -10,6 +10,7 @@ import type { ScopedTemplate } from '@/hooks/useTemplatesScoped'
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext'
 import { TemplateGallery } from '@/components/template/TemplateGallery'
 import { Template } from '@/hooks/useSupabaseData'
+import { computeTemplateIntegrity } from '@/lib/template-integrity'
 import { Plus, Palette, Building2, Search, Filter, Sparkles } from 'lucide-react'
 
 export default function TemplateLibrary() {
@@ -44,7 +45,8 @@ export default function TemplateLibrary() {
     const scopedTemplate: ScopedTemplate = {
       ...template,
       scope: template.is_global ? 'global' : 'workspace',
-      template_slug: template.name.toLowerCase().replace(/[^a-zA-Z0-9]+/g, '-')
+      template_slug: template.name.toLowerCase().replace(/[^a-zA-Z0-9]+/g, '-'),
+      integrity: computeTemplateIntegrity(template)
     }
     await createFromTemplate(scopedTemplate)
   }

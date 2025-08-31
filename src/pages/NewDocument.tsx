@@ -6,10 +6,12 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/componen
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { useTemplatesScoped, ScopedTemplate } from '@/hooks/useTemplatesScoped'
 import { useTemplateApplication } from '@/hooks/useTemplateApplication'
-import { Loader2, Search, Star, Globe, Building2, Eye, ArrowLeft, FileText, Palette, Building, Plus } from 'lucide-react'
+import { Loader2, Search, Star, Globe, Building2, Eye, ArrowLeft, FileText, Palette, Building, Plus, AlertTriangle } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
+import { emitTemplateOpenAnalytics, emitTemplateSelectAnalytics } from '@/lib/template-integrity'
 
 export default function NewDocument() {
   const { workspaceId } = useParams()
@@ -53,6 +55,9 @@ export default function NewDocument() {
       return
     }
 
+    // Emit analytics
+    emitTemplateSelectAnalytics(template.id, template.scope, workspaceId)
+
     try {
       toast({
         title: "Creating document...",
@@ -71,17 +76,29 @@ export default function NewDocument() {
         description: "Document created successfully!",
       })
       navigate(result.url)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating document from template:', error)
-      toast({
-        title: "Error",
-        description: "Failed to create document from template",
-        variant: "destructive"
-      })
+      
+      // Handle 422 template incomplete error specifically
+      if (error?.status === 422 || error?.message?.includes('TEMPLATE_INCOMPLETE')) {
+        toast({
+          title: "Template Incomplete",
+          description: "This template is not properly packaged. Please ask an admin to republish it.",
+          variant: "destructive"
+        })
+      } else {
+        toast({
+          title: "Error", 
+          description: "Failed to create document from template",
+          variant: "destructive"
+        })
+      }
     }
   }
 
   const handlePreview = (template: ScopedTemplate) => {
+    // Emit analytics
+    emitTemplateOpenAnalytics(template.id, template.scope, workspaceId)
     setPreviewTemplate(template)
   }
 
@@ -322,9 +339,12 @@ function TemplateCard({ template, onUse, onPreview, loading }: TemplateCardProps
   const docType = template.metadata?.docType
   const stylePack = template.metadata?.stylePack
   const industry = template.metadata?.industry
+  
+  const isTemplateIncomplete = !template.integrity.isComplete
 
   return (
-    <Card className="group cursor-pointer transition-all hover:shadow-lg">
+    <TooltipProvider>
+      <Card className="group cursor-pointer transition-all hover:shadow-lg">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <CardTitle className="text-base font-medium line-clamp-2 leading-tight">
@@ -404,25 +424,46 @@ function TemplateCard({ template, onUse, onPreview, loading }: TemplateCardProps
         </div>
       </CardContent>
 
-      <CardFooter className="pt-4 flex gap-2">
-        <Button 
-          size="sm" 
-          className="flex-1"
-          onClick={onUse}
-          disabled={loading}
-        >
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Use Template'}
-        </Button>
-        
-        <Button 
-          size="sm" 
-          variant="outline"
-          onClick={onPreview}
-        >
-          <Eye className="h-4 w-4" />
-        </Button>
-      </CardFooter>
-    </Card>
+        <CardFooter className="pt-4 flex gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex-1">
+                <Button 
+                  size="sm" 
+                  className="w-full"
+                  onClick={onUse}
+                  disabled={loading || isTemplateIncomplete}
+                >
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : isTemplateIncomplete ? (
+                    <>
+                      <AlertTriangle className="h-4 w-4 mr-2" />
+                      Use Template
+                    </>
+                  ) : (
+                    'Use Template'
+                  )}
+                </Button>
+              </div>
+            </TooltipTrigger>
+            {isTemplateIncomplete && (
+              <TooltipContent>
+                <p>{template.integrity.reason}</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+          
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={onPreview}
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+        </CardFooter>
+      </Card>
+    </TooltipProvider>
   )
 }
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext'
 import { useAuth } from '@/hooks/useAuth'
+import { computeTemplateIntegrity, type TemplateIntegrity } from '@/lib/template-integrity'
 
 export interface ScopedTemplate {
   id: string
@@ -21,6 +22,9 @@ export interface ScopedTemplate {
   scope: 'global' | 'workspace'
   workspace_id?: string
   template_slug: string
+  tpkg_source?: any
+  config?: any
+  integrity: TemplateIntegrity
 }
 
 interface TemplateGroups {
@@ -54,7 +58,7 @@ export function useTemplatesScoped() {
       // Fetch global templates (both new scope-based and legacy is_global)
       const { data: globalTemplates, error: globalError } = await supabase
         .from('templates')
-        .select('*')
+        .select('*, tpkg_source, config')
         .or('and(scope.eq.global,status.eq.published),and(is_global.eq.true,status.eq.published)')
         .order('usage_count', { ascending: false })
 
@@ -65,18 +69,24 @@ export function useTemplatesScoped() {
       if (currentWorkspace?.id) {
         const { data: wsTemplates, error: wsError } = await supabase
           .from('templates')
-          .select('*')
+          .select('*, tpkg_source, config')
           .eq('scope', 'workspace')
           .eq('workspace_id', currentWorkspace.id)
           .eq('status', 'published')
           .order('usage_count', { ascending: false })
 
         if (wsError) throw wsError
-        workspaceTemplates = wsTemplates || []
+        workspaceTemplates = (wsTemplates || []).map(template => ({
+          ...template,
+          integrity: computeTemplateIntegrity(template)
+        }))
       }
 
-      // Group global templates by usage (featured = top 6)
-      const sortedGlobal = globalTemplates || []
+      // Group global templates by usage (featured = top 6) and compute integrity
+      const sortedGlobal = (globalTemplates || []).map(template => ({
+        ...template,
+        integrity: computeTemplateIntegrity(template)
+      }))
       const featured = sortedGlobal.slice(0, 6)
       const remaining = sortedGlobal.slice(6)
 

@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { useTemplateApplication } from '@/hooks/useTemplateApplication'
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext'
 import { ScopedTemplate } from '@/hooks/useTemplatesScoped'
+import { computeTemplateIntegrity } from '@/lib/template-integrity'
 import { Sparkles, FileText, Palette, Building2, ArrowRight } from 'lucide-react'
 
 interface QuickComposeDialogProps {
@@ -66,7 +67,8 @@ export function QuickComposeDialog({ open, onOpenChange }: QuickComposeDialogPro
         metadata: {},
         usage_count: 0,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        integrity: computeTemplateIntegrity({})
       }
 
       await createFromTemplate(composedTemplate, title)
