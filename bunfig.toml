@@ -1,0 +1,6 @@
+[install]
+# Skip optional dependencies to avoid native module issues
+optional = false
+
+# Specific packages to avoid
+exclude = ["canvas", "sharp"]

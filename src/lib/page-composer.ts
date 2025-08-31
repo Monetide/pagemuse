@@ -1,8 +1,6 @@
 /**
  * Page Composition and Rendering
- * 
- * NOTE: Page rendering is currently disabled due to build environment constraints.
- * This module would normally use html2canvas for page-to-image conversion.
+ * Handles page-to-image conversion and template preview generation
  */
 
 export interface PageComposition {
@@ -59,12 +57,56 @@ export interface PageRenderOptions {
   quality?: number
 }
 
-// Page composition functionality is currently disabled due to build environment constraints
 export const renderPageToBlob = async (
   elementId: string,
   options: PageRenderOptions = {}
 ): Promise<Blob> => {
-  throw new Error('Page rendering is currently disabled. Please use other export formats.')
+  if (typeof window === 'undefined') {
+    throw new Error('Page rendering is only available in browser environment')
+  }
+
+  try {
+    const html2canvas = await import('html2canvas')
+    
+    const element = document.getElementById(elementId)
+    if (!element) {
+      throw new Error(`Element with id '${elementId}' not found`)
+    }
+
+    const {
+      scale = 2,
+      width,
+      height,
+      format = 'png',
+      quality = 0.9
+    } = options
+
+    const canvas = await html2canvas.default(element, {
+      scale,
+      width,
+      height,
+      useCORS: true,
+      allowTaint: false,
+      backgroundColor: null
+    })
+
+    return new Promise((resolve, reject) => {
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(blob)
+          } else {
+            reject(new Error('Failed to generate blob from canvas'))
+          }
+        },
+        `image/${format}`,
+        quality
+      )
+    })
+  } catch (error) {
+    console.error('Page rendering failed:', error)
+    throw new Error(`Failed to render page: ${error instanceof Error ? error.message : 'Unknown error'}`)
+  }
 }
 
 // Placeholder exports for backward compatibility
@@ -88,16 +130,67 @@ export const generatePageCompositions = (type: any, config?: any) => {
 }
 
 export const exportPageAsPNG = async (elementId: string, config?: any, options?: any) => {
-  // Return a mock blob to satisfy type requirements
-  const mockBlob = new Blob([''], { type: 'image/png' })
-  Object.defineProperty(mockBlob, 'size', { value: 0, writable: false })
-  return mockBlob
+  try {
+    return await renderPageToBlob(elementId, { ...config, ...options, format: 'png' })
+  } catch (error) {
+    console.warn('PNG export failed, returning empty blob:', error)
+    // Return a small transparent PNG blob as fallback
+    const canvas = document.createElement('canvas')
+    canvas.width = 1
+    canvas.height = 1
+    return new Promise<Blob>((resolve) => {
+      canvas.toBlob((blob) => {
+        resolve(blob || new Blob([''], { type: 'image/png' }))
+      }, 'image/png')
+    })
+  }
 }
 
 export const downloadBlob = (blob: Blob, filename: string) => {
-  throw new Error('Download functionality is currently disabled.')
+  if (typeof window === 'undefined') {
+    throw new Error('Download functionality is only available in browser environment')
+  }
+
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
 }
 
-export const generateTemplatePreviewsAndAssets = (config?: any) => {
-  throw new Error('Template preview generation is currently disabled.')
+export const generateTemplatePreviewsAndAssets = async (config?: any) => {
+  try {
+    // Generate preview for template elements if available
+    const previewElements = document.querySelectorAll('[data-template-preview]')
+    const previews = []
+
+    for (const element of previewElements) {
+      if (element.id) {
+        try {
+          const blob = await exportPageAsPNG(element.id)
+          previews.push({
+            elementId: element.id,
+            blob,
+            size: blob.size
+          })
+        } catch (error) {
+          console.warn(`Failed to generate preview for ${element.id}:`, error)
+        }
+      }
+    }
+
+    return {
+      previews,
+      assets: {} // Empty assets object for compatibility
+    }
+  } catch (error) {
+    console.warn('Template preview generation failed:', error)
+    return {
+      previews: [],
+      assets: {}
+    }
+  }
 }
