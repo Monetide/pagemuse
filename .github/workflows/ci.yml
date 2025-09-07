@@ -17,6 +17,12 @@ jobs:
       with:
         node-version-file: '.nvmrc'
         cache: 'npm'
+
+    - name: Print versions
+      run: |
+        node -v
+        npm -v
+        uname -a
         
     - run: npm ci --no-audit --no-fund
     - run: npm run build
