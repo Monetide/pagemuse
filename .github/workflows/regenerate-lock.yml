@@ -1,26 +1,34 @@
 name: Regen lock (Linux)
-on: { workflow_dispatch: {} }
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   regen:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
-      - run: rm -rf node_modules package-lock.json
-      - run: npm i --no-audit --no-fund
-      - name: Commit lock
+
+      - name: Recreate lockfile on Linux
         run: |
-          git checkout -b chore/linux-lock-regen
-          git add package-lock.json
-          git config user.name "lovable-dev[bot]"
-          git config user.email "bot@lovable.dev"
-          git commit -m "chore(ci): regenerate package-lock.json on Linux"
-      - uses: peter-evans/create-pull-request@v6
+          rm -rf node_modules package-lock.json
+          npm i --no-audit --no-fund
+
+      - name: Open PR with Linux-generated lockfile
+        uses: peter-evans/create-pull-request@v6
         with:
           branch: chore/linux-lock-regen
           title: "chore(ci): regenerate package-lock.json on Linux"
           commit-message: "chore(ci): regenerate package-lock.json on Linux"
-          body: "Regenerated lock on ubuntu to include rollup's platform optional packages."
+          body: "Generated on ubuntu-latest with Node from .nvmrc and npm 10; includes platform optionals for Rollup."
+          add-paths: |
+            package-lock.json
