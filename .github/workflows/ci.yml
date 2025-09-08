@@ -24,6 +24,6 @@ jobs:
         npm -v
         uname -a
         
-    - run: npm ci --no-audit --no-fund
+    - run: npm i --no-audit --no-fund
     - run: npm run build
     - run: npm test -- --run --reporter=verbose
