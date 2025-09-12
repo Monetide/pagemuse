@@ -29,12 +29,18 @@ jobs:
           npm -v
           uname -a
 
-      # TEMP: allow npm to resolve Linux optional deps (we'll switch back to `npm ci` after lock regen)
+      # TEMPORARY: allow npm to resolve Linux optionals (we'll switch to npm ci after lock regen)
       - name: Install
         run: npm i --no-audit --no-fund
 
       - name: Build
         run: npm run build
 
+      # Run tests only if a "test" script exists
+      - name: Detect test script
+        id: pkg
+        run: echo "has_test=$(node -p \"(require('./package.json').scripts||{}).hasOwnProperty('test')\")" >> $GITHUB_OUTPUT
+
       - name: Test
+        if: steps.pkg.outputs.has_test == 'true'
         run: npm test -- --run --reporter=verbose
